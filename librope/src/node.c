@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include <utf8util.h>
 
 //////////////////////////////
 /// struct RopeNode
@@ -64,7 +65,7 @@ rope_node_split(
 	}
 
 	const uint8_t *value = rope_node_value(node, &size);
-	rope_byte_index_t byte_index = rope_char_to_byte(value, size, index);
+	rope_byte_index_t byte_index = utf8_bidx(value, size, index);
 
 	left->type = node->type;
 	left->byte_size = byte_index;
@@ -251,7 +252,7 @@ rope_node_new_leaf(struct Rope *rope, const uint8_t *data, size_t byte_size) {
 	}
 
 	node->byte_size = byte_size;
-	node->char_size = rope_byte_to_char(data, byte_size);
+	node->char_size = utf8_clen(data, byte_size);
 
 	if (byte_size <= ROPE_INLINE_LEAF_SIZE) {
 		node->type = ROPE_NODE_INLINE_LEAF;

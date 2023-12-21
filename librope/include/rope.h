@@ -12,21 +12,6 @@ typedef size_t rope_char_index_t;
 typedef size_t rope_byte_index_t;
 typedef size_t rope_index_t;
 
-static inline rope_byte_index_t
-rope_char_to_byte(const uint8_t *data, size_t byte_size, rope_char_index_t index) {
-	(void)data;
-	(void)byte_size;
-	// TODO
-	return index;
-}
-
-static inline size_t
-rope_byte_to_char(const uint8_t *data, size_t byte_size) {
-	(void)data;
-	// TODO
-	return byte_size;
-}
-
 /**********************************
  * pool.c
  */
