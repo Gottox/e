@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define ROPE_INLINE_LEAF_SIZE (sizeof(void *[4]))
+#define ROPE_INLINE_LEAF_SIZE (sizeof(void *[3]))
 #define ROPE_POOL_CHUNK_SIZE 1024
 
 struct Rope;
