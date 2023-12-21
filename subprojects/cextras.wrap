@@ -1,0 +1,10 @@
+[wrap-file]
+directory = cextras-0fdb772e64ebdefe89b1e860ac821a24dd8a993d
+
+source_url = https://github.com/Gottox/cextras/archive/0fdb772e64ebdefe89b1e860ac821a24dd8a993d.tar.gz
+source_filename = cextras-0fdb772e64ebdefe89b1e860ac821a24dd8a993d.tar.gz
+source_hash = 2bcf6caae3b7a5cd6221d8784767f62c63bfc9159bb95ead00d9c1d0f7635dac
+
+[provide]
+cextras=cextras_dep
+testlib=testlib_dep
