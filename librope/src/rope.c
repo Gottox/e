@@ -54,8 +54,9 @@ rope_delete(struct Rope *rope, rope_char_index_t index, size_t char_count) {
 }
 
 int
-rope_insert(struct Rope *rope, size_t index, const uint8_t *data,
-			size_t byte_size) {
+rope_insert(
+		struct Rope *rope, size_t index, const uint8_t *data,
+		size_t byte_size) {
 	return rope_node_insert(rope->root, rope, index, data, byte_size);
 }
 

@@ -39,7 +39,7 @@ struct RopePool {
 
 int rope_pool_init(struct RopePool *pool);
 
-struct RopeNode* rope_pool_get(struct RopePool *pool);
+struct RopeNode *rope_pool_get(struct RopePool *pool);
 
 int rope_pool_recycle(struct RopePool *pool, struct RopeNode *node);
 
@@ -81,19 +81,19 @@ struct RopeNode {
 
 int rope_node_init(struct RopeNode *node);
 
-struct RopeNode *rope_node_find(struct RopeNode *node,
-								rope_char_index_t *index);
+struct RopeNode *
+rope_node_find(struct RopeNode *node, rope_char_index_t *index);
 
-int rope_node_insert(struct RopeNode *node, struct Rope *rope,
-					 rope_char_index_t index, const uint8_t *data,
-					 size_t byte_size);
+int rope_node_insert(
+		struct RopeNode *node, struct Rope *rope, rope_char_index_t index,
+		const uint8_t *data, size_t byte_size);
 
 int rope_node_delete(struct RopeNode *node, struct Rope *rope);
 
 bool rope_node_next(struct RopeNode **node);
 
-int rope_node_split(struct RopeNode *node, struct Rope *rope,
-					rope_char_index_t index);
+int rope_node_split(
+		struct RopeNode *node, struct Rope *rope, rope_char_index_t index);
 
 const uint8_t *rope_node_value(struct RopeNode *node, size_t *size);
 
@@ -122,8 +122,8 @@ int rope_append(struct Rope *rope, const uint8_t *data, size_t byte_size);
 
 struct RopeNode *rope_new_node(struct Rope *rope);
 
-int rope_insert(struct Rope *rope, size_t index, const uint8_t *data,
-				size_t byte_size);
+int rope_insert(
+		struct Rope *rope, size_t index, const uint8_t *data, size_t byte_size);
 
 int rope_delete(struct Rope *rope, size_t index, size_t char_count);
 

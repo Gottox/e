@@ -47,8 +47,8 @@ rope_node_right(struct RopeNode *base) {
 }
 
 int
-rope_node_split(struct RopeNode *node, struct Rope *rope,
-				rope_char_index_t index) {
+rope_node_split(
+		struct RopeNode *node, struct Rope *rope, rope_char_index_t index) {
 	int rv = 0;
 	size_t size;
 	struct RopeNode *left = NULL, *right = NULL;
@@ -100,8 +100,8 @@ out:
 }
 
 int
-rope_node_replace(struct RopeNode *node, struct Rope *rope,
-				  struct RopeNode *new_node) {
+rope_node_replace(
+		struct RopeNode *node, struct Rope *rope, struct RopeNode *new_node) {
 	if (node->parent == NULL) {
 		rope->root = new_node;
 	} else if (rope_node_left(node->parent) == node) {
@@ -177,8 +177,9 @@ rope_node_next(struct RopeNode **node) {
 }
 
 static int
-rope_node_insert_under(struct RopeNode *node, struct Rope *rope,
-					   struct RopeNode *new_node, enum RopeBias bias) {
+rope_node_insert_under(
+		struct RopeNode *node, struct Rope *rope, struct RopeNode *new_node,
+		enum RopeBias bias) {
 	struct RopeNode *new_parent = rope_pool_get(&rope->pool);
 	if (new_parent == NULL) {
 		return -1;
@@ -205,20 +206,20 @@ rope_node_insert_under(struct RopeNode *node, struct Rope *rope,
 }
 
 int
-rope_node_insert_right(struct RopeNode *node, struct Rope *rope,
-					   struct RopeNode *new_node) {
+rope_node_insert_right(
+		struct RopeNode *node, struct Rope *rope, struct RopeNode *new_node) {
 	return rope_node_insert_under(node, rope, new_node, ROPE_BIAS_RIGHT);
 }
 
 int
-rope_node_insert_left(struct RopeNode *node, struct Rope *rope,
-					  struct RopeNode *new_node) {
+rope_node_insert_left(
+		struct RopeNode *node, struct Rope *rope, struct RopeNode *new_node) {
 	return rope_node_insert_under(node, rope, new_node, ROPE_BIAS_LEFT);
 }
 
 static struct RopeNode *
-node_weighted_find(struct RopeNode *node, struct Rope *rope,
-				   rope_char_index_t *index) {
+node_weighted_find(
+		struct RopeNode *node, struct Rope *rope, rope_char_index_t *index) {
 	(void)rope;
 	if (*index > node->char_size) {
 		return NULL;
@@ -268,9 +269,9 @@ rope_node_new_leaf(struct Rope *rope, const uint8_t *data, size_t byte_size) {
 }
 
 int
-rope_node_insert(struct RopeNode *node, struct Rope *rope,
-				 rope_char_index_t index, const uint8_t *data,
-				 size_t byte_size) {
+rope_node_insert(
+		struct RopeNode *node, struct Rope *rope, rope_char_index_t index,
+		const uint8_t *data, size_t byte_size) {
 	int rv = 0;
 	node = node_weighted_find(node, rope, &index);
 

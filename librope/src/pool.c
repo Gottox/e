@@ -24,12 +24,12 @@ static int
 add_chunk(struct RopePool *pool) {
 	size_t outer_size = pool->next_node_index / ROPE_POOL_CHUNK_SIZE + 1;
 	pool->nodes =
-		reallocarray(pool->nodes, outer_size, sizeof(struct RopeNode *));
+			reallocarray(pool->nodes, outer_size, sizeof(struct RopeNode *));
 	if (pool->nodes == NULL) {
 		return -1;
 	}
 	struct RopeNode *new_chunk =
-		calloc(ROPE_POOL_CHUNK_SIZE, sizeof(struct RopeNode));
+			calloc(ROPE_POOL_CHUNK_SIZE, sizeof(struct RopeNode));
 	if (new_chunk == NULL) {
 		return -1;
 	}
@@ -76,8 +76,8 @@ rope_pool_cleanup(struct RopePool *pool) {
 
 	size_t outer_size = 0;
 	for (rope_index_t i = 0; i < pool->next_node_index; i++) {
-		struct RopeNode *node =
-			&pool->nodes[i / ROPE_POOL_CHUNK_SIZE][i % ROPE_POOL_CHUNK_SIZE];
+		struct RopeNode *node = &pool->nodes[i / ROPE_POOL_CHUNK_SIZE]
+											[i % ROPE_POOL_CHUNK_SIZE];
 		if (i % ROPE_POOL_CHUNK_SIZE == 0) {
 			outer_size++;
 		}
