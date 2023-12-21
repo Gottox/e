@@ -17,3 +17,14 @@ syntax highlighting and basic code analysis.
 - [ ] tree-sitter integration
 - [ ] command line frontend
 - [ ] vt100 frontend
+
+### Concepts
+
+- e-editor
+  - **0-n** buffers representing opened files
+    - **0-n** buffer editors
+      - undo/redo stack
+      - **0-n** cursors
+        - cursor position
+        - edit actions
+
