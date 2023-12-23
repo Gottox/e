@@ -1,6 +1,8 @@
+#define _GNU_SOURCE
+
+#include <cextras/unicode.h>
 #include <rope.h>
 #include <string.h>
-#include <utf8util.h>
 
 #define SEARCH(first, cond, res) \
 	for (struct RopeCursor *c = (first); c && (cond); c = c->next) { \
@@ -33,27 +35,62 @@ cursor_attach(struct RopeCursor *cursor) {
 	}
 }
 
+static void
+cursor_update_location(struct RopeCursor *cursor) {
+	rope_char_index_t index = cursor->index;
+	rope_char_index_t column = 0;
+	struct RopeNode *node = rope_node_find(cursor->rope->root, &index);
+
+	cursor->line = rope_node_line_number(node, index);
+
+	const uint8_t *value, *p;
+	size_t size = 0;
+	value = rope_node_value(node, &size);
+
+	p = memrchr(value, '\n', cx_utf8_bidx(value, size, index));
+	if (p) {
+		column = cx_utf8_clen(value, p - value) + 1;
+	} else {
+		column = index;
+		for (; !p && rope_node_prev(&node);) {
+			value = rope_node_value(node, &size);
+			p = memrchr(value, '\n', size);
+			if (p) {
+				column += cx_utf8_clen(value, p - value) + 1;
+			} else {
+				column += cx_utf8_clen(value, size);
+			}
+		}
+	}
+	cursor->column = column;
+}
 static int
 cursor_update(struct RopeCursor *cursor) {
 	cursor_detach(cursor);
 	cursor_attach(cursor);
+	cursor_update_location(cursor);
 	return 0;
 }
 
 static void
 cursor_damaged(
 		struct RopeCursor *cursor, rope_char_index_t index, off_t offset) {
-	return;
-	for (; cursor; cursor = cursor->next) {
-		if (cursor->index + offset < index) {
-			cursor->index = index;
+	// First pass: Update indices and locations
+	for (struct RopeCursor *c = cursor; c; c = c->next) {
+		if (c->index + offset < index) {
+			c->index = index;
 		} else {
-			cursor->index += offset;
+			c->index += offset;
 		}
-		if (cursor->callback) {
-			cursor->callback(cursor->rope, cursor, cursor->userdata);
+		// Note: We don't need to call update_cursor here as the order is
+		// preserved. We do need to update the location though.
+		cursor_update_location(c);
+	}
+	// Second pass: Let the cursor callback know
+	for (struct RopeCursor *c = cursor; c; c = c->next) {
+		if (c->callback) {
+			c->callback(c->rope, c, c->userdata);
 		}
-		// We don't need to update the cursor as the order is preserved.
 	}
 }
 
@@ -80,7 +117,7 @@ find_line_index(const uint8_t *value, size_t size, rope_index_t line) {
 		p = memchr(p, '\n', size);
 		p++;
 	}
-	return utf8_clen(value, p - value);
+	return cx_utf8_clen(value, p - value);
 }
 
 int
@@ -102,6 +139,17 @@ rope_cursor_set(
 }
 
 int
+rope_cursor_move(struct RopeCursor *cursor, off_t offset) {
+	// TODO: instead of this shenanigans, just check for addition overflow.
+	if (offset < 0 && (rope_char_index_t)-offset > cursor->index) {
+		cursor->index = 0;
+	} else {
+		cursor->index = cursor->index + offset;
+	}
+	return cursor_update(cursor);
+}
+
+int
 rope_cursor_insert(
 		struct RopeCursor *cursor, const uint8_t *data, size_t byte_size) {
 	int rv = 0;
@@ -112,7 +160,7 @@ rope_cursor_insert(
 		goto out;
 	}
 
-	size_t char_size = utf8_clen(data, byte_size);
+	size_t char_size = cx_utf8_clen(data, byte_size);
 	cursor_damaged(cursor, 0, char_size);
 out:
 	return rv;
@@ -162,7 +210,7 @@ rope_cursor_node(struct RopeCursor *cursor, rope_char_index_t *byte_index) {
 
 	size_t size = 0;
 	const uint8_t *value = rope_node_value(node, &size);
-	*byte_index = utf8_bidx(value, size, char_index);
+	*byte_index = cx_utf8_bidx(value, size, char_index);
 
 	return node;
 }

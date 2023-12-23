@@ -9,15 +9,14 @@ project(
     ],
 )
 
-quickjs = dependency('quickjs')
-cextras = dependency('cextras')
-json_c = dependency('json-c')
+quickjs_dep = dependency('quickjs')
+cextras_dep = dependency('cextras')
 #tree_sitter = dependency('tree-sitter')
 #tree_sitter = subproject('tree-sitter').get_variable('tree_sitter_dep')
 
 dependencies = [
-    quickjs,
-    cextras,
+    quickjs_dep,
+    cextras_dep,
     #tree_sitter,
 ]
 

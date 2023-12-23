@@ -3,7 +3,6 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
-#include <utf8util.h>
 
 int
 rope_init(struct Rope *rope) {

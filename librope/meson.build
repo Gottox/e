@@ -2,7 +2,7 @@ subdir('src')
 
 subdir('include')
 
-librope_dependencies = []
+librope_dependencies = [cextras_dep]
 
 c_args = []
 

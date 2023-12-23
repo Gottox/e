@@ -105,7 +105,45 @@ test_cursor_utf8(void) {
 	assert(rv == 0);
 }
 
+static void
+test_cursor_event(void) {
+	int rv = 0;
+	struct Rope r = {0};
+	rv = rope_init(&r);
+	assert(rv == 0);
+
+	rv = rope_append_str(&r, u8"This is a test");
+	assert(rv == 0);
+
+	struct RopeCursor c1 = {0};
+	rv = rope_cursor_init(&c1, &r, 0, NULL, NULL);
+	assert(rv == 0);
+
+	rv = rope_cursor_set(&c1, 0, 10);
+	assert(rv == 0);
+
+	struct RopeCursor c2 = {0};
+	rv = rope_cursor_init(&c2, &r, 0, NULL, NULL);
+	assert(rv == 0);
+
+	rv = rope_cursor_set(&c2, 0, 0);
+	assert(rv == 0);
+
+	rv = rope_cursor_delete(&c2, 7);
+	assert(rv == 0);
+
+	assert(c1.index == 3);
+
+	rv = rope_cursor_cleanup(&c1);
+	assert(rv == 0);
+	rv = rope_cursor_cleanup(&c2);
+	assert(rv == 0);
+	rv = rope_cleanup(&r);
+	assert(rv == 0);
+}
+
 DECLARE_TESTS
 TEST(test_cursor)
 TEST(test_cursor_utf8)
+TEST(test_cursor_event)
 END_TESTS

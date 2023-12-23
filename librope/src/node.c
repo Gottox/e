@@ -1,9 +1,9 @@
 #include <assert.h>
+#include <cextras/unicode.h>
 #include <rope.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
-#include <utf8util.h>
 
 //////////////////////////////
 /// struct RopeNode
@@ -66,8 +66,8 @@ rope_node_split(
 	}
 
 	const uint8_t *value = rope_node_value(node, &size);
-	size_t byte_index = utf8_bidx(value, size, index);
-	size_t utf16_size = utf8_16len(value, byte_index);
+	size_t byte_index = cx_utf8_bidx(value, size, index);
+	size_t utf16_size = cx_utf8_16len(value, byte_index);
 
 	left->type = node->type;
 	left->byte_size = byte_index;
@@ -180,12 +180,17 @@ rope_node_find(struct RopeNode *node, rope_char_index_t *index) {
 	return node;
 }
 
-bool
-rope_node_next(struct RopeNode **node) {
+struct CongenericFn {
+	struct RopeNode *(*forward)(struct RopeNode *);
+	struct RopeNode *(*backward)(struct RopeNode *);
+};
+
+static bool
+node_sibling(struct RopeNode **node, const struct CongenericFn *child_fns) {
 	struct RopeNode *node2 = *node;
 	while (node2->parent != NULL) {
-		if (rope_node_left(node2->parent) == node2) {
-			node2 = node2->parent->data.fork.right;
+		if (child_fns->backward(node2->parent) == node2) {
+			node2 = child_fns->forward(node2->parent);
 			break;
 		}
 		node2 = node2->parent;
@@ -195,10 +200,27 @@ rope_node_next(struct RopeNode **node) {
 		return false;
 	}
 	while (node2->type == ROPE_NODE_FORK) {
-		node2 = rope_node_left(node2);
+		node2 = child_fns->backward(node2);
 	}
 	*node = node2;
 	return true;
+}
+bool
+rope_node_next(struct RopeNode **node) {
+	static const struct CongenericFn child_fns = {
+			rope_node_right,
+			rope_node_left,
+	};
+	return node_sibling(node, &child_fns);
+}
+
+bool
+rope_node_prev(struct RopeNode **node) {
+	static const struct CongenericFn child_fns = {
+			rope_node_left,
+			rope_node_right,
+	};
+	return node_sibling(node, &child_fns);
 }
 
 static int
@@ -289,8 +311,8 @@ rope_node_new_leaf(struct Rope *rope, const uint8_t *data, size_t byte_size) {
 	}
 
 	node->byte_size = byte_size;
-	node->char_size = utf8_clen(data, byte_size);
-	node->utf16_size = utf8_16len(data, byte_size);
+	node->char_size = cx_utf8_clen(data, byte_size);
+	node->utf16_size = cx_utf8_16len(data, byte_size);
 	node->new_lines = count_new_lines(data, byte_size);
 
 	if (byte_size <= ROPE_INLINE_LEAF_SIZE) {
@@ -306,6 +328,29 @@ rope_node_new_leaf(struct Rope *rope, const uint8_t *data, size_t byte_size) {
 		memcpy(node->data.leaf.owned_data, data, byte_size);
 	}
 	return node;
+}
+
+size_t
+rope_node_line_number(const struct RopeNode *node, rope_char_index_t index) {
+	size_t line_number = 0;
+	size_t value_size = 0;
+
+	const uint8_t *value = rope_node_value(node, &value_size);
+	for (const uint8_t *p = value; (p = memchr(p, '\n', index));) {
+		index -= p - value + 1;
+		line_number++;
+		p++;
+		value = p;
+	}
+
+	for (struct RopeNode *parent; (parent = node->parent);) {
+		if (rope_node_right(parent) == node) {
+			line_number += rope_node_left(parent)->new_lines;
+		}
+		node = parent;
+	}
+
+	return line_number;
 }
 
 int
@@ -384,7 +429,7 @@ rope_node_cleanup(struct RopeNode *node) {
 }
 
 const uint8_t *
-rope_node_value(struct RopeNode *node, size_t *size) {
+rope_node_value(const struct RopeNode *node, size_t *size) {
 	*size = node->byte_size;
 	switch (node->type) {
 	case ROPE_NODE_LEAF:
