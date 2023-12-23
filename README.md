@@ -1,7 +1,7 @@
+<img align=right src="./logo.svg">
+
 e - a text editor
 =================
-
-<img align=right src="./logo.svg">
 
 *e* will be a text editor written in C. It'll follow a transparent client-server
 to allow concurrent editing of the same file(s). tree-sitter will be used for 
