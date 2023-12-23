@@ -1,6 +1,8 @@
 e - a text editor
 =================
 
+<img align=right src="./logo.svg">
+
 *e* will be a text editor written in C. It'll follow a transparent client-server
 to allow concurrent editing of the same file(s). tree-sitter will be used for 
 syntax highlighting and basic code analysis.
@@ -10,7 +12,7 @@ syntax highlighting and basic code analysis.
 ## ToDo
 
 - [x] rope data structure
-- [ ] range/cursor handling
+- [x] range/cursor handling
 - [ ] command framework (do/undo)
 - [ ] socket protocol (json/bjson?)
 - [ ] daemon lifecycle
