@@ -34,6 +34,7 @@ node_update(struct RopeNode *node) {
 		struct RopeNode *right = rope_node_right(node);
 		node->char_size = left->char_size + right->char_size;
 		node->byte_size = left->byte_size + right->byte_size;
+		node->new_lines = left->new_lines + right->new_lines;
 	}
 }
 
@@ -65,15 +66,18 @@ rope_node_split(
 	}
 
 	const uint8_t *value = rope_node_value(node, &size);
-	rope_byte_index_t byte_index = utf8_bidx(value, size, index);
+	size_t byte_index = utf8_bidx(value, size, index);
+	size_t utf16_size = utf8_16len(value, byte_index);
 
 	left->type = node->type;
 	left->byte_size = byte_index;
 	left->char_size = index;
+	left->utf16_size = utf16_size;
 
 	right->type = node->type;
 	right->byte_size = node->byte_size - byte_index;
 	right->char_size = node->char_size - index;
+	right->utf16_size = node->utf16_size - utf16_size;
 
 	if (node->type == ROPE_NODE_LEAF) {
 		left->data.leaf.data = node->data.leaf.data;
@@ -134,6 +138,26 @@ rope_node_delete(struct RopeNode *node, struct Rope *rope) {
 	rope_pool_recycle(&rope->pool, node);
 out:
 	return rv;
+}
+
+struct RopeNode *
+rope_node_find_line(struct RopeNode *node, rope_index_t *line) {
+	if (*line > node->new_lines) {
+		return NULL;
+	}
+
+	while (node->type == ROPE_NODE_FORK) {
+		struct RopeNode *left = rope_node_left(node);
+		struct RopeNode *right = rope_node_right(node);
+		size_t left_lines = left->new_lines;
+		if (*line <= left_lines) {
+			node = rope_node_left(node);
+		} else {
+			*line -= left_lines;
+			node = right;
+		}
+	}
+	return node;
 }
 
 struct RopeNode *
@@ -244,6 +268,19 @@ node_weighted_find(
 	return node;
 }
 
+static ssize_t
+count_new_lines(const uint8_t *data, size_t size) {
+	ssize_t count = 0;
+	for (const uint8_t *p = data; (p = memchr(p, '\n', size));) {
+		size -= p - data + 1;
+		count++;
+		p++;
+		data = p;
+	}
+
+	return count;
+}
+
 static struct RopeNode *
 rope_node_new_leaf(struct Rope *rope, const uint8_t *data, size_t byte_size) {
 	struct RopeNode *node = rope_pool_get(&rope->pool);
@@ -253,13 +290,15 @@ rope_node_new_leaf(struct Rope *rope, const uint8_t *data, size_t byte_size) {
 
 	node->byte_size = byte_size;
 	node->char_size = utf8_clen(data, byte_size);
+	node->utf16_size = utf8_16len(data, byte_size);
+	node->new_lines = count_new_lines(data, byte_size);
 
 	if (byte_size <= ROPE_INLINE_LEAF_SIZE) {
 		node->type = ROPE_NODE_INLINE_LEAF;
 		memcpy(node->data.inline_leaf, data, byte_size);
 	} else {
 		node->type = ROPE_NODE_LEAF;
-		node->data.leaf.owned_data = malloc(byte_size);
+		node->data.leaf.data = node->data.leaf.owned_data = malloc(byte_size);
 		if (node->data.leaf.owned_data == NULL) {
 			rope_pool_recycle(&rope->pool, node);
 			return NULL;

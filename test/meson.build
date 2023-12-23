@@ -1,12 +1,15 @@
-librope_test = files('librope/librope.c')
+e_test = ['librope/librope.c', 'librope/cursor.c']
 
 testlib_dep = subproject('cextras').get_variable('testlib_dep')
-test = executable(
-    'librope_test',
-    librope_test,
-    install: false,
-    link_with: [librope],
-    dependencies: [testlib_dep],
-    include_directories: [librope_include],
-)
-test('librope', test)
+foreach p : e_test
+    sources = [p]
+    t = executable(
+        p.underscorify(),
+        sources,
+        install: false,
+        link_with: [librope],
+        dependencies: [testlib_dep],
+        include_directories: [librope_include],
+    )
+    test(p, t)
+endforeach

@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include <utf8util.h>
 
 int
 rope_init(struct Rope *rope) {
@@ -17,10 +18,18 @@ rope_init(struct Rope *rope) {
 		rv = -1;
 		goto out;
 	}
+
 	rope->bias = ROPE_BIAS_LEFT;
+	rope->cursors = NULL;
 
 out:
 	return rv;
+}
+
+int
+rope_append_str(struct Rope *rope, const char *str) {
+	size_t byte_size = strlen(str);
+	return rope_append(rope, (const uint8_t *)str, byte_size);
 }
 
 int
@@ -31,33 +40,79 @@ rope_append(struct Rope *rope, const uint8_t *data, size_t byte_size) {
 
 int
 rope_delete(struct Rope *rope, rope_char_index_t index, size_t char_count) {
-	struct RopeNode *node = rope_node_find(rope->root, &index);
-	struct RopeNode *next = NULL;
+	int rv = 0;
+	struct RopeCursor cursor = {0};
+	rv = rope_cursor_init(&cursor, rope, index, NULL, NULL);
+	if (rv < 0) {
+		goto out;
+	}
+	rv = rope_cursor_delete(&cursor, char_count);
+	if (rv < 0) {
+		goto out;
+	}
+out:
+	rope_cursor_cleanup(&cursor);
+	return rv;
+}
 
-	if (index != 0) {
-		rope_node_split(node, rope, index);
-		node = rope_node_right(node);
+struct RopeNode *
+rope_line(struct Rope *rope, rope_index_t line, rope_byte_index_t *index) {
+	struct RopeNode *node = rope_node_find_line(rope->root, &line);
+	if (node == NULL) {
+		return NULL;
 	}
-	while (node && node->char_size <= char_count) {
-		next = node;
-		rope_node_next(&next);
-		char_count -= node->char_size;
-		rope_node_delete(node, rope);
-		node = next;
+	size_t size = 0;
+	const uint8_t *value = rope_node_value(node, &size);
+	const uint8_t *p;
+
+	for (p = value; line; line--) {
+		// We are sure, that there is a new line, so we can skip the check
+		// for overflows and NULL pointers.
+		p = memchr(p, '\n', size);
+		p++;
 	}
-	if (node && node->char_size > char_count) {
-		rope_node_split(node, rope, char_count);
-		node = rope_node_left(node);
-		rope_node_delete(node, rope);
+	*index = p - value;
+
+	return node;
+}
+
+struct RopeNode *
+rope_find(
+		struct Rope *rope, rope_char_index_t char_index,
+		rope_byte_index_t *byte_index) {
+	int rv = 0;
+	struct RopeNode *node = NULL;
+	struct RopeCursor cursor = {0};
+	rv = rope_cursor_init(&cursor, rope, char_index, NULL, NULL);
+	if (rv < 0) {
+		goto out;
 	}
-	return 0;
+	node = rope_cursor_node(&cursor, byte_index);
+	if (rv < 0) {
+		goto out;
+	}
+out:
+	rope_cursor_cleanup(&cursor);
+	return node;
 }
 
 int
 rope_insert(
 		struct Rope *rope, size_t index, const uint8_t *data,
 		size_t byte_size) {
-	return rope_node_insert(rope->root, rope, index, data, byte_size);
+	int rv = 0;
+	struct RopeCursor cursor = {0};
+	rv = rope_cursor_init(&cursor, rope, index, NULL, NULL);
+	if (rv < 0) {
+		goto out;
+	}
+	rv = rope_cursor_insert(&cursor, data, byte_size);
+	if (rv < 0) {
+		goto out;
+	}
+out:
+	rope_cursor_cleanup(&cursor);
+	return rv;
 }
 
 int
