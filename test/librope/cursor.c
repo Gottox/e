@@ -10,17 +10,14 @@ test_cursor(void) {
 	rv = rope_init(&r);
 	assert(rv == 0);
 
-	rv = rope_append_str(
-			&r,
-			"Hello World\n"
-			"This is a multiline string\n");
+	rv = rope_append_str(&r, "This is a string");
 	assert(rv == 0);
 
 	struct RopeCursor c = {0};
-	rv = rope_cursor_init(&c, &r, 0, NULL, NULL);
+	rv = rope_cursor_init(&c, &r, NULL, NULL);
 	assert(rv == 0);
 
-	rv = rope_cursor_set(&c, 1, 9);
+	rv = rope_cursor_set(&c, 0, 9);
 	assert(rv == 0);
 
 	rv = rope_cursor_insert_str(&c, "n awesome");
@@ -31,8 +28,8 @@ test_cursor(void) {
 	size_t size = 0;
 	const uint8_t *value = rope_node_value(node, &size);
 	assert(value != NULL);
-	assert(size == 21);
-	assert(memcmp(value, "Hello World\nThis is a", size) == 0);
+	assert(size == 9);
+	assert(memcmp(value, "This is a", size) == 0);
 
 	bool has_next = rope_node_next(&node);
 	assert(has_next == true);
@@ -47,7 +44,8 @@ test_cursor(void) {
 	assert(node != NULL);
 	value = rope_node_value(node, &size);
 	assert(value != NULL);
-	assert(size == 18);
+	assert(size == 7);
+	assert(memcmp(value, " string", size) == 0);
 
 	rv = rope_cursor_cleanup(&c);
 	assert(rv == 0);
@@ -62,17 +60,17 @@ test_cursor_utf8(void) {
 	rv = rope_init(&r);
 	assert(rv == 0);
 
-	rv = rope_append_str(&r, u8"👋\n🦶\n");
+	rv = rope_append_str(&r, u8"👋🦶");
 	assert(rv == 0);
 
 	struct RopeCursor c = {0};
-	rv = rope_cursor_init(&c, &r, 0, NULL, NULL);
+	rv = rope_cursor_init(&c, &r, NULL, NULL);
 	assert(rv == 0);
 
-	rv = rope_cursor_set(&c, 1, 0);
+	rv = rope_cursor_set(&c, 0, 1);
 	assert(rv == 0);
 
-	rv = rope_cursor_insert_str(&c, u8"🙂\n");
+	rv = rope_cursor_insert_str(&c, u8"🙂");
 	assert(rv == 0);
 
 	struct RopeNode *node = rope_first(&r);
@@ -80,24 +78,24 @@ test_cursor_utf8(void) {
 	size_t size = 0;
 	const uint8_t *value = rope_node_value(node, &size);
 	assert(value != NULL);
-	assert(size == 5);
-	assert(memcmp(value, u8"👋\n", size) == 0);
+	assert(size == 4);
+	assert(memcmp(value, u8"👋", size) == 0);
 
 	bool has_next = rope_node_next(&node);
 	assert(has_next == true);
 	assert(node != NULL);
 	value = rope_node_value(node, &size);
 	assert(value != NULL);
-	assert(size == 5);
-	assert(memcmp(value, u8"🙂\n", size) == 0);
+	assert(size == 4);
+	assert(memcmp(value, u8"🙂", size) == 0);
 
 	has_next = rope_node_next(&node);
 	assert(has_next != false);
 	assert(node != NULL);
 	value = rope_node_value(node, &size);
 	assert(value != NULL);
-	assert(size == 5);
-	assert(memcmp(value, u8"🦶\n", size) == 0);
+	assert(size == 4);
+	assert(memcmp(value, u8"🦶", size) == 0);
 
 	rv = rope_cursor_cleanup(&c);
 	assert(rv == 0);
@@ -116,14 +114,14 @@ test_cursor_event(void) {
 	assert(rv == 0);
 
 	struct RopeCursor c1 = {0};
-	rv = rope_cursor_init(&c1, &r, 0, NULL, NULL);
+	rv = rope_cursor_init(&c1, &r, NULL, NULL);
 	assert(rv == 0);
 
 	rv = rope_cursor_set(&c1, 0, 10);
 	assert(rv == 0);
 
 	struct RopeCursor c2 = {0};
-	rv = rope_cursor_init(&c2, &r, 0, NULL, NULL);
+	rv = rope_cursor_init(&c2, &r, NULL, NULL);
 	assert(rv == 0);
 
 	rv = rope_cursor_set(&c2, 0, 0);

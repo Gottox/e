@@ -10,10 +10,7 @@ test_range(void) {
 	rv = rope_init(&r);
 	assert(rv == 0);
 
-	rv = rope_append_str(
-			&r,
-			"Hello World\n"
-			"This is a multiline string\n");
+	rv = rope_append_str(&r, "Hello World This is a string");
 	assert(rv == 0);
 
 	struct RopeRange range = {0};

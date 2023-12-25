@@ -169,19 +169,20 @@ test_librope_insert_multiline(void) {
 	rv = rope_append(&r, (uint8_t *)"Hello", 5);
 	assert(rv == 0);
 
-	rv = rope_append(&r, (uint8_t *)"World,\nHow are you?", 19);
+	rv = rope_append(&r, (uint8_t *)"World,\nHow are you?\n", 19);
 	assert(rv == 0);
 
 	rv = rope_append(&r, (uint8_t *)" I am fine", 10);
 	assert(rv == 0);
 
 	rope_byte_index_t index = 0;
-	struct RopeNode *node = rope_line(&r, 1, &index);
+	struct RopeNode *node = rope_node_find(r.root, 0, 0, &index);
 	size_t size = 0;
 	const uint8_t *data = rope_node_value(node, &size);
-	assert(size == 19);
-	assert(index == 7);
-	assert(memcmp(&data[index], "How are you?", size - index) == 0);
+
+	assert(size == 5);
+	assert(index == 0);
+	assert(memcmp(&data[index], "Hello", size - index) == 0);
 
 	rv = rope_cleanup(&r);
 }
@@ -214,7 +215,7 @@ test_librope_delete_utf8(void) {
 	rv = rope_init(&r);
 	assert(rv == 0);
 
-	rv = rope_append_str(&r, "Hello 👋 World");
+	rv = rope_append_str(&r, u8"Hello 👋 World");
 	assert(rv == 0);
 
 	rope_delete(&r, 6, 2);

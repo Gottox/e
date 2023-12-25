@@ -5,17 +5,6 @@
 #include <string.h>
 
 void
-print_tree(struct Rope *rope, char *filename) {
-	FILE *fp = fopen(filename, "w");
-	if (!fp) {
-		fprintf(stderr, "Failed to open file: %s\n", filename);
-		return;
-	}
-	rope_print_tree(rope, fp);
-	fclose(fp);
-}
-
-void
 parse_json_and_print(JSContext *ctx, const char *json_str) {
 	JSValue obj = JS_ParseJSON(ctx, json_str, strlen(json_str), "input");
 	if (JS_IsException(obj)) {
@@ -43,15 +32,12 @@ read_file(struct Rope *r, const char *file_name) {
 	}
 
 	while ((read_size = fread(buffer, 1, sizeof(buffer), fp)) > 0) {
-		print_tree(r, "tree.txt");
 		int rv = rope_append(r, buffer, read_size);
 		if (rv < 0) {
 			fprintf(stderr, "Failed to append to rope\n");
 			goto out;
 		}
 	}
-
-	print_tree(r, "tree.txt");
 
 out:
 	fclose(fp);

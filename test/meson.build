@@ -1,4 +1,9 @@
-e_test = ['librope/librope.c', 'librope/cursor.c', 'librope/range.c']
+e_test = [
+    'librope/librope.c',
+    'librope/cursor.c',
+    'librope/range.c',
+    'librope/node.c',
+]
 
 testlib_dep = subproject('cextras').get_variable('testlib_dep')
 foreach p : e_test

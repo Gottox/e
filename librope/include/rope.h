@@ -3,14 +3,34 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define ROPE_INLINE_LEAF_SIZE (sizeof(void *[3]))
+#define ROPE_INLINE_LEAF_SIZE (sizeof(void *[2]))
 #define ROPE_POOL_CHUNK_SIZE 1024
+#define ROPE_OVERFLOW_ADD(a, b, res) __builtin_add_overflow(a, b, res)
+#define ROPE_OVERFLOW_SUB(a, b, res) __builtin_sub_overflow(a, b, res)
 
 struct Rope;
 
 typedef size_t rope_char_index_t;
 typedef size_t rope_byte_index_t;
 typedef size_t rope_index_t;
+
+/**********************************
+ * rc_string.c
+ */
+
+struct RopeRcString {
+	size_t ref_count;
+	size_t size;
+	uint8_t data[];
+};
+
+struct RopeRcString *rope_rc_string_new(const uint8_t *data, size_t size);
+
+struct RopeRcString *rope_rc_string_retain(struct RopeRcString *str);
+
+const uint8_t *rope_rc_string(struct RopeRcString *rc_str, size_t *size);
+
+void rope_rc_string_release(struct RopeRcString *str);
 
 /**********************************
  * pool.c
@@ -37,7 +57,12 @@ int rope_pool_cleanup(struct RopePool *pool);
 enum RopeNodeType {
 	ROPE_NODE_INLINE_LEAF,
 	ROPE_NODE_LEAF,
-	ROPE_NODE_FORK,
+	ROPE_NODE_BRANCH,
+};
+
+enum RopeNodeDirection {
+	ROPE_NODE_LEFT,
+	ROPE_NODE_RIGHT,
 };
 
 struct RopeNode {
@@ -46,52 +71,73 @@ struct RopeNode {
 	union {
 		uint8_t inline_leaf[ROPE_INLINE_LEAF_SIZE];
 		struct {
-			uint8_t *owned_data;
-			uint8_t *data;
+			struct RopeRcString *owned;
+			const uint8_t *data;
 		} leaf;
 		struct {
-			uint8_t *owned_data;
-			struct RopeNode *left;
-			struct RopeNode *right;
-		} fork;
+			struct RopeNode *children[2];
+			size_t leafs;
+		} branch;
 		struct {
 			struct RopeNode *next;
 		} reuse;
 	} data;
 
 	struct RopeNode *parent;
-	size_t char_size;
 	size_t byte_size;
+	size_t char_size;
 	size_t utf16_size;
 	size_t new_lines;
 };
 
-int rope_node_init(struct RopeNode *node);
+struct RopeNode *rope_node_new(struct RopePool *pool);
 
-struct RopeNode *
-rope_node_find(struct RopeNode *node, rope_char_index_t *index);
+int rope_node_set_value(
+		struct RopeNode *node, const uint8_t *data, size_t byte_size);
 
-struct RopeNode *rope_node_find_line(struct RopeNode *node, rope_index_t *line);
+int rope_node_set_rc_string(
+		struct RopeNode *node, struct RopeRcString *str, size_t byte_size);
 
-size_t
-rope_node_line_number(const struct RopeNode *node, rope_char_index_t index);
+int rope_node_insert_left(
+		struct RopeNode *parent, struct RopeNode *new_node,
+		struct RopePool *pool);
 
-int rope_node_insert(
-		struct RopeNode *node, struct Rope *rope, rope_char_index_t index,
-		const uint8_t *data, size_t byte_size);
+int rope_node_insert_right(
+		struct RopeNode *parent, struct RopeNode *new_node,
+		struct RopePool *pool);
 
-int rope_node_delete(struct RopeNode *node, struct Rope *rope);
+int rope_node_delete(struct RopeNode *node, struct RopePool *pool);
+
+int rope_node_split(
+		struct RopeNode *node, struct RopePool *pool, rope_index_t byte_index,
+		struct RopeNode **left_ptr, struct RopeNode **right_ptr);
+
+int rope_node_merge(
+		struct RopeNode *left, struct RopeNode *right, struct RopePool *pool);
+
+struct RopeNode *rope_node_find(
+		struct RopeNode *node, rope_index_t line, rope_index_t column,
+		rope_byte_index_t *byte_index);
+
+struct RopeNode *rope_node_find_char(
+		struct RopeNode *node, rope_char_index_t char_index,
+		rope_byte_index_t *byte_index);
+
+struct RopeNode *rope_node_first(struct RopeNode *node);
+
+struct RopeNode *rope_node_last(struct RopeNode *node);
+
+struct RopeNode *rope_node_left(struct RopeNode *node);
+
+struct RopeNode *rope_node_right(struct RopeNode *node);
 
 bool rope_node_next(struct RopeNode **node);
 
 bool rope_node_prev(struct RopeNode **node);
 
-int rope_node_split(
-		struct RopeNode *node, struct Rope *rope, rope_char_index_t index);
-
 const uint8_t *rope_node_value(const struct RopeNode *node, size_t *size);
 
-int rope_node_cleanup(struct RopeNode *node);
+int rope_node_free(struct RopeNode *node, struct RopePool *pool);
 
 /**********************************
  * rope.c
@@ -126,20 +172,11 @@ int rope_insert(
 
 int rope_delete(struct Rope *rope, size_t index, size_t char_count);
 
-struct RopeNode *
-rope_line(struct Rope *rope, rope_index_t line, rope_byte_index_t *index);
-
 struct RopeNode *rope_first(struct Rope *rope);
-
-struct RopeNode *rope_node_left(struct RopeNode *base);
-
-struct RopeNode *rope_node_right(struct RopeNode *base);
-
-const uint8_t *rope_node_value(const struct RopeNode *node, size_t *size);
 
 int rope_cleanup(struct Rope *rope);
 
-void rope_print_tree(struct Rope *rope, FILE *out);
+void rope_node_print(struct RopeNode *root, const char *file);
 
 /**********************************
  * cursor.c
@@ -159,8 +196,11 @@ struct RopeCursor {
 };
 
 int rope_cursor_init(
-		struct RopeCursor *cursor, struct Rope *rope, rope_char_index_t index,
+		struct RopeCursor *cursor, struct Rope *rope,
 		rope_cursor_callback_t callback, void *userdata);
+
+int
+rope_cursor_set_char(struct RopeCursor *cursor, rope_char_index_t char_index);
 
 int rope_cursor_set(
 		struct RopeCursor *cursor, rope_index_t line, rope_char_index_t column);

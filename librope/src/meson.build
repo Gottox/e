@@ -3,5 +3,6 @@ librope_sources = files(
     'node.c',
     'pool.c',
     'range.c',
+    'rc_string.c',
     'rope.c',
 )

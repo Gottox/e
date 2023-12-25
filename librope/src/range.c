@@ -27,8 +27,8 @@ rope_range_init(
 	range->offset_change_callback = offset_change_callback;
 	range->damage_callback = damage_callback;
 	range->userdata = userdata;
-	rope_cursor_init(&range->cursors[0], rope, 0, handle_change, range);
-	rope_cursor_init(&range->cursors[1], rope, 0, handle_change, range);
+	rope_cursor_init(&range->cursors[0], rope, handle_change, range);
+	rope_cursor_init(&range->cursors[1], rope, handle_change, range);
 	range->left = &range->cursors[0];
 	range->right = &range->cursors[1];
 

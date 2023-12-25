@@ -53,7 +53,6 @@ rope_pool_get(struct RopePool *pool) {
 	size_t next_index = pool->next_node_index;
 	node = &pool->nodes[next_index / ROPE_POOL_CHUNK_SIZE]
 					   [next_index % ROPE_POOL_CHUNK_SIZE];
-	rope_node_init(node);
 
 	pool->next_node_index++;
 
@@ -63,7 +62,7 @@ rope_pool_get(struct RopePool *pool) {
 int
 rope_pool_recycle(struct RopePool *pool, struct RopeNode *node) {
 	if (node != NULL) {
-		rope_node_cleanup(node);
+		memset(node, 0, sizeof(struct RopeNode));
 		node->data.reuse.next = pool->reuse_pool;
 		pool->reuse_pool = node;
 	}
@@ -82,7 +81,7 @@ rope_pool_cleanup(struct RopePool *pool) {
 			outer_size++;
 		}
 
-		rv |= rope_node_cleanup(node);
+		rv |= rope_node_free(node, pool);
 	}
 
 	for (rope_index_t i = 0; i < outer_size; i++) {
