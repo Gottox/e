@@ -1,0 +1,6 @@
+option(
+    'generate_parsers',
+    type: 'boolean',
+    value: 'false',
+    description: 'Collect and download parsers.',
+)

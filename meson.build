@@ -11,7 +11,7 @@ project(
 
 quickjs_dep = dependency('quickjs')
 cextras_dep = dependency('cextras')
-#tree_sitter = dependency('tree-sitter')
+tree_sitter_dep = dependency('tree-sitter')
 #tree_sitter = subproject('tree-sitter').get_variable('tree_sitter_dep')
 
 dependencies = [
@@ -25,6 +25,8 @@ subdir('src')
 subdir('include')
 
 subdir('librope')
+
+subdir('parsers')
 
 exe = executable(
     'e',

@@ -22,6 +22,7 @@ else
 endif
 
 MESON_FLAGS += -Db_coverage=true
+#MESON_FLAGS += -Dgenerate_parsers=true
 
 SANATIZE = 1
 
