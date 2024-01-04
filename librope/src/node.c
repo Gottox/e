@@ -53,7 +53,7 @@ node_depth(struct RopeNode *node) {
 }
 
 enum RopeNodeDirection
-node_which(struct RopeNode *node) {
+rope_node_which(struct RopeNode *node) {
 	if (*node_left(node->parent) == node) {
 		return ROPE_NODE_LEFT;
 	} else {
@@ -66,7 +66,7 @@ node_sibling(struct RopeNode *node) {
 	if (node->parent == NULL) {
 		return NULL;
 	}
-	if (node_which(node) == ROPE_NODE_LEFT) {
+	if (rope_node_which(node) == ROPE_NODE_LEFT) {
 		return node_right(node->parent);
 	} else {
 		return node_left(node->parent);
@@ -76,7 +76,7 @@ node_sibling(struct RopeNode *node) {
 static struct RopeNode *
 node_neighbour(struct RopeNode *node, enum RopeNodeDirection direction) {
 	while (node->parent != NULL) {
-		if (node_which(node) == !direction) {
+		if (rope_node_which(node) == !direction) {
 			node = *node_sibling(node);
 			break;
 		}
@@ -131,7 +131,7 @@ node_find_insertion_point(
 	}
 
 	for (; node->parent; node = node->parent) {
-		if (node_which(node) != *which) {
+		if (rope_node_which(node) != *which) {
 			break;
 		}
 	}
@@ -420,6 +420,21 @@ rope_node_last(struct RopeNode *node) {
 struct RopeNode *
 rope_node_first(struct RopeNode *node) {
 	return node_outer(node, ROPE_NODE_LEFT);
+}
+
+struct RopeNode *
+rope_node_sibling(struct RopeNode *node) {
+	return *node_sibling(node);
+}
+
+enum RopeNodeType
+rope_node_type(struct RopeNode *node) {
+	return node->type;
+}
+
+struct RopeNode *
+rope_node_parent(struct RopeNode *node) {
+	return node->parent;
 }
 
 bool

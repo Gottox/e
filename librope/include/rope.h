@@ -123,6 +123,12 @@ struct RopeNode *rope_node_find_char(
 		struct RopeNode *node, rope_char_index_t char_index,
 		rope_byte_index_t *byte_index);
 
+enum RopeNodeType rope_node_type(struct RopeNode *node);
+
+enum RopeNodeDirection rope_node_which(struct RopeNode *node);
+
+struct RopeNode *rope_node_sibling(struct RopeNode *node);
+
 struct RopeNode *rope_node_first(struct RopeNode *node);
 
 struct RopeNode *rope_node_last(struct RopeNode *node);
@@ -130,6 +136,8 @@ struct RopeNode *rope_node_last(struct RopeNode *node);
 struct RopeNode *rope_node_left(struct RopeNode *node);
 
 struct RopeNode *rope_node_right(struct RopeNode *node);
+
+struct RopeNode *rope_node_parent(struct RopeNode *node);
 
 bool rope_node_next(struct RopeNode **node);
 
