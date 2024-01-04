@@ -30,3 +30,48 @@ syntax highlighting and basic code analysis.
         - cursor position
         - edit actions
 
+### protocol
+
+newline delimited json protocol with optional trailing payload or inline payload
+
+#### Inline Payload
+```json
+{ "action": "insert", payload: "Hello World!" }
+```
+
+#### Trailing Payload
+
+A trailing payload is indicated by the `payload` field being a number.
+
+```json
+{ "action": "insert", payload: 12 }
+Hello World!
+````
+
+#### Alternative command mode
+
+For convenience there is an alternative syntax for commands, that is easier to 
+type in a terminal. This mode is never sent by *e* but can be used to make
+interaction with the daemon easier.
+
+```text
+command arg1 arg2 arg3
+```
+
+The above is equivalent to:
+
+```json
+{ "action": "command", "payload": ["arg1", "arg2", "arg3"], payload_str: "arg1 arg2 arg3" }
+```
+
+you can also embed json in the payload:
+
+```text
+command arg1 arg2 {"foo": "bar"}
+```
+
+is equivalent to:
+
+```json
+{ "action": "command", "payload": ["arg1", "arg2", {"foo": "bar"}], payload_str: "arg1 arg2 {\"foo\": \"bar\"}" }
+```
