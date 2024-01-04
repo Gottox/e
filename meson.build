@@ -20,13 +20,15 @@ dependencies = [
     #tree_sitter,
 ]
 
-subdir('src')
+subdir('librope')
+
+subdir('libtermpaint')
+
+subdir('parsers')
 
 subdir('include')
 
-subdir('librope')
-
-subdir('parsers')
+subdir('src')
 
 exe = executable(
     'e',
