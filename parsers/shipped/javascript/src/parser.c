@@ -1,4 +1,3 @@
-/* clang-format off */
 #include <tree_sitter/parser.h>
 
 #if defined(__GNUC__) || defined(__clang__)

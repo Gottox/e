@@ -21,8 +21,7 @@ cp_files() {
 		new_dir=${new_path%/*}
 		printf "        '%s',\n" "${new_path#$SUBDIR/}"
 		mkdir -p "$new_dir"
-		echo "/* clang-format off */" > "$new_path"
-		cat "$file" >> "$new_path"
+		cp "$file" "$new_path"
 	done
 }
 mkdir -p $SUBDIR

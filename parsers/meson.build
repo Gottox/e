@@ -2,6 +2,11 @@ subdir('include')
 subdir('src')
 
 e_external_grammars = {
+    'ecmd': {
+        'git': 'https://github.com/Gottox/tree-sitter-ecmd',
+        'rev': 'main',
+        'run_npm': 'root',
+    },
     #'ada': {'git': 'https://github.com/briot/tree-sitter-ada', 'rev': 'master'},
     #'agda': {
     #    'git': 'https://github.com/tree-sitter/tree-sitter-agda',
@@ -21,7 +26,7 @@ e_external_grammars = {
     #},
     'c': {
         'git': 'https://github.com/tree-sitter/tree-sitter-c',
-        'rev': 'master',
+        'rev': 'v0.20.5',
     },
     #'capnp': {
     #    'git': 'https://github.com/amaanq/tree-sitter-capnp',
@@ -155,13 +160,17 @@ e_external_grammars = {
     #    'git': 'https://github.com/tree-sitter/tree-sitter-html',
     #    'rev': 'master',
     #},
+    'ini': {
+        'git': 'https://github.com/justinmk/tree-sitter-ini',
+        'rev': 'v1.1.1',
+    },
     #'java': {
     #    'git': 'https://github.com/tree-sitter/tree-sitter-java',
     #    'rev': 'master',
     #},
     'javascript': {
         'git': 'https://github.com/tree-sitter/tree-sitter-javascript',
-        'rev': 'master',
+        'rev': 'v0.20.1',
     },
     #'jq': {'git': 'https://github.com/flurie/tree-sitter-jq', 'rev': 'main'},
     #'json': {
@@ -217,14 +226,14 @@ e_external_grammars = {
     ##    'git': 'https://github.com/MDeiml/tree-sitter-markdown',
     ##    'rev': 'main',
     ##},
-    'meson': {
-        'git': 'https://github.com/staysail/tree-sitter-meson',
-        'rev': 'main',
-    },
     ##'meson': {
-    ##    'git': 'https://github.com/Decodetalkers/tree-sitter-meson',
+    ##    'git': 'https://github.com/staysail/tree-sitter-meson',
     ##    'rev': 'main',
     ##},
+    'meson': {
+        'git': 'https://github.com/Decodetalkers/tree-sitter-meson',
+        'rev': '1.2',
+    },
     #'nix': {
     #    'git': 'https://github.com/cstrahan/tree-sitter-nix',
     #    'rev': 'master',

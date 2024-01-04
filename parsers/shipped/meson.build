@@ -3,6 +3,14 @@ tree_sitter_parsers_source = [
     files(
         'c/src/parser.c',
     ),
+    # ecmd
+    files(
+        'ecmd/src/parser.c',
+    ),
+    # ini
+    files(
+        'ini/src/parser.c',
+    ),
     # javascript
     files(
         'javascript/src/parser.c',
