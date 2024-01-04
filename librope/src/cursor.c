@@ -137,21 +137,23 @@ rope_cursor_move(struct RopeCursor *cursor, off_t offset) {
 }
 
 static int
-cursor_insert(struct RopeCursor *cursor, struct RopeNode *node) {
+cursor_insert(
+		struct RopeCursor *cursor, rope_index_t index, struct RopeNode *node) {
 	struct Rope *rope = cursor->rope;
 	struct RopeNode *root = rope->root;
 	int rv = 0;
 
 	rope_index_t byte_index = 0;
 	struct RopeNode *insert_node =
-			rope_node_find_char(root, cursor->index, &byte_index);
+			rope_node_find_char(root, index, &byte_index);
 
 	if (byte_index == 0) {
 		rv = rope_node_insert_left(insert_node, node, &rope->pool);
 	} else if (byte_index == insert_node->byte_size) {
 		if (insert_node->byte_size + node->byte_size < ROPE_INLINE_LEAF_SIZE &&
 			insert_node->type == ROPE_NODE_INLINE_LEAF &&
-			node->type == ROPE_NODE_INLINE_LEAF) {
+			node->type == ROPE_NODE_INLINE_LEAF &&
+			insert_node->new_lines == 0) {
 			rv = rope_node_merge(insert_node, node, &rope->pool);
 		} else {
 			rv = rope_node_insert_right(insert_node, node, &rope->pool);
@@ -179,6 +181,8 @@ rope_cursor_insert(
 	struct Rope *rope = cursor->rope;
 
 	const uint8_t *chunk = data;
+	rope_index_t cursor_index = cursor->index;
+	off_t cursor_offset = 0;
 	do {
 		const uint8_t *chunk_end =
 				memchr(chunk, '\n', byte_size - (chunk - data));
@@ -198,16 +202,17 @@ rope_cursor_insert(
 		if (rv < 0) {
 			goto out;
 		}
+		size_t char_size = cx_utf8_clen(chunk, chunk_size);
 
-		rv = cursor_insert(cursor, node);
+		rv = cursor_insert(cursor, cursor_index + cursor_offset, node);
 		if (rv < 0) {
 			goto out;
 		}
 		chunk = chunk_end;
+		cursor_offset += char_size;
 	} while (chunk != NULL && chunk < data + byte_size);
 
-	size_t char_index = cx_utf8_clen(data, byte_size);
-	cursor_damaged(cursor, 0, char_index);
+	cursor_damaged(cursor, cursor->index, cursor_offset);
 out:
 	return rv;
 }

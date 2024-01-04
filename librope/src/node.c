@@ -332,7 +332,7 @@ rope_node_merge(
 	memcpy(&target->data.inline_leaf[target->byte_size],
 		   extra->data.inline_leaf, extra->byte_size);
 	target->byte_size += extra->byte_size;
-	node_update_leaf(target);
+	node_update(target);
 	// TODO: maybe detach extra too?
 	rope_node_free(extra, pool);
 	return 0;
@@ -343,7 +343,6 @@ rope_node_find(
 		struct RopeNode *node, rope_index_t line, rope_index_t column,
 		rope_byte_index_t *byte_index) {
 	// Find Line
-	*byte_index = 0;
 	for (; node;) {
 		if (node->type != ROPE_NODE_BRANCH) {
 			break;
@@ -355,7 +354,6 @@ rope_node_find(
 		} else {
 			struct RopeNode *right = *node_right(node);
 			line -= left->new_lines;
-			*byte_index += left->byte_size;
 			node = right;
 		}
 		if (line == 0) {
@@ -363,25 +361,25 @@ rope_node_find(
 		}
 	}
 
-	// Find column
-	for (; node; node = node->parent) {
-		if (node->type != ROPE_NODE_BRANCH) {
-			break;
-		}
-		struct RopeNode *left = *node_left(node);
-		struct RopeNode *right = *node_right(node);
+	node = rope_node_first(node);
 
-		if (left->char_size >= column) {
-			node = left;
-		} else {
-			column -= left->char_size;
-			*byte_index += left->byte_size;
-			node = right;
-		}
-		if (column == 0) {
+	while (line > 0) {
+		line -= node->new_lines;
+		rope_node_next(&node);
+	}
+
+	// Find column
+	// TODO: This is a naive implementation, we can do better
+
+	for (; node; rope_node_next(&node)) {
+		if (node->char_size > column) {
 			break;
 		}
+		column -= node->char_size;
 	}
+	size_t size;
+	const uint8_t *value = rope_node_value(node, &size);
+	*byte_index = cx_utf8_bidx(value, size, column);
 
 	return node;
 }
