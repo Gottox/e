@@ -1,1 +1,1 @@
-e_src = files('e.c')
+e_src = files('tree/tree-rope.c', 'tree/tree.c', 'e.c')

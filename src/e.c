@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <tree.h>
 
 void
 parse_json_and_print(JSContext *ctx, const char *json_str) {
@@ -73,10 +74,25 @@ main(int argc, char *argv[]) {
 		return 1;
 	}
 
-	// struct RopeNode *node = rope_first(&rope);
-	// for(; node; rope_node_next(&node)) {
-	//	printf("%lu\n", node->byte_size);
-	// }
+	int chr = 0;
+	while (1) {
+		struct RopeNode *node = rope_first(&rope);
+		for (; node; rope_node_next(&node)) {
+			// printf("%lu\n", node->byte_size);
+			size_t size = 0;
+			const uint8_t *value = rope_node_value(node, &size);
+			fwrite(value, 1, size, stdout);
+		}
+		fputs("\n-------\n", stdout);
+		e_tree_view_ascii(&e_tree_visitor_rope_impl, rope.root, stdout);
+		chr = getchar();
+		if (chr == EOF) {
+			break;
+		}
+
+		uint8_t chr2 = (uint8_t)chr;
+		rope_append(&rope, &chr2, 1);
+	}
 
 	// Read a line from stdin using getline
 	// char *input_buffer = NULL;
