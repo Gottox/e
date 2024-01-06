@@ -22,7 +22,7 @@ dependencies = [
 
 subdir('librope')
 
-subdir('libtermpaint')
+subdir('libttyui')
 
 subdir('parsers')
 
@@ -36,9 +36,11 @@ exe = executable(
     include_directories: [
         e_include,
         librope_include,
+        libttyui_include,
     ],
     link_with: [
         librope,
+        libttyui,
     ],
     dependencies: dependencies,
     install: true,
