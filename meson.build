@@ -24,6 +24,8 @@ subdir('librope')
 
 subdir('libttyui')
 
+subdir('libhighlight')
+
 subdir('parsers')
 
 subdir('include')

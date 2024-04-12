@@ -1,147 +1,138 @@
 #include <assert.h>
 #include <rope.h>
 #include <string.h>
-#include <testlib.h>
+#include <utest.h>
 
-static void
-test_node_insert(void) {
+UTEST(reader, test_node_insert) {
 	int rv = 0;
 	struct RopePool p = {0};
 	rv = rope_pool_init(&p);
-	assert(rv == 0);
+	ASSERT_EQ(0, rv);
 
 	struct RopeNode *n = rope_node_new(&p);
-	assert(n != NULL);
+	ASSERT_TRUE(NULL != n);
 	rv = rope_node_set_value(n, (const uint8_t *)"hello", 5);
-	assert(rv == 0);
+	ASSERT_EQ(0, rv);
 
 	struct RopeNode *n2 = rope_node_new(&p);
-	assert(n2 != NULL);
+	ASSERT_TRUE(NULL != n2);
 	rv = rope_node_set_value(n2, (const uint8_t *)"world", 5);
-	assert(rv == 0);
+	ASSERT_EQ(0, rv);
 
 	rv = rope_node_insert_right(n, n2, &p);
 
-	assert(n->type == ROPE_NODE_BRANCH);
+	ASSERT_EQ(ROPE_NODE_BRANCH, (int)n->type);
 
 	struct RopeNode *left = rope_node_left(n);
 	size_t size;
 	const uint8_t *value = rope_node_value(left, &size);
-	assert(size == 5);
-	assert(memcmp(value, "hello", 5) == 0);
+	ASSERT_EQ((size_t)5, size);
+	ASSERT_EQ(0, memcmp(value, "hello", 5));
 
 	struct RopeNode *right = rope_node_right(n);
 	value = rope_node_value(right, &size);
-	assert(size == 5);
-	assert(memcmp(value, "world", 5) == 0);
+	ASSERT_EQ((size_t)5, size);
+	ASSERT_EQ(0, memcmp(value, "world", 5));
 
 	rv = rope_pool_cleanup(&p);
 }
 
-static void
-test_node_split(void) {
+UTEST(reader, test_node_split) {
 	int rv = 0;
 	size_t size = 0;
 	const uint8_t *value = NULL;
 	struct RopePool pool = {0};
 	rv = rope_pool_init(&pool);
-	assert(rv == 0);
+	ASSERT_EQ(0, rv);
 
 	struct RopeNode *node = rope_node_new(&pool);
-	assert(node != NULL);
+	ASSERT_TRUE(NULL != node);
 	rv = rope_node_set_value(node, (const uint8_t *)"helloworld", 10);
-	assert(rv == 0);
+	ASSERT_EQ(0, rv);
 
 	struct RopeNode *left = NULL;
 	struct RopeNode *right = NULL;
 	rv = rope_node_split(node, &pool, 5, &left, &right);
 
-	assert(left != NULL);
+	ASSERT_TRUE(NULL != left);
 	value = rope_node_value(left, &size);
-	assert(size == 5);
-	assert(memcmp(value, "hello", 5) == 0);
-	assert(right != NULL);
+	ASSERT_EQ((size_t)5, size);
+	ASSERT_EQ(0, memcmp(value, "hello", 5));
+	ASSERT_TRUE(NULL != right);
 
 	value = rope_node_value(right, &size);
-	assert(size == 5);
-	assert(memcmp(value, "world", 5) == 0);
+	ASSERT_EQ((size_t)5, size);
+	ASSERT_EQ(0, memcmp(value, "world", 5));
 
 	rv = rope_pool_cleanup(&pool);
 }
 
-static void
-check_balanced(struct RopeNode *node) {
+void
+check_balanced(struct RopeNode *node, int *utest_result) {
 	if (node->type == ROPE_NODE_BRANCH) {
 		struct RopeNode *left = rope_node_left(node);
 		struct RopeNode *right = rope_node_right(node);
 
-		assert(left->data.branch.leafs == right->data.branch.leafs);
-		check_balanced(left);
-		check_balanced(right);
+		ASSERT_EQ(right->data.branch.leafs, left->data.branch.leafs);
+		check_balanced(left, utest_result);
+		check_balanced(right, utest_result);
 	}
 }
 
-static void
-test_node_balanced_tree_right(void) {
+UTEST(reader, test_node_balanced_tree_right) {
 	int rv = 0;
 	struct RopePool pool = {0};
 	rv = rope_pool_init(&pool);
-	assert(rv == 0);
+	ASSERT_EQ(0, rv);
 
 	struct RopeNode *root = rope_node_new(&pool);
-	assert(root != NULL);
+	ASSERT_TRUE(NULL != root);
 
 	for (int i = 0; i < 32; i++) {
 		struct RopeNode *node = rope_node_new(&pool);
-		assert(node != NULL);
+		ASSERT_TRUE(NULL != node);
 		rv = rope_node_set_value(
 				node, (const uint8_t *)"12345678901234567890123456789012",
 				i + 1);
-		assert(rv == 0);
+		ASSERT_EQ(0, rv);
 		rv = rope_node_insert_right(root, node, &pool);
-		assert(rv == 0);
+		ASSERT_EQ(0, rv);
 	}
 
-	assert(root->type == ROPE_NODE_BRANCH);
+	ASSERT_EQ(ROPE_NODE_BRANCH, (int)root->type);
 
-	check_balanced(root);
+	check_balanced(root, utest_result);
 
 	rv = rope_pool_cleanup(&pool);
-	assert(rv == 0);
+	ASSERT_EQ(0, rv);
 }
 
-static void
-test_node_balanced_tree_left(void) {
+UTEST(reader, test_node_balanced_tree_left) {
 	int rv = 0;
 	struct RopePool pool = {0};
 	rv = rope_pool_init(&pool);
-	assert(rv == 0);
+	ASSERT_EQ(0, rv);
 
 	struct RopeNode *root = rope_node_new(&pool);
-	assert(root != NULL);
+	ASSERT_TRUE(NULL != root);
 
 	for (int i = 0; i < 32; i++) {
 		struct RopeNode *node = rope_node_new(&pool);
-		assert(node != NULL);
+		ASSERT_TRUE(NULL != node);
 		rv = rope_node_set_value(
 				node, (const uint8_t *)"12345678901234567890123456789012",
 				i + 1);
-		assert(rv == 0);
+		ASSERT_EQ(0, rv);
 		rv = rope_node_insert_right(root, node, &pool);
-		assert(rv == 0);
+		ASSERT_EQ(0, rv);
 	}
 
-	assert(root->type == ROPE_NODE_BRANCH);
+	ASSERT_EQ(ROPE_NODE_BRANCH, (int)root->type);
 
-	check_balanced(root);
+	check_balanced(root, utest_result);
 
 	rv = rope_pool_cleanup(&pool);
-	assert(rv == 0);
+	ASSERT_EQ(0, rv);
 }
 
-DECLARE_TESTS
-TEST(test_node_insert)
-TEST(test_node_split)
-TEST(test_node_balanced_tree_left)
-TEST(test_node_balanced_tree_right)
-END_TESTS
+UTEST_MAIN()

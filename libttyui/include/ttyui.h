@@ -1,5 +1,7 @@
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
 #include <sys/select.h>
 #include <termios.h>
 
@@ -30,7 +32,6 @@ enum TtyUiEventType {
 	TTYUI_EVENT_MOUSE,
 	TTYUI_EVENT_FOCUS,
 	TTYUI_EVENT_RESIZE,
-	TTYUI_EVENT_EOF,
 };
 
 enum TtyUiModifier {
@@ -44,7 +45,7 @@ struct TtyUiEvent {
 	enum TtyUiEventType type;
 	union {
 		struct {
-			// 8 bytes so we can store UTF-8.
+			// 8 bytes so we can store UTF-8 sequences.
 			char seq[8];
 			size_t len;
 			enum TtyUiModifier modifier;
@@ -64,12 +65,31 @@ struct TtyUiEvent {
 	};
 };
 
+struct TtyUiState {
+	unsigned int columns;
+	unsigned int rows;
+};
+
+struct TtyUiDrawOptions {
+	uint32_t fg_color;
+	uint32_t bg_color;
+	bool bold;
+	bool underline;
+	bool strikethrough;
+	bool overline;
+	bool italic;
+	bool inverse;
+	bool strike;
+};
+
 struct TtyUi {
 	int fd;
-	char input_buffer[128];
-	size_t input_buffer_len;
+	FILE *fd_file;
 	struct termios old_termios;
+	void (*old_sigwinch)(int);
 	ttyui_event_handler handler;
+	unsigned int columns;
+	unsigned int rows;
 	void *user_data;
 };
 
@@ -87,3 +107,15 @@ int ttyui_cleanup(struct TtyUi *ttyui);
  */
 
 int ttyui_process(struct TtyUi *ttyui);
+
+/***************************************
+ * draw.c
+ */
+
+int ttyui_draw(
+		struct TtyUi *ttyui, const char *str, size_t len,
+		const struct TtyUiDrawOptions *options, struct TtyUiState *state);
+
+int ttyui_draw_eol(
+		struct TtyUi *ttyui, const struct TtyUiDrawOptions *options,
+		struct TtyUiState *state);

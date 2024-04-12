@@ -1,1 +1,9 @@
-e_src = files('tree/tree-rope.c', 'tree/tree.c', 'e.c')
+e_src = files(
+    'expose/expose.c',
+    'tree/tree-rope.c',
+    'tree/tree.c',
+    'client.c',
+    'daemon.c',
+    'document.c',
+    'e.c',
+)

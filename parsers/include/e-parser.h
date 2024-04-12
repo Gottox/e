@@ -1,5 +1,5 @@
 #include <e-parser-table.h>
-#include <tree_sitter/parser.h>
+#include <tree_sitter/api.h>
 
 #ifndef E_PARSER_H
 #	define E_PARSER_H

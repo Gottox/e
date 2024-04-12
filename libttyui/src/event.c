@@ -6,6 +6,7 @@
 #include <unistd.h>
 
 #define CSI_PARAMETER_COUNT 10
+#define INPUT_BUFFER_SIZE 128
 
 struct Csi {
 	int parameter[CSI_PARAMETER_COUNT];
@@ -14,21 +15,21 @@ struct Csi {
 };
 
 static int
-report_simple_key(struct TtyUi *ui) {
+report_simple_key(
+		struct TtyUi *ui, char *input_buffer, size_t *input_buffer_len) {
 	struct TtyUiEvent event = {0};
-	ssize_t seq_len = cx_utf8_bidx(
-			(uint8_t *)ui->input_buffer, sizeof(ui->input_buffer), 1);
+	ssize_t seq_len =
+			cx_utf8_bidx((uint8_t *)input_buffer, INPUT_BUFFER_SIZE, 1);
 	if (seq_len < 0) {
 		// invalid utf8 sequence, treat as a single byte
 		seq_len = 1;
 	}
 
 	event.type = TTYUI_EVENT_KEY;
-	memcpy(event.key.seq, ui->input_buffer, seq_len);
+	memcpy(event.key.seq, input_buffer, seq_len);
 	event.key.len = seq_len;
-	memmove(ui->input_buffer, &ui->input_buffer[seq_len],
-			ui->input_buffer_len - seq_len);
-	ui->input_buffer_len -= seq_len;
+	memmove(input_buffer, &input_buffer[seq_len], *input_buffer_len - seq_len);
+	*input_buffer_len -= seq_len;
 
 	return ui->handler(ui, &event, ui->user_data);
 }
@@ -80,10 +81,10 @@ parse_csi(struct Csi *csi, const char *str, const size_t size) {
 }
 
 static int
-report_csi(struct TtyUi *ui) {
+report_csi(struct TtyUi *ui, char *input_buffer, size_t *input_buffer_len) {
 	struct Csi csi = {0};
 	struct TtyUiEvent event = {0};
-	int rv = parse_csi(&csi, ui->input_buffer, ui->input_buffer_len);
+	int rv = parse_csi(&csi, input_buffer, *input_buffer_len);
 	if (rv < 0) {
 		return rv;
 	}
@@ -136,9 +137,9 @@ report_csi(struct TtyUi *ui) {
 		break;
 	}
 
-	memmove(ui->input_buffer, &ui->input_buffer[csi_len + 1],
-			ui->input_buffer_len - csi_len - 1);
-	ui->input_buffer_len -= csi_len + 1;
+	memmove(input_buffer, &input_buffer[csi_len + 1],
+			*input_buffer_len - csi_len - 1);
+	*input_buffer_len -= csi_len + 1;
 
 	return ui->handler(ui, &event, ui->user_data);
 }
@@ -147,29 +148,22 @@ int
 ttyui_process(struct TtyUi *ui) {
 	int rv = 0;
 
-	// return buffered input. It will always be handled as a key event.
-	if (ui->input_buffer_len != 0) {
-		rv = report_simple_key(ui);
-		goto out;
-	}
+	char input_buffer[INPUT_BUFFER_SIZE] = {0};
+	size_t input_buffer_len = 0;
 
-	rv = read(ui->fd, &ui->input_buffer, sizeof(ui->input_buffer));
+	rv = read(ui->fd, &input_buffer, INPUT_BUFFER_SIZE);
 	if (rv < 0) {
 		rv = -errno;
 		goto out;
 	}
-	ui->input_buffer_len = rv;
+	input_buffer_len = rv;
 	rv = 0;
 
-	if (ui->input_buffer_len == 0) {
-		goto out;
-	}
-
-	while (ui->input_buffer_len > 0) {
-		rv = report_csi(ui);
+	while (input_buffer_len > 0) {
+		rv = report_csi(ui, input_buffer, &input_buffer_len);
 
 		if (rv < 0) {
-			rv = report_simple_key(ui);
+			rv = report_simple_key(ui, input_buffer, &input_buffer_len);
 			goto out;
 		}
 	}

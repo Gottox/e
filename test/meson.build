@@ -3,18 +3,19 @@ e_test = [
     'librope/cursor.c',
     'librope/range.c',
     'librope/node.c',
+    'libhighlight/highlight.c',
 ]
 
-testlib_dep = subproject('cextras').get_variable('testlib_dep')
+utest_dep = dependency('utest')
 foreach p : e_test
     sources = [p]
     t = executable(
         p.underscorify(),
         sources,
         install: false,
-        link_with: [librope],
-        dependencies: [testlib_dep],
-        include_directories: [librope_include],
+        link_with: [librope, libhighlight],
+        dependencies: [utest_dep],
+        include_directories: [librope_include, libhighlight_include],
     )
     test(p, t)
 endforeach

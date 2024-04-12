@@ -1,5 +1,6 @@
 #include <rope.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 
 struct RopeRcString *

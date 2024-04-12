@@ -1,147 +1,139 @@
-#include <assert.h>
 #include <rope.h>
 #include <string.h>
-#include <testlib.h>
+#include <utest.h>
 
-static void
-test_cursor(void) {
+UTEST(cursor, basic) {
 	int rv = 0;
 	struct Rope r = {0};
 	rv = rope_init(&r);
-	assert(rv == 0);
+	ASSERT_EQ(0, rv);
 
 	rv = rope_append_str(&r, "This is a string");
-	assert(rv == 0);
+	ASSERT_EQ(0, rv);
 
 	struct RopeCursor c = {0};
 	rv = rope_cursor_init(&c, &r, NULL, NULL);
-	assert(rv == 0);
+	ASSERT_EQ(0, rv);
 
 	rv = rope_cursor_set(&c, 0, 9);
-	assert(rv == 0);
+	ASSERT_EQ(0, rv);
 
 	rv = rope_cursor_insert_str(&c, "n awesome");
-	assert(rv == 0);
+	ASSERT_EQ(0, rv);
 
 	struct RopeNode *node = rope_first(&r);
-	assert(node != NULL);
+	ASSERT_TRUE(NULL != node);
 	size_t size = 0;
 	const uint8_t *value = rope_node_value(node, &size);
-	assert(value != NULL);
-	assert(size == 9);
-	assert(memcmp(value, "This is a", size) == 0);
+	ASSERT_TRUE(NULL != value);
+	ASSERT_EQ((size_t)9, size);
+	ASSERT_EQ(0, memcmp(value, "This is a", size));
 
 	bool has_next = rope_node_next(&node);
-	assert(has_next == true);
-	assert(node != NULL);
+	ASSERT_EQ(true, has_next);
+	ASSERT_TRUE(NULL != node);
 	value = rope_node_value(node, &size);
-	assert(value != NULL);
-	assert(size == 9);
-	assert(memcmp(value, "n awesome", size) == 0);
+	ASSERT_TRUE(NULL != value);
+	ASSERT_EQ((size_t)9, size);
+	ASSERT_EQ(0, memcmp(value, "n awesome", size));
 
 	has_next = rope_node_next(&node);
-	assert(has_next != false);
-	assert(node != NULL);
+	ASSERT_NE(false, has_next);
+	ASSERT_TRUE(NULL != node);
 	value = rope_node_value(node, &size);
-	assert(value != NULL);
-	assert(size == 7);
-	assert(memcmp(value, " string", size) == 0);
+	ASSERT_TRUE(NULL != value);
+	ASSERT_EQ((size_t)7, size);
+	ASSERT_EQ(0, memcmp(value, " string", size));
 
 	rv = rope_cursor_cleanup(&c);
-	assert(rv == 0);
+	ASSERT_EQ(0, rv);
 	rv = rope_cleanup(&r);
-	assert(rv == 0);
+	ASSERT_EQ(0, rv);
 }
 
-static void
-test_cursor_utf8(void) {
+UTEST(cursor, utf8) {
 	int rv = 0;
 	struct Rope r = {0};
 	rv = rope_init(&r);
-	assert(rv == 0);
+	ASSERT_EQ(0, rv);
 
 	rv = rope_append_str(&r, u8"👋🦶");
-	assert(rv == 0);
+	ASSERT_EQ(0, rv);
 
 	struct RopeCursor c = {0};
 	rv = rope_cursor_init(&c, &r, NULL, NULL);
-	assert(rv == 0);
+	ASSERT_EQ(0, rv);
 
 	rv = rope_cursor_set(&c, 0, 1);
-	assert(rv == 0);
+	ASSERT_EQ(0, rv);
 
 	rv = rope_cursor_insert_str(&c, u8"🙂");
-	assert(rv == 0);
+	ASSERT_EQ(0, rv);
 
 	struct RopeNode *node = rope_first(&r);
-	assert(node != NULL);
+	ASSERT_TRUE(NULL != node);
 	size_t size = 0;
 	const uint8_t *value = rope_node_value(node, &size);
-	assert(value != NULL);
-	assert(size == 4);
-	assert(memcmp(value, u8"👋", size) == 0);
+	ASSERT_TRUE(NULL != value);
+	ASSERT_EQ((size_t)4, size);
+	ASSERT_EQ(0, memcmp(value, u8"👋", size));
 
 	bool has_next = rope_node_next(&node);
-	assert(has_next == true);
-	assert(node != NULL);
+	ASSERT_EQ(true, has_next);
+	ASSERT_TRUE(NULL != node);
 	value = rope_node_value(node, &size);
-	assert(value != NULL);
-	assert(size == 4);
-	assert(memcmp(value, u8"🙂", size) == 0);
+	ASSERT_TRUE(NULL != value);
+	ASSERT_EQ((size_t)4, size);
+	ASSERT_EQ(0, memcmp(value, u8"🙂", size));
 
 	has_next = rope_node_next(&node);
-	assert(has_next != false);
-	assert(node != NULL);
+	ASSERT_NE(false, has_next);
+	ASSERT_TRUE(NULL != node);
 	value = rope_node_value(node, &size);
-	assert(value != NULL);
-	assert(size == 4);
-	assert(memcmp(value, u8"🦶", size) == 0);
+	ASSERT_TRUE(NULL != value);
+	ASSERT_EQ((size_t)4, size);
+	ASSERT_EQ(0, memcmp(value, u8"🦶", size));
 
 	rv = rope_cursor_cleanup(&c);
-	assert(rv == 0);
+	ASSERT_EQ(0, rv);
 	rv = rope_cleanup(&r);
-	assert(rv == 0);
+	ASSERT_EQ(0, rv);
 }
 
-static void
-test_cursor_event(void) {
+UTEST(cursor, event) {
 	int rv = 0;
 	struct Rope r = {0};
 	rv = rope_init(&r);
-	assert(rv == 0);
+	ASSERT_EQ(0, rv);
 
 	rv = rope_append_str(&r, u8"This is a test");
-	assert(rv == 0);
+	ASSERT_EQ(0, rv);
 
 	struct RopeCursor c1 = {0};
 	rv = rope_cursor_init(&c1, &r, NULL, NULL);
-	assert(rv == 0);
+	ASSERT_EQ(0, rv);
 
 	rv = rope_cursor_set(&c1, 0, 10);
-	assert(rv == 0);
+	ASSERT_EQ(0, rv);
 
 	struct RopeCursor c2 = {0};
 	rv = rope_cursor_init(&c2, &r, NULL, NULL);
-	assert(rv == 0);
+	ASSERT_EQ(0, rv);
 
 	rv = rope_cursor_set(&c2, 0, 0);
-	assert(rv == 0);
+	ASSERT_EQ(0, rv);
 
 	rv = rope_cursor_delete(&c2, 7);
-	assert(rv == 0);
+	ASSERT_EQ(0, rv);
 
-	assert(c1.index == 3);
+	ASSERT_EQ((size_t)3, c1.index);
 
 	rv = rope_cursor_cleanup(&c1);
-	assert(rv == 0);
+	ASSERT_EQ(0, rv);
 	rv = rope_cursor_cleanup(&c2);
-	assert(rv == 0);
+	ASSERT_EQ(0, rv);
 	rv = rope_cleanup(&r);
-	assert(rv == 0);
+	ASSERT_EQ(0, rv);
 }
 
-DECLARE_TESTS
-TEST(test_cursor)
-TEST(test_cursor_utf8)
-TEST(test_cursor_event)
-END_TESTS
+UTEST_MAIN()

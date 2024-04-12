@@ -498,7 +498,8 @@ tree_sitter_parsers = static_library(
     tree_sitter_parsers_source,
     dependencies: tree_sitter_dep,
     c_args: [
-        '-Wno-error', # for 'null character(s) preserved in literal'
+        # for 'null character(s) preserved in literal'. ref https://github.com/tree-sitter/tree-sitter-go/issues/132
+        '-Wno-error',
         '-Wno-parentheses',
         '-Wno-pedantic',
         '-Wno-empty-body',

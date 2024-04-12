@@ -1,28 +1,24 @@
-#include <assert.h>
 #include <rope.h>
 #include <string.h>
-#include <testlib.h>
+#include <utest.h>
 
-static void
-test_range(void) {
+UTEST(reader, test_range) {
 	int rv = 0;
 	struct Rope r = {0};
 	rv = rope_init(&r);
-	assert(rv == 0);
+	ASSERT_EQ(0, rv);
 
 	rv = rope_append_str(&r, "Hello World This is a string");
-	assert(rv == 0);
+	ASSERT_EQ(0, rv);
 
 	struct RopeRange range = {0};
 	rv = rope_range_init(&range, &r, NULL, NULL, NULL);
-	assert(rv == 0);
+	ASSERT_EQ(0, rv);
 
 	rv = rope_range_cleanup(&range);
-	assert(rv == 0);
+	ASSERT_EQ(0, rv);
 	rv = rope_cleanup(&r);
-	assert(rv == 0);
+	ASSERT_EQ(0, rv);
 }
 
-DECLARE_TESTS
-TEST(test_range)
-END_TESTS
+UTEST_MAIN()

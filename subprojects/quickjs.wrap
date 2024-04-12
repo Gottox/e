@@ -1,9 +1,9 @@
 [wrap-file]
-directory = quickjs-c81f05c9859cea5f83a80057416a0c7affe9b876
+directory = quickjs-078b2a00fe7347775eed6273f972cd3a8aff7bdd
 
-source_url = https://github.com/frida/quickjs/archive/c81f05c9859cea5f83a80057416a0c7affe9b876.tar.gz
-source_filename = quickjs-c81f05c9859cea5f83a80057416a0c7affe9b876.tar.gz
-source_hash = b52eea1ee5a175cce82bbda4daff9d89502653018bb61ed24c16549ba4de3cff
+source_url = https://github.com/frida/quickjs/archive/078b2a00fe7347775eed6273f972cd3a8aff7bdd.tar.gz
+source_filename = quickjs-078b2a00fe7347775eed6273f972cd3a8aff7bdd.tar.gz
+source_hash = 77d090fd52fcf4a7ce8d5de795295ffeb8b90536ef4b2181238058f0f004f12c
 
 [provide]
 quickjs=quickjs_dep

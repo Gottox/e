@@ -1,12 +1,14 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
 
-#define ROPE_INLINE_LEAF_SIZE (sizeof(void *[2]))
-#define ROPE_POOL_CHUNK_SIZE 1024
-#define ROPE_OVERFLOW_ADD(a, b, res) __builtin_add_overflow(a, b, res)
-#define ROPE_OVERFLOW_SUB(a, b, res) __builtin_sub_overflow(a, b, res)
+#ifndef ROPE_H
+#	define ROPE_H
+
+#	define ROPE_INLINE_LEAF_SIZE (sizeof(void *[2]))
+#	define ROPE_POOL_CHUNK_SIZE 1024
+#	define ROPE_OVERFLOW_ADD(a, b, res) __builtin_add_overflow(a, b, res)
+#	define ROPE_OVERFLOW_SUB(a, b, res) __builtin_sub_overflow(a, b, res)
 
 struct Rope;
 
@@ -283,3 +285,5 @@ bool rope_iterator_next(
 		struct RopeIterator *iter, const uint8_t **value, size_t *size);
 
 int rope_iterator_cleanup(struct RopeIterator *iter);
+
+#endif

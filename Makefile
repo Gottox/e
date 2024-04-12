@@ -63,5 +63,8 @@ $(BUILD_DIR): meson.build Makefile
 
 .PHONY: clean
 
+run: test
+	$(BUILD_DIR)/e
+
 clean:
 	rm -rf "$(BUILD_DIR)"

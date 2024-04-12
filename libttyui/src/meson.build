@@ -1,1 +1,1 @@
-libttyui_sources = files('event.c', 'ttyui.c')
+libttyui_sources = files('draw.c', 'event.c', 'ttyui.c')
