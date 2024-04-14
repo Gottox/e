@@ -23,8 +23,8 @@ syntax highlighting and basic code analysis.
 ### Concepts
 
 - e-editor
-  - **0-n** buffers representing opened files
-    - **0-n** buffer editors
+  - **0-n** documents representing opened files
+    - **0-n** documents editors
       - undo/redo stack
       - **0-n** cursors
         - cursor position
@@ -36,7 +36,7 @@ newline delimited json protocol with optional trailing payload or inline payload
 
 #### Inline Payload
 ```json
-{ "action": "insert", payload: "Hello World!" }
+{ "action": "insert", "payload": "Hello World!" }
 ```
 
 #### Trailing Payload
@@ -44,7 +44,7 @@ newline delimited json protocol with optional trailing payload or inline payload
 A trailing payload is indicated by the `payload` field being a number.
 
 ```json
-{ "action": "insert", payload: 12 }
+{ "action": "insert", "payload": 12 }
 Hello World!
 ````
 
@@ -61,7 +61,7 @@ command arg1 arg2 arg3
 The above is equivalent to:
 
 ```json
-{ "action": "command", "payload": ["arg1", "arg2", "arg3"], payload_str: "arg1 arg2 arg3" }
+{ "action": "command", "payload": ["arg1", "arg2", "arg3"], "payload_str": "arg1 arg2 arg3" }
 ```
 
 you can also embed json in the payload:
@@ -73,5 +73,5 @@ command arg1 arg2 {"foo": "bar"}
 is equivalent to:
 
 ```json
-{ "action": "command", "payload": ["arg1", "arg2", {"foo": "bar"}], payload_str: "arg1 arg2 {\"foo\": \"bar\"}" }
+{ "action": "command", "payload": ["arg1", "arg2", {"foo": "bar"}], "payload_str": "arg1 arg2 {\"foo\": \"bar\"}" }
 ```
