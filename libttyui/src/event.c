@@ -45,7 +45,7 @@ parse_csi(struct Csi *csi, const char *str, const size_t size) {
 		return -1;
 	}
 
-	memset(csi, 0, sizeof(*csi));
+	memset(csi, 0, sizeof(struct Csi));
 
 	size_t index = 2;
 	switch (str[index]) {

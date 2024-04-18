@@ -91,6 +91,7 @@ struct TtyUi {
 	unsigned int columns;
 	unsigned int rows;
 	void *user_data;
+	bool true_color;
 };
 
 /***************************************

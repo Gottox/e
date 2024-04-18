@@ -1,8 +1,6 @@
-#include <cextras/unicode.h>
 #include <errno.h>
 #include <signal.h>
-#include <stdbool.h>
-#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
 #include <ttyui.h>
@@ -76,6 +74,13 @@ init_terminal(struct TtyUi *ui) {
 	if (rv < 0) {
 		rv = -errno;
 		goto out;
+	}
+
+	char *true_color = getenv("COLORTERM");
+	if (true_color != NULL && strcmp(true_color, "truecolor") == 0) {
+		ui->true_color = true;
+	} else {
+		ui->true_color = false;
 	}
 
 	rv = update_size(ui);
