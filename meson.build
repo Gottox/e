@@ -6,6 +6,8 @@ project(
         'warning_level=3',
         'quickjs:warning_level=2',
         'quickjs:werror=false',
+        'quickjs:libc=false',
+        'quickjs:default_library=static',
     ],
 )
 
