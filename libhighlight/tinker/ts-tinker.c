@@ -1,130 +1,217 @@
-#include <assert.h>
+#include <getopt.h>
+#include <highlight.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include <tree_sitter/api.h>
 
-extern const TSLanguage *tree_sitter_c(void);
+const TSLanguage *tree_sitter_c(void);
+
+static const char *const capture_names[] = {
+		"attribute",
+		"boolean",
+		"carriage-return",
+		"comment",
+		"comment.documentation",
+		"constant",
+		"constant.builtin",
+		"constructor",
+		"constructor.builtin",
+		"embedded",
+		"error",
+		"escape",
+		"function",
+		"function.builtin",
+		"keyword",
+		"markup",
+		"markup.bold",
+		"markup.heading",
+		"markup.italic",
+		"markup.link",
+		"markup.link.url",
+		"markup.list",
+		"markup.list.checked",
+		"markup.list.numbered",
+		"markup.list.unchecked",
+		"markup.list.unnumbered",
+		"markup.quote",
+		"markup.raw",
+		"markup.raw.block",
+		"markup.raw.inline",
+		"markup.strikethrough",
+		"module",
+		"number",
+		"operator",
+		"property",
+		"property.builtin",
+		"punctuation",
+		"punctuation.bracket",
+		"punctuation.delimiter",
+		"punctuation.special",
+		"string",
+		"string.escape",
+		"string.regexp",
+		"string.special",
+		"string.special.symbol",
+		"tag",
+		"type",
+		"type.builtin",
+		"variable",
+		"variable.builtin",
+		"variable.member",
+		"variable.parameter",
+};
+static const int capture_names_count =
+		sizeof(capture_names) / sizeof(capture_names[0]);
+
+int
+usage(char *arg0) {
+	printf("Usage: %s <query> <src>\n", arg0);
+	return 1;
+}
 
 static char *
-read_content(const char *path) {
-	bool success = false;
-	char *content = NULL;
-	size_t size = 0;
-	FILE *file = fopen(path, "r");
-	if (!file) {
-		fprintf(stderr, "Failed to open file: %s\n", path);
+get_content(const char *path) {
+	FILE *f = fopen(path, "r");
+	if (!f) {
+		fprintf(stderr, "Failed to open file %s\n", path);
 		return NULL;
 	}
 
-	fseek(file, 0, SEEK_END);
-	size = ftell(file);
-	rewind(file);
+	fseek(f, 0, SEEK_END);
+	long size = ftell(f);
+	fseek(f, 0, SEEK_SET);
 
-	content = (char *)malloc(size + 1);
+	char *content = malloc(size + 1);
 	if (!content) {
-		fprintf(stderr, "Failed to allocate memory for file: %s\n", path);
-		goto out;
+		fprintf(stderr, "Failed to allocate memory\n");
+		fclose(f);
+		return NULL;
 	}
 
-	if (fread(content, 1, size, file) != size) {
-		fprintf(stderr, "Failed to read file: %s\n", path);
-		goto out;
+	long read = fread(content, 1, size, f);
+	if (read != size) {
+		fprintf(stderr, "Failed to read file %s\n", path);
+		fclose(f);
+		free(content);
+		return NULL;
 	}
 
 	content[size] = '\0';
-
-	success = true;
-out:
-	if (file) {
-		fclose(file);
-	}
-	if (!success) {
-		free(content);
-		content = NULL;
-	}
+	fclose(f);
 	return content;
+}
+
+static char *source = NULL;
+
+static void
+highlight_cb(const struct HighlightEvent *event) {
+	switch (event->type) {
+	case HIGHLIGHT_START:
+		printf("\033[38;5;%um", event->start.capture_id);
+		break;
+	case HIGHLIGHT_TEXT:
+		fwrite(&source[event->text.start], 1,
+			   event->text.end - event->text.start, stdout);
+		break;
+	case HIGHLIGHT_END:
+		fputs("\033[0m", stdout);
+		break;
+	}
+}
+
+static void
+dump_cb(const struct HighlightEvent *event) {
+	switch (event->type) {
+	case HIGHLIGHT_START:
+		printf("start: %s\n", capture_names[event->start.capture_id]);
+		break;
+	case HIGHLIGHT_TEXT:
+		printf("text: %i - %i\n", event->text.start, event->text.end);
+		break;
+	case HIGHLIGHT_END:
+		printf("end\n");
+		break;
+	}
 }
 
 int
 main(int argc, char *argv[]) {
-	assert(argc == 3);
-	const char *source_path = argv[1];
-	const char *query_path = argv[2];
-
 	const TSLanguage *lang = tree_sitter_c();
-	TSParser *parser = ts_parser_new();
-	if (!parser) {
-		fprintf(stderr, "Failed to create parser\n");
+	struct Highlighter hl = {0};
+	struct HighlightIterator iter = {0};
+	TSQuery *query = NULL;
+	TSParser *parser = NULL;
+	TSTree *tree = NULL;
+	int opt;
+	void (*cb)(const struct HighlightEvent *) = highlight_cb;
+
+	while ((opt = getopt(argc, argv, "hd")) != -1) {
+		switch (opt) {
+		case 'd':
+			cb = dump_cb;
+			break;
+		default:
+			return usage(argv[0]);
+		}
+	}
+
+	char *arg0 = argv[0];
+	argc -= optind;
+	argv += optind;
+
+	if (argc != 2) {
+		return usage(arg0);
+	}
+
+	char *query_src = get_content(argv[0]);
+	if (!query_src) {
+		fprintf(stderr, "Failed to read query\n");
 		return 1;
+	}
+	size_t query_len = strlen(query_src);
+
+	source = get_content(argv[1]);
+	if (!source) {
+		fprintf(stderr, "Failed to read source\n");
+		free(query_src);
+		return 1;
+	}
+	size_t source_len = strlen(source);
+
+	uint32_t error_offset;
+	TSQueryError error;
+	query = ts_query_new(lang, query_src, query_len, &error_offset, &error);
+	if (!query) {
+		fprintf(stderr, "Failed to parse query\n");
+		goto out;
+	}
+
+	parser = ts_parser_new();
+	if (!parser) {
+		fprintf(stderr, "Failed to initialize parser\n");
+		goto out;
 	}
 	ts_parser_set_language(parser, lang);
 
-	TSTree *tree = NULL;
-	char *source = read_content(source_path);
-	if (!source) {
+	tree = ts_parser_parse_string(parser, NULL, source, source_len);
+
+	int rv = highlighter_init(&hl, query, capture_names, capture_names_count);
+	if (rv < 0) {
+		fprintf(stderr, "Failed to initialize highlighter\n");
 		goto out;
 	}
 
-	tree = ts_parser_parse_string(parser, NULL, source, strlen(source));
+	rv = highlight_iterator_init(&iter, &hl, tree);
 
-	if (!tree) {
-		fprintf(stderr, "Failed to parse content\n");
-		goto out;
+	struct HighlightEvent event;
+	while (highlight_iterator_next(&iter, &event, &rv)) {
+		cb(&event);
 	}
-
-	TSNode root = ts_tree_root_node(tree);
-
-	char *query = read_content(query_path);
-
-	if (!query) {
-		fprintf(stderr, "Failed to read query\n");
-		goto out;
-	}
-
-	uint32_t error_offset;
-	TSQueryError error_type;
-
-	TSQuery *ts_query = ts_query_new(
-			lang, query, strlen(query), &error_offset, &error_type);
-	if (!ts_query) {
-		fprintf(stderr, "Failed to parse query %i\n", error_offset);
-		goto out;
-	}
-
-	TSQueryCursor *cursor = ts_query_cursor_new();
-	if (!cursor) {
-		fprintf(stderr, "Failed to create query cursor\n");
-		goto out;
-	}
-
-	ts_query_cursor_exec(cursor, ts_query, root);
-
-	TSQueryMatch match;
-	while (ts_query_cursor_next_match(cursor, &match)) {
-		printf("Match: pattern_index=%u, captures.size=%u\n",
-			   match.pattern_index, match.capture_count);
-		for (uint32_t i = 0; i < match.capture_count; i++) {
-			TSQueryCapture capture = match.captures[i];
-			TSNode node = capture.node;
-			char *node_string = ts_node_string(node);
-			printf("  capture_index=%u, node=%s\n", capture.index, node_string);
-			free(node_string);
-			uint32_t start_index = ts_node_start_byte(node);
-			uint32_t end_index = ts_node_end_byte(node);
-			fwrite(source + start_index, 1, end_index - start_index, stdout);
-			puts("");
-		}
-		puts("-----------------------------");
-	}
-
-	ts_query_cursor_delete(cursor);
-	ts_parser_delete(parser);
-	ts_query_delete(ts_query);
-	ts_tree_delete(tree);
-	free(query);
-	free(source);
-
 out:
+	highlight_iterator_cleanup(&iter);
+	highlighter_cleanup(&hl);
+	ts_tree_delete(tree);
+	ts_parser_delete(parser);
+	free(query_src);
+	free(source);
 	return 0;
 }

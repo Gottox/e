@@ -4,23 +4,21 @@
 typedef size_t highlight_index_t;
 
 struct Highlighter {
-	const TSLanguage *language;
 	TSQuery *query;
-	const char *const *captures;
-	size_t captures_len;
+	uint32_t *capture_lookup_table;
 };
 
 enum HighlightEventType {
-	HIGHLIGHT_START,
-	HIGHLIGHT_TEXT,
 	HIGHLIGHT_END,
+	HIGHLIGHT_TEXT,
+	HIGHLIGHT_START,
 };
 
 struct HighlightEvent {
 	enum HighlightEventType type;
 	union {
 		struct {
-			const char *capture;
+			uint32_t capture_id;
 		} start;
 		struct {
 			uint32_t start;
@@ -29,22 +27,42 @@ struct HighlightEvent {
 	};
 };
 
-struct HighlightPosition;
+struct HighlightPosition {
+	uint32_t position;
+	uint32_t capture_id;
+	struct HighlightPosition *next;
+};
+
+struct HighlightPositionPool {
+	struct HighlightPosition *recycle;
+	struct HighlightPosition **pools;
+	size_t pool_size;
+};
 
 struct HighlightIterator {
 	struct Highlighter *highlighter;
 	TSQueryCursor *cursor;
 	const TSTree *tree;
-	size_t last_start_byte;
+	uint_fast32_t current_offset;
+	uint_fast32_t tree_completed_offset;
+	uint_fast32_t end_offset;
+	uint_fast32_t current_capture_id;
+	struct HighlightPositionPool position_pool;
 	struct HighlightPosition *positions;
-	struct HighlightPosition *positions_recycle;
-	struct HighlightPosition **position_pools;
-	size_t position_pool_index;
 };
 
+int highlight_position_pool_init(struct HighlightPositionPool *pool);
+
+int highlight_position_pool_cleanup(struct HighlightPositionPool *pool);
+
+struct HighlightPosition *
+highlight_position_pool_new(struct HighlightPositionPool *pool);
+
+int highlight_position_pool_recycle(
+		struct HighlightPositionPool *pool, struct HighlightPosition *position);
+
 int highlighter_init(
-		struct Highlighter *highlighter, const TSLanguage *language,
-		const char *highlight_query, size_t highlight_query_len,
+		struct Highlighter *highlighter, TSQuery *query,
 		const char *const captures[], size_t captures_len);
 
 int highlighter_cleanup(struct Highlighter *highlighter);

@@ -1,7 +1,7 @@
 #include <highlight.h>
 #include <string.h>
 
-static const char *const standard_capture_names[] = {
+const char *const standard_capture_names[] = {
 		"attribute",
 		"boolean",
 		"carriage-return",
@@ -54,38 +54,69 @@ static const char *const standard_capture_names[] = {
 		"variable.builtin",
 		"variable.member",
 		"variable.parameter",
+		NULL,
 };
-static const int standard_capture_names_len =
+static const int capture_names_count =
 		sizeof(standard_capture_names) / sizeof(standard_capture_names[0]);
 
-int
-highlighter_init(
-		struct Highlighter *highlighter, const TSLanguage *language,
-		const char *highlight_query, size_t highlight_query_len,
-		const char *const captures[], size_t captures_len) {
+static int
+setup_lookup_table(
+		struct Highlighter *highlighter, const char *const captures[],
+		size_t captures_count) {
 	int rv = 0;
-	memset(highlighter, 0, sizeof(struct Highlighter));
+	TSQuery *query = highlighter->query;
+	const size_t query_captures_count = ts_query_capture_count(query);
 
-	uint32_t error_offset = 0;
-	TSQueryError error_type = TSQueryErrorNone;
-
-	// Setup query
-	highlighter->query = ts_query_new(
-			language, highlight_query, highlight_query_len, &error_offset,
-			&error_type);
-
-	if (highlighter->query == NULL) {
+	uint32_t *capture_lookup_table =
+			calloc(query_captures_count, sizeof(uint32_t));
+	if (capture_lookup_table == NULL) {
 		rv = -1;
 		goto out;
 	}
 
+	for (size_t i = 0; i < query_captures_count; i++) {
+		uint32_t name_len = 0;
+		const char *name = ts_query_capture_name_for_id(query, i, &name_len);
+
+		uint32_t j;
+		capture_lookup_table[i] = UINT32_MAX;
+		for (j = 0; j < captures_count; j++) {
+			if (strncmp(name, captures[j], name_len) == 0) {
+				capture_lookup_table[i] = j;
+				break;
+			}
+		}
+		if (capture_lookup_table[i] == UINT32_MAX) {
+			ts_query_disable_capture(query, name, name_len);
+		}
+	}
+
+	highlighter->capture_lookup_table = capture_lookup_table;
+out:
+	if (rv < 0) {
+		free(capture_lookup_table);
+	}
+	return rv;
+}
+
+int
+highlighter_init(
+		struct Highlighter *highlighter, TSQuery *query,
+		const char *const captures[], size_t captures_count) {
+	int rv = 0;
+	memset(highlighter, 0, sizeof(struct Highlighter));
+
+	highlighter->query = query;
+
 	if (captures == NULL) {
 		captures = standard_capture_names;
-		captures_len = standard_capture_names_len;
+		captures_count = capture_names_count;
 	}
-	highlighter->captures = captures;
-	highlighter->captures_len = captures_len;
-	highlighter->language = language;
+
+	rv = setup_lookup_table(highlighter, captures, captures_count);
+	if (rv < 0) {
+		goto out;
+	}
 
 out:
 	if (rv < 0) {
@@ -96,8 +127,9 @@ out:
 
 int
 highlighter_cleanup(struct Highlighter *highlighter) {
-	if (highlighter->query != NULL) {
+	if (highlighter->query) {
 		ts_query_delete(highlighter->query);
 	}
+	free(highlighter->capture_lookup_table);
 	return 0;
 }
