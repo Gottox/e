@@ -17,3 +17,8 @@ librope = static_library(
     c_args: c_args,
     dependencies: librope_dependencies,
 )
+
+librope_dep = declare_dependency(
+    include_directories: [librope_include],
+    link_with: librope,
+)

@@ -1,3 +1,4 @@
+subdir('generators')
 subdir('include')
 subdir('src')
 
@@ -26,7 +27,7 @@ e_external_grammars = {
     #},
     'c': {
         'git': 'https://github.com/tree-sitter/tree-sitter-c',
-        'rev': 'v0.20.5',
+        'rev': 'v0.20.7',
     },
     #'capnp': {
     #    'git': 'https://github.com/amaanq/tree-sitter-capnp',
@@ -170,7 +171,7 @@ e_external_grammars = {
     #},
     'javascript': {
         'git': 'https://github.com/tree-sitter/tree-sitter-javascript',
-        'rev': 'v0.20.1',
+        'rev': 'v0.21.0',
     },
     #'jq': {'git': 'https://github.com/flurie/tree-sitter-jq', 'rev': 'main'},
     #'json': {
@@ -218,21 +219,27 @@ e_external_grammars = {
     #    'git': 'https://github.com/alemuller/tree-sitter-make',
     #    'rev': 'main',
     #},
-    #'markdown': {
-    #    'git': 'https://github.com/ikatyang/tree-sitter-markdown',
-    #    'rev': 'master',
-    #},
     ##'markdown': {
-    ##    'git': 'https://github.com/MDeiml/tree-sitter-markdown',
-    ##    'rev': 'main',
+    ##    'git': 'https://github.com/ikatyang/tree-sitter-markdown',
+    ##    'rev': 'master',
     ##},
+    'markdown': {
+        'git': 'https://github.com/tree-sitter-grammars/tree-sitter-markdown',
+        'rev': 'v0.2.3',
+        'path': 'tree-sitter-markdown',
+    },
+    'markdown_inline': {
+        'git': 'https://github.com/tree-sitter-grammars/tree-sitter-markdown',
+        'rev': 'v0.2.3',
+        'path': 'tree-sitter-markdown-inline',
+    },
     ##'meson': {
     ##    'git': 'https://github.com/staysail/tree-sitter-meson',
     ##    'rev': 'main',
     ##},
     'meson': {
         'git': 'https://github.com/Decodetalkers/tree-sitter-meson',
-        'rev': '1.2',
+        'rev': '1.2.1',
     },
     #'nix': {
     #    'git': 'https://github.com/cstrahan/tree-sitter-nix',
@@ -514,11 +521,18 @@ tree_sitter_parsers = static_library(
     ],
 )
 # pack all the parsers into a single library
-e_parser_library = static_library(
+e_parsers = static_library(
     'e_parser',
     parser_table,
     link_whole: tree_sitter_parsers,
     include_directories: parser_include,
     dependencies: tree_sitter_dep,
     build_by_default: true,
+)
+
+e_parsers_dep = declare_dependency(
+    include_directories: [parser_include],
+    sources: [parser_table],
+    link_with: e_parsers,
+    dependencies: tree_sitter_dep,
 )

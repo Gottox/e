@@ -1,9 +1,7 @@
-#include <cextras/memory.h>
 #include <highlight.h>
-#include <netinet/in.h>
-#include <stdlib.h>
+#include <string.h>
 
-/*static const char *const standard_capture_names[] = {
+static const char *const standard_capture_names[] = {
 		"attribute",
 		"boolean",
 		"carriage-return",
@@ -56,47 +54,50 @@
 		"variable.builtin",
 		"variable.member",
 		"variable.parameter",
-		NULL,
-};*/
+};
+static const int standard_capture_names_len =
+		sizeof(standard_capture_names) / sizeof(standard_capture_names[0]);
 
 int
 highlighter_init(
-		struct Highlighter *highlighter, const struct HighlightConfig *config) {
-	(void)config;
-	highlighter->parser = ts_parser_new();
-	if (!highlighter->parser) {
-		return -1;
+		struct Highlighter *highlighter, const TSLanguage *language,
+		const char *highlight_query, size_t highlight_query_len,
+		const char *const captures[], size_t captures_len) {
+	int rv = 0;
+	memset(highlighter, 0, sizeof(struct Highlighter));
+
+	uint32_t error_offset = 0;
+	TSQueryError error_type = TSQueryErrorNone;
+
+	// Setup query
+	highlighter->query = ts_query_new(
+			language, highlight_query, highlight_query_len, &error_offset,
+			&error_type);
+
+	if (highlighter->query == NULL) {
+		rv = -1;
+		goto out;
 	}
-	highlighter->cursors = NULL;
-	highlighter->cursor_len = 0;
-	return 0;
+
+	if (captures == NULL) {
+		captures = standard_capture_names;
+		captures_len = standard_capture_names_len;
+	}
+	highlighter->captures = captures;
+	highlighter->captures_len = captures_len;
+	highlighter->language = language;
+
+out:
+	if (rv < 0) {
+		highlighter_cleanup(highlighter);
+	}
+	return rv;
 }
 
 int
 highlighter_cleanup(struct Highlighter *highlighter) {
-	for (size_t i = 0; i < highlighter->cursor_len; i++) {
-		ts_query_cursor_delete(highlighter->cursors[i]);
+	if (highlighter->query != NULL) {
+		ts_query_delete(highlighter->query);
 	}
-	free(highlighter->cursors);
-	ts_parser_delete(highlighter->parser);
-	return 0;
-}
-
-int
-highlight_iterator_init(
-		struct HighlightIterator *iterator, struct Highlighter *highlighter,
-		const struct HighlightConfig *config, const TSTree *tree,
-		const TSInput *source) {
-	(void)highlighter;
-	(void)config;
-	(void)tree;
-	(void)source;
-	(void)iterator;
-	return 0;
-}
-
-int
-highlight_iterator_cleanup(struct HighlightIterator *iterator) {
-	(void)iterator;
 	return 0;
 }

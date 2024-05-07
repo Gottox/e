@@ -16,35 +16,31 @@ cextras_dep = dependency('cextras')
 tree_sitter_dep = dependency('tree-sitter')
 #tree_sitter = subproject('tree-sitter').get_variable('tree_sitter_dep')
 
-dependencies = [
-    quickjs_dep,
-    cextras_dep,
-    #tree_sitter,
-]
-
 subdir('librope')
 
 subdir('libttyui')
 
-subdir('libhighlight')
-
 subdir('parsers')
+
+subdir('libhighlight')
 
 subdir('include')
 
 subdir('src')
+
+dependencies = [
+    quickjs_dep,
+    cextras_dep,
+    librope_dep,
+    libttyui_dep,
+    #tree_sitter,
+]
 
 exe = executable(
     'e',
     e_src,
     include_directories: [
         e_include,
-        librope_include,
-        libttyui_include,
-    ],
-    link_with: [
-        librope,
-        libttyui,
     ],
     dependencies: dependencies,
     install: true,

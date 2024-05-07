@@ -1,1 +1,1 @@
-libhighlight_sources = files('highlight.c')
+libhighlight_sources = files('highlight.c', 'highlight_iterator.c')

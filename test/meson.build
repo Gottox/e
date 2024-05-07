@@ -13,8 +13,7 @@ foreach p : e_test
         p.underscorify(),
         sources,
         install: false,
-        link_with: [librope, libhighlight],
-        dependencies: [utest_dep],
+        dependencies: [utest_dep, e_parsers_dep, libhighlight_dep, librope_dep],
         include_directories: [librope_include, libhighlight_include],
     )
     test(p, t)

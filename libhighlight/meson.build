@@ -2,12 +2,12 @@ subdir('src')
 
 subdir('include')
 
-libhightlight_dependencies = [cextras_dep, tree_sitter_dep]
+libhighlight_dependencies = [cextras_dep, tree_sitter_dep]
 
 c_args = []
 
 libhighlight = static_library(
-    'hightlight',
+    'highlight',
     libhighlight_sources,
     include_directories: [
         libhighlight_include,
@@ -15,5 +15,14 @@ libhighlight = static_library(
 
     install: false,
     c_args: c_args,
-    dependencies: libhightlight_dependencies,
+    dependencies: libhighlight_dependencies,
 )
+
+libhighlight_dep = declare_dependency(
+    include_directories: [
+        libhighlight_include,
+    ],
+    link_with: libhighlight,
+)
+
+subdir('tinker')
