@@ -1,12 +1,9 @@
-#include <highlight.h>
+#include <highlight_private.h>
 
-#define HIGHLIGHT_POSITION_POOL_SIZE 32
-#define HIGHLIGHT_DIVIDE_CEIL(x, y) ((x) / (y) + !!((x) % (y)))
-
-struct HighlightPosition *
-highlight_position_pool_new(struct HighlightPositionPool *pool) {
+struct HighlightMarker *
+highlight_marker_pool_new(struct HighlightMarkerPool *pool) {
 	if (pool->recycle != NULL) {
-		struct HighlightPosition *top = pool->recycle;
+		struct HighlightMarker *top = pool->recycle;
 		pool->recycle = top->next;
 		return top;
 	}
@@ -14,14 +11,14 @@ highlight_position_pool_new(struct HighlightPositionPool *pool) {
 	if (pool->pool_size % HIGHLIGHT_POSITION_POOL_SIZE == 0) {
 		size_t new_size = (pool->pool_size / HIGHLIGHT_POSITION_POOL_SIZE) + 1;
 
-		struct HighlightPosition **new_pool_table = reallocarray(
-				pool->pools, new_size, sizeof(struct HighlightPosition *));
+		struct HighlightMarker **new_pool_table = reallocarray(
+				pool->pools, new_size, sizeof(struct HighlightMarker *));
 		if (new_pool_table == NULL) {
 			return NULL;
 		}
 		pool->pools = new_pool_table;
-		struct HighlightPosition *new_pool = calloc(
-				HIGHLIGHT_POSITION_POOL_SIZE, sizeof(struct HighlightPosition));
+		struct HighlightMarker *new_pool = calloc(
+				HIGHLIGHT_POSITION_POOL_SIZE, sizeof(struct HighlightMarker));
 		if (new_pool == NULL) {
 			return NULL;
 		}
@@ -30,22 +27,21 @@ highlight_position_pool_new(struct HighlightPositionPool *pool) {
 	size_t outer_index = pool->pool_size / HIGHLIGHT_POSITION_POOL_SIZE;
 	size_t inner_index = pool->pool_size % HIGHLIGHT_POSITION_POOL_SIZE;
 
-	struct HighlightPosition *result = &pool->pools[outer_index][inner_index];
+	struct HighlightMarker *result = &pool->pools[outer_index][inner_index];
 	pool->pool_size++;
 	return result;
 }
 
 int
-highlight_position_pool_recycle(
-		struct HighlightPositionPool *iterator,
-		struct HighlightPosition *position) {
-	position->next = iterator->recycle;
-	iterator->recycle = position;
+highlight_marker_pool_recycle(
+		struct HighlightMarkerPool *iterator, struct HighlightMarker *marker) {
+	marker->next = iterator->recycle;
+	iterator->recycle = marker;
 	return 0;
 }
 
 int
-highlight_position_pool_cleanup(struct HighlightPositionPool *iterator) {
+highlight_marker_pool_cleanup(struct HighlightMarkerPool *iterator) {
 	if (iterator->pools == NULL) {
 		return 0;
 	}

@@ -1,4 +1,4 @@
-#include <highlight.h>
+#include <highlight_private.h>
 #include <string.h>
 
 const char *const standard_capture_names[] = {
@@ -54,10 +54,25 @@ const char *const standard_capture_names[] = {
 		"variable.builtin",
 		"variable.member",
 		"variable.parameter",
-		NULL,
 };
-static const int capture_names_count =
-		sizeof(standard_capture_names) / sizeof(standard_capture_names[0]);
+static const int capture_names_count = LENGTH(standard_capture_names);
+
+static const char *special_capture_names[] = {
+		"injection.content",      "injection.language", "local.definition",
+		"local.definition-value", "local.reference",    "local.scope",
+};
+
+static int
+array_index_of(
+		const char *const arr[], size_t arr_len, const char *key, int key_len) {
+	for (size_t i = 0; i < arr_len; i++) {
+		const char *name = arr[i];
+		if (strncmp(name, key, key_len) == 0) {
+			return i;
+		}
+	}
+	return -1;
+}
 
 static int
 setup_lookup_table(
@@ -78,17 +93,22 @@ setup_lookup_table(
 		uint32_t name_len = 0;
 		const char *name = ts_query_capture_name_for_id(query, i, &name_len);
 
-		uint32_t j;
-		capture_lookup_table[i] = UINT32_MAX;
-		for (j = 0; j < captures_count; j++) {
-			if (strncmp(name, captures[j], name_len) == 0) {
-				capture_lookup_table[i] = j;
-				break;
-			}
+		int idx = array_index_of(
+				special_capture_names, LENGTH(special_capture_names), name,
+				name_len);
+		if (idx >= 0) {
+			capture_lookup_table[i] =
+					capture_names_count | HIGHLIGHT_SPECIAL_MASK;
+			continue;
 		}
-		if (capture_lookup_table[i] == UINT32_MAX) {
-			ts_query_disable_capture(query, name, name_len);
+		idx = array_index_of(captures, captures_count, name, name_len);
+		if (idx >= 0) {
+			capture_lookup_table[i] = idx;
+			continue;
 		}
+
+		capture_lookup_table[i] = HIGHLIGHT_NO_CAPTURE;
+		ts_query_disable_capture(query, name, name_len);
 	}
 
 	highlighter->capture_lookup_table = capture_lookup_table;

@@ -1,6 +1,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <tree_sitter/api.h>
+
 typedef size_t highlight_index_t;
 
 struct Highlighter {
@@ -27,15 +28,15 @@ struct HighlightEvent {
 	};
 };
 
-struct HighlightPosition {
-	uint32_t position;
+struct HighlightMarker {
+	uint32_t offset;
 	uint32_t capture_id;
-	struct HighlightPosition *next;
+	struct HighlightMarker *next;
 };
 
-struct HighlightPositionPool {
-	struct HighlightPosition *recycle;
-	struct HighlightPosition **pools;
+struct HighlightMarkerPool {
+	struct HighlightMarker *recycle;
+	struct HighlightMarker **pools;
 	size_t pool_size;
 };
 
@@ -47,19 +48,19 @@ struct HighlightIterator {
 	uint_fast32_t tree_completed_offset;
 	uint_fast32_t end_offset;
 	uint_fast32_t current_capture_id;
-	struct HighlightPositionPool position_pool;
-	struct HighlightPosition *positions;
+	struct HighlightMarkerPool marker_pool;
+	struct HighlightMarker *markers;
 };
 
-int highlight_position_pool_init(struct HighlightPositionPool *pool);
+int highlight_marker_pool_init(struct HighlightMarkerPool *pool);
 
-int highlight_position_pool_cleanup(struct HighlightPositionPool *pool);
+int highlight_marker_pool_cleanup(struct HighlightMarkerPool *pool);
 
-struct HighlightPosition *
-highlight_position_pool_new(struct HighlightPositionPool *pool);
+struct HighlightMarker *
+highlight_marker_pool_new(struct HighlightMarkerPool *pool);
 
-int highlight_position_pool_recycle(
-		struct HighlightPositionPool *pool, struct HighlightPosition *position);
+int highlight_marker_pool_recycle(
+		struct HighlightMarkerPool *pool, struct HighlightMarker *marker);
 
 int highlighter_init(
 		struct Highlighter *highlighter, TSQuery *query,
