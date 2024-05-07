@@ -284,16 +284,7 @@ manhatten_distance(uint32_t color1, uint32_t color2) {
 }
 
 static int
-draw_color(const struct TtyUi *ui, const char *mode, uint32_t color) {
-	uint8_t r = (color >> 16) & 0xFF;
-	uint8_t g = (color >> 8) & 0xFF;
-	uint8_t b = (color >> 0) & 0xFF;
-
-	if (ui->true_color) {
-		fprintf(ui->fd_file, ";%s;2;%u;%u;%u", mode, r, g, b);
-		return 0;
-	}
-
+draw_color_256(const struct TtyUi *ui, const char *mode, uint32_t color) {
 	unsigned int min_distance = UINT_MAX;
 	uint8_t xterm_number = 0;
 	for (size_t i = 0; i < LENGTH(color_table); i++) {
@@ -306,6 +297,30 @@ draw_color(const struct TtyUi *ui, const char *mode, uint32_t color) {
 
 	fprintf(ui->fd_file, ";%s;5;%u", mode, xterm_number);
 
+	return 0;
+}
+
+static int
+draw_color_true(const struct TtyUi *ui, const char *mode, uint32_t color) {
+	uint8_t r = (color >> 16) & 0xFF;
+	uint8_t g = (color >> 8) & 0xFF;
+	uint8_t b = color & 0xFF;
+
+	int written = fprintf(ui->fd_file, ";%s;2;%u;%u;%u", mode, r, g, b);
+
+	return written < 0 ? written : 0;
+}
+
+static int
+draw_color(const struct TtyUi *ui, const char *mode, uint32_t color) {
+	switch (ui->color_mode) {
+	case TTYUI_COLOR_MODE_TRUE:
+		return draw_color_true(ui, mode, color);
+	case TTYUI_COLOR_MODE_256:
+		return draw_color_256(ui, mode, color);
+	case TTYUI_COLOR_MODE_OFF:
+		break;
+	}
 	return 0;
 }
 

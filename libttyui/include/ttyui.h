@@ -41,6 +41,12 @@ enum TtyUiModifier {
 	TTYUI_MODIFIER_CTRL = 4,
 };
 
+enum TtyColorMode {
+	TTYUI_COLOR_MODE_OFF,
+	TTYUI_COLOR_MODE_256,
+	TTYUI_COLOR_MODE_TRUE,
+};
+
 struct TtyUiEvent {
 	enum TtyUiEventType type;
 	union {
@@ -91,7 +97,7 @@ struct TtyUi {
 	unsigned int columns;
 	unsigned int rows;
 	void *user_data;
-	bool true_color;
+	enum TtyColorMode color_mode;
 };
 
 /***************************************

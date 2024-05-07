@@ -76,11 +76,14 @@ init_terminal(struct TtyUi *ui) {
 		goto out;
 	}
 
-	char *true_color = getenv("COLORTERM");
-	if (true_color != NULL && strcmp(true_color, "truecolor") == 0) {
-		ui->true_color = true;
+	const char *true_color = getenv("COLORTERM");
+	const char *no_color = getenv("NO_COLOR");
+	if (no_color != NULL && no_color[0] != '\0') {
+		ui->color_mode = TTYUI_COLOR_MODE_OFF;
+	} else if (true_color != NULL && strcmp(true_color, "truecolor") == 0) {
+		ui->color_mode = TTYUI_COLOR_MODE_TRUE;
 	} else {
-		ui->true_color = false;
+		ui->color_mode = TTYUI_COLOR_MODE_256;
 	}
 
 	rv = update_size(ui);

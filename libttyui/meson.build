@@ -17,3 +17,10 @@ libttyui = static_library(
     c_args: c_args,
     dependencies: libttyui_dependencies,
 )
+
+libttyui_dep = declare_dependency(
+    include_directories: [
+        libttyui_include,
+    ],
+    link_with: libttyui,
+)
