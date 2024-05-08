@@ -1,7 +1,7 @@
 #include <highlight_private.h>
 
 struct HighlightMarker *
-highlight_marker_pool_new(struct HighlightMarkerPool *pool) {
+highlight_marker_new(struct HighlightMarkerPool *pool) {
 	if (pool->recycle != NULL) {
 		struct HighlightMarker *top = pool->recycle;
 		pool->recycle = top->next;
@@ -33,10 +33,37 @@ highlight_marker_pool_new(struct HighlightMarkerPool *pool) {
 }
 
 int
-highlight_marker_pool_recycle(
-		struct HighlightMarkerPool *iterator, struct HighlightMarker *marker) {
-	marker->next = iterator->recycle;
-	iterator->recycle = marker;
+highlight_marker_list_init(
+		struct HighlightMarkerList *list, struct HighlightMarkerPool *pool) {
+	list->head = NULL;
+	list->pool = pool;
+	return 0;
+}
+
+int
+highlight_marker_list_cleanup(struct HighlightMarkerList *list) {
+	struct HighlightMarker *iterator = list->head;
+	while (iterator != NULL) {
+		struct HighlightMarker *next = iterator->next;
+		highlight_marker_recycle(iterator, list);
+		iterator = next;
+	}
+	return 0;
+}
+
+int
+highlight_marker_recycle(
+		struct HighlightMarker *marker, struct HighlightMarkerList *list) {
+	marker->next = list->pool->recycle;
+	list->pool->recycle = marker;
+	return 0;
+}
+
+int
+highlight_marker_pool_init(struct HighlightMarkerPool *iterator) {
+	iterator->pool_size = 0;
+	iterator->recycle = NULL;
+	iterator->pools = NULL;
 	return 0;
 }
 

@@ -11,11 +11,12 @@ get_highlight_capture(const TSQueryMatch *match) {
 
 int
 highlight_iterator_init(
-		struct HighlightIterator *iterator, struct Highlighter *highlighter,
+		struct HighlightIterator *iterator, struct Highlight *highlight,
 		const TSTree *tree) {
+	int rv = 0;
 	memset(iterator, 0, sizeof(struct HighlightIterator));
 
-	iterator->highlighter = highlighter;
+	iterator->highlight = highlight;
 	iterator->tree = tree;
 	iterator->cursor = ts_query_cursor_new();
 	iterator->current_capture_id = HIGHLIGHT_NO_CAPTURE;
@@ -23,9 +24,19 @@ highlight_iterator_init(
 	TSNode root = ts_tree_root_node(iterator->tree);
 	iterator->current_offset = ts_node_start_byte(root);
 	iterator->end_offset = ts_node_end_byte(root);
-	ts_query_cursor_exec(iterator->cursor, highlighter->query, root);
+	ts_query_cursor_exec(iterator->cursor, highlight->query, root);
 
-	return 0;
+	rv = highlight_marker_pool_init(&iterator->marker_pool);
+	if (rv < 0) {
+		goto out;
+	}
+
+	rv = highlight_marker_list_init(&iterator->markers, &iterator->marker_pool);
+	if (rv < 0) {
+		goto out;
+	}
+out:
+	return rv;
 }
 
 struct HighlightMarker *
@@ -50,7 +61,7 @@ marker_insert(
 
 	if (new_marker->offset == current->offset) {
 		current->capture_id = new_marker->capture_id;
-		highlight_marker_pool_recycle(&iterator->marker_pool, new_marker);
+		highlight_marker_recycle(new_marker, &iterator->markers);
 		return current;
 	} else {
 		new_marker->next = current->next;
@@ -63,7 +74,7 @@ static int
 add_match(struct HighlightIterator *iterator) {
 	int rv = 0;
 	TSQueryMatch match = {0};
-	struct Highlighter *highlighter = iterator->highlighter;
+	struct Highlight *highlight = iterator->highlight;
 
 	bool has_next = ts_query_cursor_next_match(iterator->cursor, &match);
 	if (!has_next) {
@@ -82,24 +93,23 @@ add_match(struct HighlightIterator *iterator) {
 
 	uint32_t old_capture = HIGHLIGHT_NO_CAPTURE;
 
-	uint32_t capture_id =
-			highlighter->capture_lookup_table[query_capture->index];
+	uint32_t capture_id = highlight->capture_lookup_table[query_capture->index];
 	if (HIGHLIGHT_IS_SPECIAL(capture_id)) {
 		goto out;
 	}
 
 	struct HighlightMarker *start =
-			highlight_marker_pool_new(&iterator->marker_pool);
+			highlight_marker_new(&iterator->marker_pool);
 	if (start == NULL) {
 		rv = -1;
 		goto out;
 	}
 	start->offset = start_byte;
 	start->capture_id = HIGHLIGHT_CAPTURE_ID(capture_id);
-	start = marker_insert(iterator, &iterator->markers, start, &old_capture);
+	start = marker_insert(
+			iterator, &iterator->markers.head, start, &old_capture);
 
-	struct HighlightMarker *end =
-			highlight_marker_pool_new(&iterator->marker_pool);
+	struct HighlightMarker *end = highlight_marker_new(&iterator->marker_pool);
 	if (end == NULL) {
 		rv = -1;
 		goto out;
@@ -118,7 +128,7 @@ markers_fill(struct HighlightIterator *iterator) {
 	int rv = 0;
 	const struct HighlightMarker dummy = {0};
 	const struct HighlightMarker *start =
-			iterator->markers ? iterator->markers : &dummy;
+			iterator->markers.head ? iterator->markers.head : &dummy;
 	const struct HighlightMarker *end = start->next ? start->next : &dummy;
 
 	while (iterator->tree_completed_offset != iterator->end_offset &&
@@ -127,8 +137,8 @@ markers_fill(struct HighlightIterator *iterator) {
 		if (rv < 0) {
 			goto out;
 		}
-		if (iterator->markers != NULL) {
-			start = iterator->markers;
+		if (iterator->markers.head != NULL) {
+			start = iterator->markers.head;
 			end = start->next;
 		}
 	}
@@ -145,7 +155,7 @@ highlight_iterator_next(
 	memset(event, 0, sizeof(struct HighlightEvent));
 
 	if (iterator->current_offset == iterator->end_offset &&
-		iterator->markers == NULL) {
+		iterator->markers.head == NULL) {
 		return false;
 	}
 
@@ -154,7 +164,7 @@ highlight_iterator_next(
 		goto out;
 	}
 
-	struct HighlightMarker *next = iterator->markers;
+	struct HighlightMarker *next = iterator->markers.head;
 	const uint32_t next_marker = next ? next->offset : iterator->end_offset;
 	if (iterator->current_offset != next_marker) {
 		event->type = HIGHLIGHT_TEXT;
@@ -165,14 +175,14 @@ highlight_iterator_next(
 		event->type = HIGHLIGHT_START;
 		event->start.capture_id = capture_id;
 		iterator->current_capture_id = capture_id;
-		iterator->markers = next->next;
-		highlight_marker_pool_recycle(&iterator->marker_pool, next);
+		iterator->markers.head = next->next;
+		highlight_marker_recycle(next, &iterator->markers);
 	} else {
 		event->type = HIGHLIGHT_END;
 		iterator->current_capture_id = HIGHLIGHT_NO_CAPTURE;
 		if (next->capture_id == HIGHLIGHT_NO_CAPTURE) {
-			iterator->markers = next->next;
-			highlight_marker_pool_recycle(&iterator->marker_pool, next);
+			iterator->markers.head = next->next;
+			highlight_marker_recycle(next, &iterator->markers);
 		}
 	}
 
@@ -186,5 +196,6 @@ out:
 int
 highlight_iterator_cleanup(struct HighlightIterator *iterator) {
 	ts_query_cursor_delete(iterator->cursor);
+	highlight_marker_list_cleanup(&iterator->markers);
 	return highlight_marker_pool_cleanup(&iterator->marker_pool);
 }

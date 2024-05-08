@@ -6,19 +6,25 @@ const TSLanguage *tree_sitter_markdown_inline(void);
 
 const TSLanguage *(*language)(void) = tree_sitter_markdown_inline;
 
-static TSQuery *
-query_new(const char *source) {
-	uint32_t error_offset;
-	TSQueryError error_type;
-	return ts_query_new(
-			language(), source, strlen(source), &error_offset, &error_type);
+static struct HighlightConfig *
+new_config(
+		const char *source, const char *const *captures, size_t captures_len,
+		struct HighlightConfig *config) {
+	highlight_config_init(config, language());
+	highlight_config_captures(config, captures, captures_len);
+	highlight_config_highlight(config, source, strlen(source));
+
+	return config;
 }
 
+#define NEW_CONFIG(source, captures, captures_len) \
+	new_config(source, captures, captures_len, &(struct HighlightConfig){0})
+
 UTEST(highlight, init) {
-	struct Highlighter hl = {0};
-	int rv = highlighter_init(&hl, query_new(""), NULL, 0);
+	struct Highlight hl = {0};
+	int rv = highlight_init(&hl, NEW_CONFIG("", NULL, 0));
 	ASSERT_EQ(rv, 0);
-	highlighter_cleanup(&hl);
+	highlight_cleanup(&hl);
 }
 
 UTEST(highlight_iterator, init) {
@@ -29,16 +35,16 @@ UTEST(highlight_iterator, init) {
 	TSTree *tree = ts_parser_parse_string(
 			parser, NULL, source_code, strlen(source_code));
 
-	struct Highlighter hl = {0};
+	struct Highlight hl = {0};
 	struct HighlightIterator it = {0};
-	int rv = highlighter_init(&hl, query_new(""), NULL, 0);
+	int rv = highlight_init(&hl, NEW_CONFIG("", NULL, 0));
 	ASSERT_EQ(rv, 0);
 
 	rv = highlight_iterator_init(&it, &hl, tree);
 	ASSERT_EQ(rv, 0);
 
 	highlight_iterator_cleanup(&it);
-	highlighter_cleanup(&hl);
+	highlight_cleanup(&hl);
 	ts_tree_delete(tree);
 	ts_parser_delete(parser);
 }
@@ -57,9 +63,9 @@ UTEST(highlight_iterator, plain_text) {
 
 	TSTree *tree = ts_parser_parse_string(parser, NULL, source, source_len);
 
-	struct Highlighter hl = {0};
+	struct Highlight hl = {0};
 	struct HighlightIterator it = {0};
-	int rv = highlighter_init(&hl, query_new(query), captures, captures_len);
+	int rv = highlight_init(&hl, NEW_CONFIG(query, captures, captures_len));
 	ASSERT_EQ(0, rv);
 
 	rv = highlight_iterator_init(&it, &hl, tree);
@@ -77,7 +83,7 @@ UTEST(highlight_iterator, plain_text) {
 	ASSERT_EQ(0, rv);
 
 	highlight_iterator_cleanup(&it);
-	highlighter_cleanup(&hl);
+	highlight_cleanup(&hl);
 	ts_tree_delete(tree);
 	ts_parser_delete(parser);
 }
@@ -96,9 +102,9 @@ UTEST(highlight_iterator, emphasis) {
 
 	TSTree *tree = ts_parser_parse_string(parser, NULL, source, source_len);
 
-	struct Highlighter hl = {0};
+	struct Highlight hl = {0};
 	struct HighlightIterator it = {0};
-	int rv = highlighter_init(&hl, query_new(query), captures, captures_len);
+	int rv = highlight_init(&hl, NEW_CONFIG(query, captures, captures_len));
 	ASSERT_EQ(0, rv);
 
 	rv = highlight_iterator_init(&it, &hl, tree);
@@ -126,7 +132,7 @@ UTEST(highlight_iterator, emphasis) {
 	ASSERT_EQ(0, rv);
 
 	highlight_iterator_cleanup(&it);
-	highlighter_cleanup(&hl);
+	highlight_cleanup(&hl);
 	ts_tree_delete(tree);
 	ts_parser_delete(parser);
 }
@@ -146,9 +152,9 @@ UTEST(highlight_iterator, nested) {
 
 	TSTree *tree = ts_parser_parse_string(parser, NULL, source, source_len);
 
-	struct Highlighter hl = {0};
+	struct Highlight hl = {0};
 	struct HighlightIterator it = {0};
-	int rv = highlighter_init(&hl, query_new(query), captures, captures_len);
+	int rv = highlight_init(&hl, NEW_CONFIG(query, captures, captures_len));
 	ASSERT_EQ(0, rv);
 
 	rv = highlight_iterator_init(&it, &hl, tree);
@@ -210,7 +216,7 @@ UTEST(highlight_iterator, nested) {
 	ASSERT_EQ(0, rv);
 
 	highlight_iterator_cleanup(&it);
-	highlighter_cleanup(&hl);
+	highlight_cleanup(&hl);
 	ts_tree_delete(tree);
 	ts_parser_delete(parser);
 }
@@ -230,9 +236,9 @@ UTEST(highlight, captures_filter) {
 
 	TSTree *tree = ts_parser_parse_string(parser, NULL, source, source_len);
 
-	struct Highlighter hl = {0};
+	struct Highlight hl = {0};
 	struct HighlightIterator it = {0};
-	int rv = highlighter_init(&hl, query_new(query), captures, captures_len);
+	int rv = highlight_init(&hl, NEW_CONFIG(query, captures, captures_len));
 	ASSERT_EQ(0, rv);
 
 	rv = highlight_iterator_init(&it, &hl, tree);
@@ -274,7 +280,7 @@ UTEST(highlight, captures_filter) {
 	ASSERT_EQ(0, rv);
 
 	highlight_iterator_cleanup(&it);
-	highlighter_cleanup(&hl);
+	highlight_cleanup(&hl);
 	ts_tree_delete(tree);
 	ts_parser_delete(parser);
 }

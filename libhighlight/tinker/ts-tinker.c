@@ -136,9 +136,8 @@ dump_cb(const struct HighlightEvent *event) {
 int
 main(int argc, char *argv[]) {
 	const TSLanguage *lang = tree_sitter_c();
-	struct Highlighter hl = {0};
+	struct Highlight hl = {0};
 	struct HighlightIterator iter = {0};
-	TSQuery *query = NULL;
 	TSParser *parser = NULL;
 	TSTree *tree = NULL;
 	int opt;
@@ -177,11 +176,14 @@ main(int argc, char *argv[]) {
 	}
 	size_t source_len = strlen(source);
 
-	uint32_t error_offset;
-	TSQueryError error;
-	query = ts_query_new(lang, query_src, query_len, &error_offset, &error);
-	if (!query) {
-		fprintf(stderr, "Failed to parse query\n");
+	struct HighlightConfig config = {0};
+	highlight_config_init(&config, lang);
+	highlight_config_highlight(&config, query_src, query_len);
+	highlight_config_captures(&config, capture_names, capture_names_count);
+
+	int rv = highlight_init(&hl, &config);
+	if (rv < 0) {
+		fprintf(stderr, "Failed to initialize highlighter\n");
 		goto out;
 	}
 
@@ -194,12 +196,6 @@ main(int argc, char *argv[]) {
 
 	tree = ts_parser_parse_string(parser, NULL, source, source_len);
 
-	int rv = highlighter_init(&hl, query, capture_names, capture_names_count);
-	if (rv < 0) {
-		fprintf(stderr, "Failed to initialize highlighter\n");
-		goto out;
-	}
-
 	rv = highlight_iterator_init(&iter, &hl, tree);
 
 	struct HighlightEvent event;
@@ -208,7 +204,7 @@ main(int argc, char *argv[]) {
 	}
 out:
 	highlight_iterator_cleanup(&iter);
-	highlighter_cleanup(&hl);
+	highlight_cleanup(&hl);
 	ts_tree_delete(tree);
 	ts_parser_delete(parser);
 	free(query_src);
