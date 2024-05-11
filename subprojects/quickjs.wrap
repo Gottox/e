@@ -1,9 +1,11 @@
 [wrap-file]
-directory = quickjs-078b2a00fe7347775eed6273f972cd3a8aff7bdd
+directory = quickjs-0.4.1
 
-source_url = https://github.com/frida/quickjs/archive/078b2a00fe7347775eed6273f972cd3a8aff7bdd.tar.gz
-source_filename = quickjs-078b2a00fe7347775eed6273f972cd3a8aff7bdd.tar.gz
-source_hash = 77d090fd52fcf4a7ce8d5de795295ffeb8b90536ef4b2181238058f0f004f12c
+source_url = https://github.com/quickjs-ng/quickjs/archive/v0.4.1.tar.gz
+source_filename = quickjs-0.4.1.tar.gz
+source_hash = cd0e25729343f29940646828de77282948852f72bacb28c1f906397e2599e541
+
+method = cmake
 
 [provide]
-quickjs=quickjs_dep
+quickjs=qjs_dep

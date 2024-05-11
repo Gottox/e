@@ -6,15 +6,25 @@ project(
         'warning_level=3',
         'quickjs:warning_level=2',
         'quickjs:werror=false',
-        'quickjs:libc=false',
-        'quickjs:default_library=static',
     ],
 )
 
-quickjs_dep = dependency('quickjs')
+# Configure QuickJS
+cmake = import('cmake')
+quickjs = cmake.subproject('quickjs')
+
+# Dependencies
+quickjs_dep = declare_dependency(
+    # quickjs depends on -lm and -pthread, but cmake doesn't add it. So we add it here manually.
+    dependencies: [
+        quickjs.dependency('qjs'),
+        meson.get_compiler('c').find_library('m', required: false),
+        dependency('threads'),
+    ],
+)
 cextras_dep = dependency('cextras')
 tree_sitter_dep = dependency('tree-sitter')
-#tree_sitter = subproject('tree-sitter').get_variable('tree_sitter_dep')
+#tree_sitter_dep = subproject('tree-sitter').get_variable('tree_sitter_dep')
 
 subdir('librope')
 
@@ -33,7 +43,7 @@ dependencies = [
     cextras_dep,
     librope_dep,
     libttyui_dep,
-    #tree_sitter,
+    #tree_sitter_dep,
 ]
 
 exe = executable(
