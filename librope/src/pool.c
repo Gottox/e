@@ -1,95 +1,29 @@
 #include <rope.h>
 #include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 //////////////////////////////
 /// struct RopePool
 
 int
 rope_pool_init(struct RopePool *pool) {
-	memset(pool, 0, sizeof(*pool));
+	cx_prealloc_pool_init(&pool->pool, sizeof(struct RopeNode));
 
-	return 0;
-}
-
-struct RopeNode *
-reuse_node(struct RopePool *pool) {
-	struct RopeNode *node = pool->reuse_pool;
-	pool->reuse_pool = node->data.reuse.next;
-	return node;
-}
-
-static int
-add_chunk(struct RopePool *pool) {
-	size_t outer_size = pool->next_node_index / ROPE_POOL_CHUNK_SIZE + 1;
-	pool->nodes =
-			reallocarray(pool->nodes, outer_size, sizeof(struct RopeNode *));
-	if (pool->nodes == NULL) {
-		return -1;
-	}
-	struct RopeNode *new_chunk =
-			calloc(ROPE_POOL_CHUNK_SIZE, sizeof(struct RopeNode));
-	if (new_chunk == NULL) {
-		return -1;
-	}
-	pool->nodes[outer_size - 1] = new_chunk;
 	return 0;
 }
 
 struct RopeNode *
 rope_pool_get(struct RopePool *pool) {
-	struct RopeNode *node = NULL;
-	int rv = 0;
-	if (pool->reuse_pool != NULL) {
-		return reuse_node(pool);
-	} else if (pool->next_node_index % ROPE_POOL_CHUNK_SIZE == 0) {
-		rv = add_chunk(pool);
-		if (rv < 0) {
-			return NULL;
-		}
-	}
-
-	size_t next_index = pool->next_node_index;
-	node = &pool->nodes[next_index / ROPE_POOL_CHUNK_SIZE]
-					   [next_index % ROPE_POOL_CHUNK_SIZE];
-
-	pool->next_node_index++;
-
-	return node;
+	return cx_prealloc_pool_get(&pool->pool);
 }
 
 int
 rope_pool_recycle(struct RopePool *pool, struct RopeNode *node) {
-	if (node != NULL) {
-		memset(node, 0, sizeof(struct RopeNode));
-		node->data.reuse.next = pool->reuse_pool;
-		pool->reuse_pool = node;
-	}
+	cx_prealloc_pool_recycle(&pool->pool, node);
 	return 0;
 }
 
 int
 rope_pool_cleanup(struct RopePool *pool) {
-	int rv = 0;
-
-	size_t outer_size = 0;
-	for (rope_index_t i = 0; i < pool->next_node_index; i++) {
-		struct RopeNode *node = &pool->nodes[i / ROPE_POOL_CHUNK_SIZE]
-											[i % ROPE_POOL_CHUNK_SIZE];
-		if (i % ROPE_POOL_CHUNK_SIZE == 0) {
-			outer_size++;
-		}
-
-		rv |= rope_node_free(node, pool);
-	}
-
-	for (rope_index_t i = 0; i < outer_size; i++) {
-		free(pool->nodes[i]);
-	}
-
-	free(pool->nodes);
-
-	return rv;
+	cx_prealloc_pool_cleanup(&pool->pool);
+	return 0;
 }

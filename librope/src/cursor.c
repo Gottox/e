@@ -44,7 +44,9 @@ cursor_update_location(struct RopeCursor *cursor) {
 	size_t size = 0;
 	const uint8_t *value = rope_node_value(node, &size);
 
-	// TODO This is a naiv implementation.
+	// TODO This is a naiv implementation. This implementation looks at every
+	// leaf node before the cursor. Maybe it is faster to look at the parent
+	// nodes which contain the aggregated new_lines.
 	cursor->line = 0;
 	cursor->column = cx_utf8_bidx(value, size, byte_index);
 	while (rope_node_prev(&node)) {
@@ -83,11 +85,9 @@ cursor_damaged(
 }
 
 int
-rope_cursor_init(
-		struct RopeCursor *cursor, struct Rope *rope,
-		rope_cursor_callback_t callback, void *userdata) {
-	cursor->callback = callback;
-	cursor->userdata = userdata;
+rope_cursor_init(struct RopeCursor *cursor, struct Rope *rope) {
+	cursor->callback = NULL;
+	cursor->userdata = NULL;
 	cursor->rope = rope;
 	cursor->index = 0;
 	cursor->next = NULL;
@@ -96,7 +96,16 @@ rope_cursor_init(
 }
 
 int
-rope_cursor_set(
+rope_cursor_set_callback(
+		struct RopeCursor *cursor, rope_cursor_callback_t callback,
+		void *userdata) {
+	cursor->callback = callback;
+	cursor->userdata = userdata;
+	return 0;
+}
+
+int
+rope_cursor_move_to(
 		struct RopeCursor *cursor, rope_index_t line,
 		rope_char_index_t column) {
 	struct Rope *rope = cursor->rope;
@@ -116,7 +125,7 @@ rope_cursor_set(
 }
 
 int
-rope_cursor_set_char(struct RopeCursor *cursor, rope_char_index_t index) {
+rope_cursor_move_to_index(struct RopeCursor *cursor, rope_char_index_t index) {
 	struct Rope *rope = cursor->rope;
 	if (index > rope->root->char_size) {
 		return -1;
@@ -263,6 +272,21 @@ rope_cursor_node(struct RopeCursor *cursor, rope_char_index_t *byte_index) {
 	}
 
 	return node;
+}
+
+int32_t
+rope_cursor_codepoint(struct RopeCursor *cursor) {
+	rope_char_index_t byte_index = 0;
+	struct RopeNode *node = rope_cursor_node(cursor, &byte_index);
+	if (node == NULL) {
+		return -1;
+	}
+
+	size_t byte_size = 0;
+	const uint8_t *value = rope_node_value(node, &byte_size);
+	size_t char_size = cx_utf8_clen(&value[byte_index], byte_size - byte_index);
+
+	return cx_utf8_cp(&value[byte_index], char_size);
 }
 
 int

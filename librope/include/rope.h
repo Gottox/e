@@ -1,3 +1,4 @@
+#include <cextras/memory.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -39,9 +40,7 @@ void rope_rc_string_release(struct RopeRcString *str);
  */
 
 struct RopePool {
-	struct RopeNode **nodes;
-	size_t next_node_index;
-	struct RopeNode *reuse_pool;
+	struct CxPreallocPool pool;
 };
 
 int rope_pool_init(struct RopePool *pool);
@@ -186,6 +185,10 @@ struct RopeNode *rope_first(struct Rope *rope);
 
 int rope_cleanup(struct Rope *rope);
 
+int rope_char_size(struct Rope *rope);
+
+int rope_byte_size(struct Rope *rope);
+
 void rope_node_print(struct RopeNode *root, const char *file);
 
 /**********************************
@@ -205,14 +208,16 @@ struct RopeCursor {
 	void *userdata;
 };
 
-int rope_cursor_init(
-		struct RopeCursor *cursor, struct Rope *rope,
-		rope_cursor_callback_t callback, void *userdata);
+int rope_cursor_init(struct RopeCursor *cursor, struct Rope *rope);
 
-int
-rope_cursor_set_char(struct RopeCursor *cursor, rope_char_index_t char_index);
+int rope_cursor_set_callback(
+		struct RopeCursor *cursor, rope_cursor_callback_t callback,
+		void *userdata);
 
-int rope_cursor_set(
+int rope_cursor_move_to_index(
+		struct RopeCursor *cursor, rope_char_index_t char_index);
+
+int rope_cursor_move_to(
 		struct RopeCursor *cursor, rope_index_t line, rope_char_index_t column);
 
 int rope_cursor_insert(
@@ -226,6 +231,10 @@ int rope_cursor_delete(struct RopeCursor *cursor, size_t char_count);
 
 struct RopeNode *
 rope_cursor_node(struct RopeCursor *cursor, rope_char_index_t *byte_index);
+
+int32_t rope_cursor_codepoint(struct RopeCursor *cursor);
+
+int rope_cursor_set_codepoint(struct RopeCursor *cursor, int32_t codepoint);
 
 int rope_cursor_cleanup(struct RopeCursor *cursor);
 

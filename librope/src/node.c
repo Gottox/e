@@ -66,11 +66,7 @@ node_sibling(struct RopeNode *node) {
 	if (node->parent == NULL) {
 		return NULL;
 	}
-	if (rope_node_which(node) == ROPE_NODE_LEFT) {
-		return node_right(node->parent);
-	} else {
-		return node_left(node->parent);
-	}
+	return node_child(node->parent, !rope_node_which(node));
 }
 
 static struct RopeNode *
@@ -513,6 +509,32 @@ rope_node_free(struct RopeNode *node, struct RopePool *pool) {
 	return rope_pool_recycle(pool, node);
 }
 
+void
+print_escaped(const uint8_t *data, size_t size, FILE *out) {
+	for (size_t i = 0; i < size; i++) {
+		switch (data[i]) {
+		case '\n':
+			fputs("\\n", out);
+			break;
+		case '\r':
+			fputs("\\r", out);
+			break;
+		case '\t':
+			fputs("\\t", out);
+			break;
+		case '"':
+			fputs("\\\"", out);
+			break;
+		case '\\':
+			fputs("\\\\", out);
+			break;
+		default:
+			fputc(data[i], out);
+			break;
+		}
+	}
+}
+
 static void
 print_node(struct RopeNode *node, FILE *out) {
 	fprintf(out, "node%p", (void *)node);
@@ -522,10 +544,14 @@ print_node(struct RopeNode *node, FILE *out) {
 	}
 	switch (node->type) {
 	case ROPE_NODE_LEAF:
-		fprintf(out, " [label=\"leaf %lu\"]\n", node->char_size);
+		fputs(" [label=\"leaf ", out);
+		print_escaped(node->data.leaf.data, node->byte_size, out);
+		fprintf(out, " %lu\"]\n", node->char_size);
 		break;
 	case ROPE_NODE_INLINE_LEAF:
-		fprintf(out, " [label=\"inline_leaf %lu\"]\n", node->char_size);
+		fputs(" [label=\"inline_leaf ", out);
+		print_escaped(node->data.inline_leaf, node->byte_size, out);
+		fprintf(out, " %lu\"]\n", node->char_size);
 		break;
 	case ROPE_NODE_BRANCH:
 		fprintf(out, " [label=\"branch %lu\"]\n", node->char_size);

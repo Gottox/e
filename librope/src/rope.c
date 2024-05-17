@@ -1,4 +1,3 @@
-#include <assert.h>
 #include <rope.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -42,12 +41,12 @@ rope_delete(
 		struct Rope *rope, rope_char_index_t char_index, size_t char_count) {
 	int rv = 0;
 	struct RopeCursor cursor = {0};
-	rv = rope_cursor_init(&cursor, rope, NULL, NULL);
+	rv = rope_cursor_init(&cursor, rope);
 	if (rv < 0) {
 		goto out;
 	}
 
-	rv = rope_cursor_set_char(&cursor, char_index);
+	rv = rope_cursor_move_to_index(&cursor, char_index);
 	if (rv < 0) {
 		goto out;
 	}
@@ -68,12 +67,12 @@ rope_find(
 	int rv = 0;
 	struct RopeNode *node = NULL;
 	struct RopeCursor cursor = {0};
-	rv = rope_cursor_init(&cursor, rope, NULL, NULL);
+	rv = rope_cursor_init(&cursor, rope);
 	if (rv < 0) {
 		goto out;
 	}
 
-	rv = rope_cursor_set_char(&cursor, char_index);
+	rv = rope_cursor_move_to_index(&cursor, char_index);
 	if (rv < 0) {
 		goto out;
 	}
@@ -98,12 +97,12 @@ rope_insert(
 		size_t byte_size) {
 	int rv = 0;
 	struct RopeCursor cursor = {0};
-	rv = rope_cursor_init(&cursor, rope, NULL, NULL);
+	rv = rope_cursor_init(&cursor, rope);
 	if (rv < 0) {
 		goto out;
 	}
 
-	rv = rope_cursor_set_char(&cursor, char_index);
+	rv = rope_cursor_move_to_index(&cursor, char_index);
 	if (rv < 0) {
 		goto out;
 	}
@@ -115,6 +114,16 @@ rope_insert(
 out:
 	rope_cursor_cleanup(&cursor);
 	return rv;
+}
+
+int
+rope_char_size(struct Rope *rope) {
+	return rope->root->char_size;
+}
+
+int
+rope_byte_size(struct Rope *rope) {
+	return rope->root->byte_size;
 }
 
 int

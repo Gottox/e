@@ -12,10 +12,10 @@ UTEST(cursor, basic) {
 	ASSERT_EQ(0, rv);
 
 	struct RopeCursor c = {0};
-	rv = rope_cursor_init(&c, &r, NULL, NULL);
+	rv = rope_cursor_init(&c, &r);
 	ASSERT_EQ(0, rv);
 
-	rv = rope_cursor_set(&c, 0, 9);
+	rv = rope_cursor_move_to(&c, 0, 9);
 	ASSERT_EQ(0, rv);
 
 	rv = rope_cursor_insert_str(&c, "n awesome");
@@ -61,10 +61,10 @@ UTEST(cursor, utf8) {
 	ASSERT_EQ(0, rv);
 
 	struct RopeCursor c = {0};
-	rv = rope_cursor_init(&c, &r, NULL, NULL);
+	rv = rope_cursor_init(&c, &r);
 	ASSERT_EQ(0, rv);
 
-	rv = rope_cursor_set(&c, 0, 1);
+	rv = rope_cursor_move_to(&c, 0, 1);
 	ASSERT_EQ(0, rv);
 
 	rv = rope_cursor_insert_str(&c, u8"🙂");
@@ -110,17 +110,17 @@ UTEST(cursor, event) {
 	ASSERT_EQ(0, rv);
 
 	struct RopeCursor c1 = {0};
-	rv = rope_cursor_init(&c1, &r, NULL, NULL);
+	rv = rope_cursor_init(&c1, &r);
 	ASSERT_EQ(0, rv);
 
-	rv = rope_cursor_set(&c1, 0, 10);
+	rv = rope_cursor_move_to(&c1, 0, 10);
 	ASSERT_EQ(0, rv);
 
 	struct RopeCursor c2 = {0};
-	rv = rope_cursor_init(&c2, &r, NULL, NULL);
+	rv = rope_cursor_init(&c2, &r);
 	ASSERT_EQ(0, rv);
 
-	rv = rope_cursor_set(&c2, 0, 0);
+	rv = rope_cursor_move_to(&c2, 0, 0);
 	ASSERT_EQ(0, rv);
 
 	rv = rope_cursor_delete(&c2, 7);
