@@ -1,3 +1,4 @@
+#include <cextras/memory.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <tree_sitter/api.h>
@@ -55,17 +56,6 @@ struct HighlightMarker {
 	struct HighlightMarker *next;
 };
 
-struct HighlightMarkerList {
-	struct HighlightMarker *head;
-	struct HighlightMarkerPool *pool;
-};
-
-struct HighlightMarkerPool {
-	struct HighlightMarker *recycle;
-	struct HighlightMarker **pools;
-	size_t pool_size;
-};
-
 struct HighlightIterator {
 	struct Highlight *highlight;
 	TSQueryCursor *cursor;
@@ -74,8 +64,8 @@ struct HighlightIterator {
 	uint_fast32_t tree_completed_offset;
 	uint_fast32_t end_offset;
 	uint_fast32_t current_capture_id;
-	struct HighlightMarkerPool marker_pool;
-	struct HighlightMarkerList markers;
+	struct CxPreallocPool marker_pool;
+	struct HighlightMarker *markers;
 };
 
 int highlight_config_init(
@@ -94,20 +84,6 @@ void highlight_config_captures(
 		size_t captures_len);
 
 int highlight_config_cleanup(struct HighlightConfig *config);
-
-int highlight_marker_pool_init(struct HighlightMarkerPool *pool);
-
-int highlight_marker_pool_cleanup(struct HighlightMarkerPool *pool);
-
-int highlight_marker_list_init(
-		struct HighlightMarkerList *list, struct HighlightMarkerPool *pool);
-
-int highlight_marker_list_cleanup(struct HighlightMarkerList *list);
-
-struct HighlightMarker *highlight_marker_new(struct HighlightMarkerPool *pool);
-
-int highlight_marker_recycle(
-		struct HighlightMarker *marker, struct HighlightMarkerList *list);
 
 int highlight_init(
 		struct Highlight *highlight, const struct HighlightConfig *config);
