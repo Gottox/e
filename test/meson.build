@@ -13,7 +13,13 @@ foreach p : e_test
         p.underscorify(),
         sources,
         install: false,
-        dependencies: [utest_dep, e_parsers_dep, libhighlight_dep, librope_dep],
+        dependencies: [
+            utest_dep,
+            e_parsers_dep,
+            libhighlight_dep,
+            librope_dep,
+            cextras_dep,
+        ],
         include_directories: [librope_include, libhighlight_include],
     )
     test(p, t)
