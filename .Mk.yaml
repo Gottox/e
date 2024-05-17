@@ -1,0 +1,5 @@
+configure:
+  - -Db_coverage=true
+  - -Dgenerate_parsers=false
+default:
+  - test
