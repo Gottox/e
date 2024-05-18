@@ -9,30 +9,21 @@ project(
     ],
 )
 
-# Configure QuickJS
-cmake = import('cmake')
-quickjs = cmake.subproject('quickjs')
-
-# Dependencies
-quickjs_dep = declare_dependency(
-    # quickjs depends on -lm and -pthread, but cmake doesn't add it. So we add it here manually.
-    dependencies: [
-        quickjs.dependency('qjs'),
-        meson.get_compiler('c').find_library('m', required: false),
-        dependency('threads'),
-    ],
-)
 cextras_dep = dependency('cextras')
 tree_sitter_dep = dependency('tree-sitter')
 #tree_sitter_dep = subproject('tree-sitter').get_variable('tree_sitter_dep')
 
-subdir('librope')
+quickjs_dep = subproject('quickjs').get_variable('quickjs_dep')
 
-subdir('libttyui')
+liblsp_dep = subproject('liblsp').get_variable('liblsp_dep')
+
+librope_dep = subproject('librope').get_variable('librope_dep')
+
+libttyui_dep = subproject('libttyui').get_variable('libttyui_dep')
 
 subdir('parsers')
 
-subdir('libhighlight')
+libhighlight_dep = subproject('libhighlight').get_variable('libhighlight_dep')
 
 subdir('include')
 
@@ -46,7 +37,7 @@ dependencies = [
     #tree_sitter_dep,
 ]
 
-exe = executable(
+executable(
     'e',
     e_src,
     include_directories: [

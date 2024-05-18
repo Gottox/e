@@ -20,7 +20,6 @@ foreach p : e_test
             librope_dep,
             cextras_dep,
         ],
-        include_directories: [librope_include, libhighlight_include],
     )
     test(p, t)
 endforeach

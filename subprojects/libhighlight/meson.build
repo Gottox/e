@@ -1,6 +1,10 @@
+project('libhighlight', 'c')
 subdir('src')
 
 subdir('include')
+
+cextras_dep = dependency('cextras')
+tree_sitter_dep = dependency('tree-sitter')
 
 libhighlight_dependencies = [cextras_dep, tree_sitter_dep]
 

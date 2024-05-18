@@ -7,5 +7,5 @@ source_hash = cd0e25729343f29940646828de77282948852f72bacb28c1f906397e2599e541
 
 method = cmake
 
-[provide]
-quickjs=qjs_dep
+#[provide]
+#quickjs_cmake=qjs_dep

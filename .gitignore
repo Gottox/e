@@ -60,6 +60,11 @@ dkms.conf
 # subproject directories
 /subprojects/*
 !/subprojects/*.wrap
+!/subprojects/libhighlight
+!/subprojects/liblsp
+!/subprojects/librope
+!/subprojects/libttyui
+!/subprojects/quickjs
 
 # Meson Directories
 meson-logs

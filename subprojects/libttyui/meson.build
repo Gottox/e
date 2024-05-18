@@ -1,6 +1,9 @@
+project('libttyui', 'c')
 subdir('src')
 
 subdir('include')
+
+cextras_dep = dependency('cextras')
 
 libttyui_dependencies = [cextras_dep]
 
