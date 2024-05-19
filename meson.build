@@ -21,9 +21,13 @@ librope_dep = subproject('librope').get_variable('librope_dep')
 
 libttyui_dep = subproject('libttyui').get_variable('libttyui_dep')
 
-subdir('parsers')
+libeditorconfig_dep = subproject(
+    'libeditorconfig',
+).get_variable('libeditorconfig_dep')
 
 libhighlight_dep = subproject('libhighlight').get_variable('libhighlight_dep')
+
+subdir('parsers')
 
 subdir('include')
 
@@ -34,6 +38,7 @@ dependencies = [
     cextras_dep,
     librope_dep,
     libttyui_dep,
+    libeditorconfig_dep,
     #tree_sitter_dep,
 ]
 
