@@ -1,5 +1,7 @@
 configure:
   - -Db_coverage=true
   - -Dtest=true
+env:
+  CC_LD: mold
 default:
   - test

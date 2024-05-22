@@ -4,5 +4,8 @@ configure:
   - -Dlibrope:test=true
   - -Dlibhighlight:test=true
   - -Dliblsp:test=true
+  - -Dlibttyui:test=true
+env:
+  CC_LD: mold
 default:
   - test
