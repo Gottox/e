@@ -30,3 +30,7 @@ libhighlight_dep = declare_dependency(
 )
 
 subdir('tinker')
+
+if get_option('test')
+    subdir('test')
+endif

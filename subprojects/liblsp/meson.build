@@ -1,10 +1,17 @@
 project('liblsp', 'c')
 
+quickjs_dep = subproject('quickjs').get_variable('quickjs_dep')
+
 subdir('src')
 
 subdir('include')
 
-quickjs_dep = subproject('quickjs').get_variable('quickjs_dep')
+subdir('gen')
+
+if get_option('test')
+    subdir('test')
+endif
+
 
 liblsp_dependencies = [quickjs_dep]
 

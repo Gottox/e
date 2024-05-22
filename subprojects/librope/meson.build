@@ -26,3 +26,7 @@ librope_dep = declare_dependency(
     include_directories: [librope_include],
     link_with: librope,
 )
+
+if get_option('test')
+    subdir('test')
+endif

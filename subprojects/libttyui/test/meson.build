@@ -9,11 +9,9 @@ foreach p : e_test
         install: false,
         dependencies: [
             utest_dep,
-            e_parsers_dep,
-            libhighlight_dep,
-            librope_dep,
-            cextras_dep,
+            libttyui_dep,
         ],
     )
     test(p, t)
 endforeach
+

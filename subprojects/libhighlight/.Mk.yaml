@@ -1,0 +1,5 @@
+configure:
+  - -Db_coverage=true
+  - -Dtest=true
+default:
+  - test

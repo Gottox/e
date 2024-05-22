@@ -66,6 +66,7 @@ dkms.conf
 !/subprojects/librope
 !/subprojects/libttyui
 !/subprojects/quickjs
+/subprojects/quickjs_cmake.wrap
 
 # Meson Directories
 meson-logs

@@ -26,3 +26,7 @@ libeditorconfig_dep = declare_dependency(
     ],
     link_with: libeditorconfig,
 )
+
+if get_option('test')
+    subdir('test')
+endif

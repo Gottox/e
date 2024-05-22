@@ -13,7 +13,7 @@ cextras_dep = dependency('cextras')
 tree_sitter_dep = dependency('tree-sitter')
 #tree_sitter_dep = subproject('tree-sitter').get_variable('tree_sitter_dep')
 
-quickjs_dep = subproject('quickjs').get_variable('quickjs_dep')
+quickjs_dep = dependency('quickjs', fallback: ['quickjs', 'quickjs_dep'])
 
 liblsp_dep = subproject('liblsp').get_variable('liblsp_dep')
 

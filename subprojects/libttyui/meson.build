@@ -27,3 +27,7 @@ libttyui_dep = declare_dependency(
     ],
     link_with: libttyui,
 )
+
+if get_option('test')
+    subdir('test')
+endif

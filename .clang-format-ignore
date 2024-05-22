@@ -1,1 +1,2 @@
 parsers/shipped/**
+subprojects/libhighlight/test/tree-sitter-markdown-inline/**

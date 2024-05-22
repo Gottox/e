@@ -1,5 +1,8 @@
 configure:
   - -Db_coverage=true
   - -Dgenerate_parsers=false
+  - -Dlibrope:test=true
+  - -Dlibhighlight:test=true
+  - -Dliblsp:test=true
 default:
   - test

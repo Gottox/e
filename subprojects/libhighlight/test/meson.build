@@ -1,19 +1,23 @@
-e_test = []
+e_test = ['libhighlight.c']
 
 utest_dep = dependency('utest')
 foreach p : e_test
-    sources = [p]
+    sources = files(
+        'tree-sitter-markdown-inline/src/parser.c',
+        'tree-sitter-markdown-inline/src/scanner.c',
+        p,
+    )
     t = executable(
         p.underscorify(),
         sources,
         install: false,
         dependencies: [
             utest_dep,
-            e_parsers_dep,
             libhighlight_dep,
-            librope_dep,
             cextras_dep,
         ],
     )
     test(p, t)
 endforeach
+
+

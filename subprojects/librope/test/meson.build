@@ -1,4 +1,9 @@
-e_test = []
+e_test = [
+    'librope.c',
+    'cursor.c',
+    'range.c',
+    'node.c',
+]
 
 utest_dep = dependency('utest')
 foreach p : e_test
@@ -9,11 +14,10 @@ foreach p : e_test
         install: false,
         dependencies: [
             utest_dep,
-            e_parsers_dep,
-            libhighlight_dep,
             librope_dep,
             cextras_dep,
         ],
     )
     test(p, t)
 endforeach
+
