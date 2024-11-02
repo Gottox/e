@@ -333,35 +333,35 @@ int
 ttyui_draw_options(struct TtyUi *ui, const struct TtyUiDrawOptions *options) {
 	fputs("\033[0", ui->fd_file);
 
-	if (has_color(options->fg_color)) {
-		draw_color(ui, FOREGROUND, options->fg_color);
+	if (has_color(options->fg)) {
+		draw_color(ui, FOREGROUND, options->fg);
 	}
 
-	if (has_color(options->bg_color)) {
-		draw_color(ui, BACKGROUND, options->bg_color);
+	if (has_color(options->bg)) {
+		draw_color(ui, BACKGROUND, options->bg);
 	}
 
-	if (options->bold) {
+	if (options->flags & TTYUI_DRAW_BOLD) {
 		fputs(";1", ui->fd_file);
 	}
 
-	if (options->italic) {
+	if (options->flags & TTYUI_DRAW_ITALIC) {
 		fputs(";3", ui->fd_file);
 	}
 
-	if (options->underline) {
+	if (options->flags & TTYUI_DRAW_UNDERLINE) {
 		fputs(";4", ui->fd_file);
 	}
 
-	if (options->inverse) {
+	if (options->flags & TTYUI_DRAW_INVERSE) {
 		fputs(";7", ui->fd_file);
 	}
 
-	if (options->strikethrough) {
+	if (options->flags & TTYUI_DRAW_STRIKETHROUGH) {
 		fputs(";9", ui->fd_file);
 	}
 
-	if (options->overline) {
+	if (options->flags & TTYUI_DRAW_OVERLINE) {
 		fputs(";53", ui->fd_file);
 	}
 

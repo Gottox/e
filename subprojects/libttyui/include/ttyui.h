@@ -76,16 +76,20 @@ struct TtyUiState {
 	unsigned int rows;
 };
 
+enum TtyUiDrawOptionsFlags {
+	TTYUI_DRAW_BOLD = 1 << 0,
+	TTYUI_DRAW_UNDERLINE = 1 << 1,
+	TTYUI_DRAW_STRIKETHROUGH = 1 << 2,
+	TTYUI_DRAW_OVERLINE = 1 << 3,
+	TTYUI_DRAW_ITALIC = 1 << 4,
+	TTYUI_DRAW_INVERSE = 1 << 5,
+	TTYUI_DRAW_STRIKE = 1 << 6,
+};
+
 struct TtyUiDrawOptions {
-	uint32_t fg_color;
-	uint32_t bg_color;
-	bool bold;
-	bool underline;
-	bool strikethrough;
-	bool overline;
-	bool italic;
-	bool inverse;
-	bool strike;
+	uint32_t fg;
+	uint32_t bg;
+	uint8_t flags;
 };
 
 struct TtyUi {
