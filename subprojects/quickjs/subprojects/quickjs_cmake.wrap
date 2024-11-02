@@ -1,11 +1,11 @@
 [wrap-file]
-directory = quickjs-0.4.1
+directory = quickjs-0.6.1
 
-source_url = https://github.com/quickjs-ng/quickjs/archive/v0.4.1.tar.gz
-source_filename = quickjs-0.4.1.tar.gz
-source_hash = cd0e25729343f29940646828de77282948852f72bacb28c1f906397e2599e541
+source_url = https://github.com/quickjs-ng/quickjs/archive/v0.6.1.tar.gz
+source_filename = quickjs-0.6.1.tar.gz
+source_hash = 276edbb30896cdf2eee12a8bdb5b9c1cc2734eac8c898de6d52268ae201e614d
 
 method = cmake
 
-#[provide]
-#quickjs_cmake=qjs_dep
+[provide]
+quickjs_cmake=qjs_dep

@@ -49,15 +49,15 @@ handle_tty(struct TtyUi *ui, struct TtyUiEvent *ev, void *user_data) {
 			ttyui_draw(
 					ui, "😃", 4,
 					&(struct TtyUiDrawOptions){
-							.bg_color = 0x01c0c0c0,
-							.fg_color = 0x01000000,
+							.bg = 0x01c0c0c0,
+							.fg = 0x01000000,
 					},
 					NULL);
 			ttyui_draw_eol(
 					ui,
 					&(struct TtyUiDrawOptions){
-							.bg_color = 0x01c0c0c0,
-							.fg_color = 0x01000000,
+							.bg = 0x01c0c0c0,
+							.fg = 0x01000000,
 					},
 					NULL);
 			break;
