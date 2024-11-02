@@ -1,5 +1,6 @@
 configure:
-  - -Db_coverage=true
+  - -Db_lundef=false
+  - -Db_sanitize=address,undefined
   - -Dtest=true
 env:
   CC_LD: mold

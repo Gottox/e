@@ -1,7 +1,6 @@
-#include "identifier_util.h"
-#include <gen.h>
 #include <jw.h>
 #include <jw_quickjs.h>
+#include <metamodel_gen.h>
 #include <quickjs.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,14 +25,13 @@ read_file(char *filename) {
 
 int
 main(int argc, char **argv) {
-	if (argc < 3) {
+	if (argc < 2) {
 		fprintf(stderr, "Usage: %s <metaModel.json> <output.h>\n", argv[0]);
 		exit(1);
 	}
 	char *input = argv[1];
-	char *output = argv[2];
-	char *buf = read_file(input);
-	if (!buf) {
+	char *json = read_file(input);
+	if (!json) {
 		perror(input);
 		exit(1);
 	}
@@ -48,25 +46,36 @@ main(int argc, char **argv) {
 	}
 
 	struct JwVal obj = {0};
-	rv = jw_parse(&jw, &obj, buf, strlen(buf));
+	rv = jw_parse(&jw, &obj, json, strlen(json));
 	if (rv != 0) {
 		fprintf(stderr, "Failed to parse JSON\n");
 		exit(1);
 	}
 
-	struct JwVal type_aliases = {0};
-	rv = jw_obj_get(&jw, &obj, "typeAliases", &type_aliases);
-	struct JwVal structures = {0};
-	rv = jw_obj_get(&jw, &obj, "structures", &structures);
-	struct JwVal enums = {0};
-	rv = jw_obj_get(&jw, &obj, "enums", &type_aliases);
-	gen_structures(&jw, &structures, &type_aliases, &enums);
+	struct Generator generator = {0};
+	rv = generator_init(&generator, &jw, &obj);
+	if (rv < 0) {
+		fprintf(stderr, "Failed to initialize generator\n");
+		exit(1);
+	}
 
-	// struct JwVal requests = {0};
-	// rv = jw_obj_get(&jw, &obj, "requests", &requests);
-	// gen_requests(&jw, &requests);
+	rv = generator_load_types(&generator);
+	if (rv < 0) {
+		fprintf(stderr, "Failed to load types\n");
+		exit(1);
+	}
 
+	struct Type *type = generator.type_head;
+	while (type) {
+		fputs("Type:", stdout);
+		puts(type->name);
+		type = type->next;
+	}
+
+	generator_cleanup(&generator);
+	jw_cleanup(&jw, &obj);
 	JS_FreeContext(ctx);
 	JS_FreeRuntime(rt);
+	free(json);
 	return 0;
 }

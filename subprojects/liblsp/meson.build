@@ -1,6 +1,8 @@
 project('liblsp', 'c')
 
 quickjs_dep = subproject('quickjs').get_variable('quickjs_dep')
+libjsonwrap_dep = subproject('libjsonwrap').get_variable('libjsonwrap_dep')
+cextras_dep = subproject('cextras').get_variable('cextras_dep')
 
 subdir('src')
 
@@ -12,8 +14,7 @@ if get_option('test')
     subdir('test')
 endif
 
-
-liblsp_dependencies = [quickjs_dep]
+liblsp_dependencies = [quickjs_dep, libjsonwrap_dep]
 
 c_args = []
 
