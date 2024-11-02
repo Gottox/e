@@ -33,7 +33,7 @@ highlight_iterator_init(
 	return 0;
 }
 
-struct HighlightMarker *
+static struct HighlightMarker *
 marker_insert(
 		struct HighlightIterator *iterator, struct HighlightMarker **top,
 		struct HighlightMarker *new_marker, uint32_t *old_capture) {
