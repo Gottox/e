@@ -40,7 +40,7 @@ jw_serialize(struct Jw *jw, struct JwVal *val, char **json, size_t *size) {
 			jw->context, val->value, JS_UNDEFINED, JS_UNDEFINED);
 	EXCEPTION(value);
 
-	char *js_json = JS_ToCString(jw->context, value);
+	const char *js_json = JS_ToCString(jw->context, value);
 	*json = strdup(js_json);
 	if (*json == NULL) {
 		rv = -1;
