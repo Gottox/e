@@ -1,4 +1,4 @@
-#include <quickjs/quickjs.h>
+#include <quickjs.h>
 #include <rope.h>
 
 struct pollfd;

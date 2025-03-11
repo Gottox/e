@@ -65,4 +65,6 @@ int jw_arr_get_float(
 
 void jw_debug(struct Jw *jw, struct JwVal *val);
 
+int jw_dup(struct Jw *jw, struct JwVal *target, struct JwVal *src);
+
 #endif // JW_H

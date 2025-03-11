@@ -6,6 +6,7 @@
 
 static int
 tuple_generate_type(struct Type *type) {
+	printf("tuple %s\n", type->name);
 	return 0;
 }
 
@@ -16,7 +17,14 @@ tuple_generate_field(struct Type *type, const char *field_name) {
 
 int
 type_tuple_init(struct Type *type) {
+	int rv = 0;
 	type->generate_type = tuple_generate_type;
 	type->generate_field = tuple_generate_field;
-	return type_compound_init(type, "Tuple", "items", type->definition);
+	rv = type_name_copy(type, "Tuple");
+	if (rv < 0) {
+		goto out;
+	}
+	rv = type_compound_init(type, "items", true);
+out:
+	return rv;
 }

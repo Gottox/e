@@ -97,6 +97,7 @@ jw_arr_len(struct Jw *jw, struct JwVal *arr) {
 
 int
 jw_int(struct Jw *jw, struct JwVal *val, int *int_val) {
+	(void)jw;
 	int rv = 0;
 	if (!JS_IsNumber(val->value) && JS_IsBool(val->value)) {
 		rv = -1;
@@ -109,6 +110,7 @@ out:
 
 int
 jw_float(struct Jw *jw, struct JwVal *val, double *f_val) {
+	(void)jw;
 	int rv = 0;
 	if (!JS_IsNumber(val->value)) {
 		rv = -1;
@@ -122,19 +124,28 @@ out:
 int
 jw_str(struct Jw *jw, struct JwVal *val, char **str, size_t *size) {
 	int rv = 0;
-	size_t str_size;
-	const char *js_str = JS_ToCStringLen(jw->context, &str_size, val->value);
+	size_t str_size = 0;
+	const char *js_str = NULL;
+	*str = NULL;
+	if (!jw_is_str(jw, val)) {
+		rv = -1;
+		goto out;
+	}
+
+	js_str = JS_ToCStringLen(jw->context, &str_size, val->value);
 	*str = cx_memdup(js_str, str_size);
 	if (*str == NULL) {
 		rv = -1;
 		goto out;
 	}
-	if (size != NULL) {
-		*size = str_size;
-	}
 out:
 	if (rv < 0) {
 		free(*str);
+		*str = NULL;
+
+	}
+	if (size != NULL) {
+		*size = str_size;
 	}
 	JS_FreeCString(jw->context, js_str);
 	return rv;
@@ -147,34 +158,46 @@ jw_is_str(struct Jw *jw, struct JwVal *val) {
 
 bool
 jw_is_int(struct Jw *jw, struct JwVal *val) {
+	(void)jw;
 	return JS_IsNumber(val->value) &&
 			JS_VALUE_GET_TAG(val->value) == JS_TAG_INT;
 }
 
 bool
 jw_is_float(struct Jw *jw, struct JwVal *val) {
+	(void)jw;
 	return JS_IsNumber(val->value) &&
 			JS_VALUE_GET_TAG(val->value) == JS_TAG_FLOAT64;
 }
 
 bool
 jw_is_obj(struct Jw *jw, struct JwVal *val) {
+	(void)jw;
 	return JS_IsObject(val->value);
 }
 
 bool
 jw_is_arr(struct Jw *jw, struct JwVal *val) {
-	return JS_IsArray(jw->context, val->value);
+	(void)jw;
+	return JS_IsArray(val->value);
 }
 
 bool
 jw_is_null(struct Jw *jw, struct JwVal *val) {
+	(void)jw;
 	return JS_IsNull(val->value);
 }
 
 bool
 jw_is_bool(struct Jw *jw, struct JwVal *val) {
+	(void)jw;
 	return JS_IsBool(val->value);
+}
+
+int
+jw_dup(struct Jw *jw, struct JwVal *target, struct JwVal *src) {
+	target->value = JS_DupValue(jw->context, src->value);
+	return 0;
 }
 
 int

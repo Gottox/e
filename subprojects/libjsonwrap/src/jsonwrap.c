@@ -141,7 +141,7 @@ jw_arr_foreach(
 		return len;
 	}
 
-	for (size_t i = 0; i < len && rv >= 0; i++) {
+	for (size_t i = 0; i < len && rv == 0; i++) {
 		rv = jw_arr_foreach_inner(jw, arr, i, cb, data);
 	}
 

@@ -10,5 +10,9 @@ metamodel_gen_src = files(
     'type_reference.c',
     'type_string_literal.c',
     'type_structure.c',
+    'type_enumeration.c',
+    'type_alias.c',
     'type_tuple.c',
+    'type_compound.c',
+    'property_iterator.c'
 )

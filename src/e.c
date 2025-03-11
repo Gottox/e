@@ -1,6 +1,6 @@
 #include <e.h>
 #include <libgen.h>
-#include <quickjs/quickjs.h>
+#include <quickjs.h>
 #include <rope.h>
 #include <string.h>
 #include <sys/prctl.h>

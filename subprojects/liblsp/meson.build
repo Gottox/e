@@ -1,6 +1,6 @@
 project('liblsp', 'c')
 
-quickjs_dep = subproject('quickjs').get_variable('quickjs_dep')
+quickjs_dep = dependency('quickjs-ng')
 libjsonwrap_dep = subproject('libjsonwrap').get_variable('libjsonwrap_dep')
 cextras_dep = subproject('cextras').get_variable('cextras_dep')
 

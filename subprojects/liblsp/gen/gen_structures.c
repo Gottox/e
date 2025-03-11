@@ -36,6 +36,7 @@ gen_base_types(struct Jw *jw, struct JwVal *type) {
 	} else {
 		fprintf(stderr, "Unknown base type: %s\n", name);
 	}
+	return 0;
 }
 static int
 gen_structure(struct Jw *jw, struct JwVal *request, int index, void *data);

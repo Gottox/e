@@ -6,6 +6,7 @@
 
 static int
 or_generate_type(struct Type *type) {
+	printf("or %s\n", type->name);
 	return 0;
 }
 
@@ -19,5 +20,5 @@ type_or_init(struct Type *type) {
 	type->generate_type = or_generate_type;
 	type->generate_field = or_generate_field;
 
-	return type_compound_init(type, "Or", "items", type->definition);
+	return type_compound_init(type, "Or", "items");
 }

@@ -65,10 +65,9 @@ main(int argc, char **argv) {
 		exit(1);
 	}
 
-	struct Type *type = generator.type_head;
+	struct Type *type = generator.type_list.head;
 	while (type) {
-		fputs("Type:", stdout);
-		puts(type->name);
+		type->generate_type(type);
 		type = type->next;
 	}
 

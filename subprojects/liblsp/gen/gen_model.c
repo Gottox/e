@@ -18,6 +18,10 @@ read_file(char *filename) {
 	long len = ftell(f);
 	fseek(f, 0, SEEK_SET);
 	char *buf = calloc(len + 1, 1);
+	if (!buf) {
+		perror("calloc");
+		exit(1);
+	}
 	fread(buf, 1, len, f);
 	buf[len] = 0;
 	fclose(f);

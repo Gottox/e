@@ -6,6 +6,7 @@
 
 static int
 array_generate_type(struct Type *type) {
+	printf("array %s\n", type->name);
 	return 0;
 }
 
@@ -19,7 +20,7 @@ type_array_init(struct Type *type) {
 	int rv = 0;
 	struct JwVal element = {0};
 	struct Generator *generator = type->generator;
-	struct JwVal *definition = type->definition;
+	struct JwVal *definition = &type->definition;
 	rv = jw_obj_get(generator->jw, definition, "element", &element);
 	if (rv < 0) {
 		goto out;

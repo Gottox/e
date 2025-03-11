@@ -7,6 +7,7 @@
 
 static int
 base_generate_type(struct Type *type) {
+	printf("base %s\n", type->name);
 	return 0;
 }
 
@@ -20,7 +21,7 @@ type_base_init(struct Type *type) {
 	int rv = 0;
 	char *name = NULL;
 	struct Generator *generator = type->generator;
-	struct JwVal *definition = type->definition;
+	struct JwVal *definition = &type->definition;
 	rv = jw_obj_get_str(generator->jw, definition, "name", &name, NULL);
 	if (rv < 0) {
 		goto out;

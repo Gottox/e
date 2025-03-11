@@ -6,6 +6,7 @@
 
 static int
 map_generate_type(struct Type *type) {
+	printf("map %s\n", type->name);
 	return 0;
 }
 
@@ -18,7 +19,7 @@ int
 type_map_init(struct Type *type) {
 	int rv = 0;
 	struct Generator *generator = type->generator;
-	struct JwVal *definition = type->definition;
+	struct JwVal *definition = &type->definition;
 	struct JwVal key_def = {0};
 	struct JwVal value_def = {0};
 

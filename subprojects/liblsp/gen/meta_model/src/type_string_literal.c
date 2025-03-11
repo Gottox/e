@@ -6,6 +6,7 @@
 
 static int
 string_literal_generate_type(struct Type *type) {
+	printf("string_literal %s\n", type->name);
 	return 0;
 }
 
@@ -17,7 +18,7 @@ string_literal_generate_field(struct Type *type, const char *field_name) {
 int
 type_string_literal_init(struct Type *type) {
 	struct Generator *generator = type->generator;
-	struct JwVal *definition = type->definition;
+	struct JwVal *definition = &type->definition;
 	char *value = NULL;
 
 	type->generate_type = string_literal_generate_type;

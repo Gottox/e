@@ -1,6 +1,6 @@
 project('libjsonwrap', 'c')
 
-quickjs_dep = subproject('quickjs').get_variable('quickjs_dep')
+quickjs_dep = dependency('quickjs-ng')
 cextras_dep = subproject('cextras').get_variable('cextras_dep')
 
 subdir('src')
