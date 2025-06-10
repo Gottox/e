@@ -10,10 +10,6 @@ subdir('include')
 
 subdir('gen')
 
-if get_option('test')
-    subdir('test')
-endif
-
 liblsp_dependencies = [quickjs_dep, libjsonwrap_dep]
 
 c_args = []
@@ -36,3 +32,8 @@ liblsp_dep = declare_dependency(
     ],
     link_with: liblsp,
 )
+
+if get_option('test')
+    subdir('test')
+endif
+

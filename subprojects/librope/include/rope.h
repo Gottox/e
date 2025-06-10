@@ -70,8 +70,12 @@ struct RopeNode {
 	enum RopeNodeType type;
 
 	union {
-		uint8_t inline_leaf[ROPE_INLINE_LEAF_SIZE];
 		struct {
+			uint64_t tags;
+			uint8_t data[ROPE_INLINE_LEAF_SIZE];
+		} inline_leaf;
+		struct {
+			uint64_t tags;
 			struct RopeRcString *owned;
 			const uint8_t *data;
 		} leaf;
@@ -79,9 +83,6 @@ struct RopeNode {
 			struct RopeNode *children[2];
 			size_t leafs;
 		} branch;
-		struct {
-			struct RopeNode *next;
-		} reuse;
 	} data;
 
 	struct RopeNode *parent;
@@ -145,6 +146,10 @@ bool rope_node_next(struct RopeNode **node);
 bool rope_node_prev(struct RopeNode **node);
 
 const uint8_t *rope_node_value(const struct RopeNode *node, size_t *size);
+
+uint64_t rope_node_tags(struct RopeNode *node);
+
+void rope_node_set_tags(struct RopeNode *node, uint64_t tags);
 
 int rope_node_free(struct RopeNode *node, struct RopePool *pool);
 

@@ -9,62 +9,74 @@
 #include <stddef.h>
 #include <unistd.h>
 
-struct Jw;
-
-struct JwVal;
+#include <jw_backend.h>
 
 int jw_init(struct Jw *jw, void *context);
 
-int jw_parse(struct Jw *jw, struct JwVal *val, const char *json, size_t size);
+int jw_deinit(struct Jw *jw);
 
-int jw_serialize(struct Jw *jw, struct JwVal *val, char **json, size_t *size);
+int jw_parse(struct JwVal *val, struct Jw *jw, const char *json, size_t size);
 
-int jw_obj_get(
-		struct Jw *jw, struct JwVal *object, const char *key,
-		struct JwVal *target);
+int jw_serialize(struct JwVal *val, char **json, size_t *size);
+
+int jw_obj_get(struct JwVal *object, const char *key, struct JwVal *target);
 
 int jw_arr_get(
-		struct Jw *jw, struct JwVal *arr, size_t index, struct JwVal *target);
+		struct JwVal *arr, size_t index, struct JwVal *target);
 
-ssize_t jw_arr_len(struct Jw *jw, struct JwVal *arr);
+ssize_t jw_arr_len(struct JwVal *arr);
 
-int jw_int(struct Jw *jw, struct JwVal *val, int *int_val);
+int jw_int(struct JwVal *val, int *int_val);
 
-int jw_float(struct Jw *jw, struct JwVal *val, double *f_val);
+int jw_float(struct JwVal *val, double *f_val);
 
-int jw_str(struct Jw *jw, struct JwVal *val, char **str, size_t *size);
+int jw_str(struct JwVal *val, char **str, size_t *size);
 
-int jw_cleanup(struct Jw *jw, struct JwVal *val);
+int jw_cleanup(struct JwVal *val);
 
 // Util functions
 
 typedef int (*jw_arr_foreach_fn)(
-		struct Jw *jw, struct JwVal *val, int index, void *data);
+		struct JwVal *val, int index, void *data);
 
 int jw_arr_foreach(
-		struct Jw *jw, struct JwVal *arr, jw_arr_foreach_fn fn, void *data);
+		struct JwVal *arr, jw_arr_foreach_fn fn, void *data);
 
 int jw_obj_get_str(
-		struct Jw *jw, struct JwVal *obj, const char *key, char **str,
+		struct JwVal *obj, const char *key, char **str,
 		size_t *size);
 
 int
-jw_obj_get_int(struct Jw *jw, struct JwVal *obj, const char *key, int *number);
+jw_obj_get_int(struct JwVal *obj, const char *key, int *number);
 
 int jw_obj_get_float(
-		struct Jw *jw, struct JwVal *obj, const char *key, double *number);
+		struct JwVal *obj, const char *key, double *number);
 
 int jw_arr_get_str(
-		struct Jw *jw, struct JwVal *arr, size_t index, char **str,
+		struct JwVal *arr, size_t index, char **str,
 		size_t *size);
 
-int jw_arr_get_int(struct Jw *jw, struct JwVal *arr, size_t index, int *number);
+int jw_arr_get_int(struct JwVal *arr, size_t index, int *number);
 
 int jw_arr_get_float(
-		struct Jw *jw, struct JwVal *arr, size_t index, double *number);
+		struct JwVal *arr, size_t index, double *number);
 
-void jw_debug(struct Jw *jw, struct JwVal *val);
+void jw_debug(struct JwVal *val);
 
-int jw_dup(struct Jw *jw, struct JwVal *target, struct JwVal *src);
+int jw_dup(struct JwVal *target, struct JwVal *src);
+
+bool jw_is_str(struct JwVal *val);
+
+bool jw_is_int(struct JwVal *val);
+
+bool jw_is_float(struct JwVal *val);
+
+bool jw_is_obj(struct JwVal *val);
+
+bool jw_is_arr(struct JwVal *val);
+
+bool jw_is_null(struct JwVal *val);
+
+bool jw_is_bool(struct JwVal *val);
 
 #endif // JW_H

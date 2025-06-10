@@ -1,4 +1,4 @@
 libjsonwrap_sources = files(
-    'impl_quickjs.c',
+    '@0@_backend.c'.format(get_option('json_backend')),
     'jsonwrap.c',
 )

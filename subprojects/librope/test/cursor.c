@@ -1,8 +1,8 @@
 #include <rope.h>
 #include <string.h>
-#include <utest.h>
+#include <testlib.h>
 
-UTEST(cursor, basic) {
+static void cursor_basic() {
 	int rv = 0;
 	struct Rope r = {0};
 	rv = rope_init(&r);
@@ -51,7 +51,7 @@ UTEST(cursor, basic) {
 	ASSERT_EQ(0, rv);
 }
 
-UTEST(cursor, utf8) {
+static void cursor_utf8() {
 	int rv = 0;
 	struct Rope r = {0};
 	rv = rope_init(&r);
@@ -100,7 +100,7 @@ UTEST(cursor, utf8) {
 	ASSERT_EQ(0, rv);
 }
 
-UTEST(cursor, event) {
+static void cursor_event() {
 	int rv = 0;
 	struct Rope r = {0};
 	rv = rope_init(&r);
@@ -136,4 +136,8 @@ UTEST(cursor, event) {
 	ASSERT_EQ(0, rv);
 }
 
-UTEST_MAIN()
+DECLARE_TESTS
+TEST(cursor_basic)
+TEST(cursor_utf8)
+TEST(cursor_event)
+END_TESTS

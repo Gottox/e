@@ -1,6 +1,7 @@
 #include <errno.h>
 #include <lsp_private.h>
 #include <signal.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/wait.h>
@@ -9,12 +10,14 @@
 extern char **environ;
 
 int
-lsp_connection_init(struct LSPCConnection *client, const char *lsp_command[]) {
-	int sender_pipe[2];
-	int receiver_pipe[2];
+lsp_connection_client_init(struct LSPConnection *connection, const char *lsp_command[]) {
+	int rv = 0;
+	int sender_pipe[2] = {0};
+	int receiver_pipe[2] = {0};
 
 	if (pipe(sender_pipe) != 0 || pipe(receiver_pipe) != 0) {
-		return -errno;
+		rv = -errno;
+		goto out;
 	}
 
 	posix_spawn_file_actions_t actions;
@@ -27,54 +30,85 @@ lsp_connection_init(struct LSPCConnection *client, const char *lsp_command[]) {
 	posix_spawn_file_actions_addclose(&actions, receiver_pipe[0]);
 
 	if (posix_spawn(
-				&client->lsp_pid, lsp_command[0], &actions, NULL,
+				&connection->lsp_pid, lsp_command[0], &actions, NULL,
 				(char *const *)lsp_command, environ) != 0) {
-		return -errno;
+		rv = -errno;
+		goto out;
 	}
 
 	close(sender_pipe[0]);
 	close(receiver_pipe[1]);
 
-	client->sender = fdopen(sender_pipe[1], "w");
-	client->receiver = fdopen(receiver_pipe[0], "r");
+	connection->sender = fdopen(sender_pipe[1], "w");
+	connection->receiver = fdopen(receiver_pipe[0], "r");
 
-	if (!client->sender || !client->receiver) {
-		return -errno;
+	if (!connection->sender || !connection->receiver) {
+		rv = -1;
+		goto out;
 	}
 
+out:
+	posix_spawn_file_actions_destroy(&actions);
+	return rv;
+}
+
+int
+lsp_connection_server_init(struct LSPConnection *connection, FILE *in, FILE *out) {
+	if (out == NULL) {
+		out = stdout;
+	}
+	if (in == NULL) {
+		in = stdin;
+	}
+	connection->sender = out;
+	connection->receiver = in;
+	connection->lsp_pid = -1;
 	return 0;
 }
 
 int
 lsp_connection_send(
-		struct LSPCConnection *client, const char *req, size_t req_length) {
-	if (fprintf(client->sender, "Content-Length: %zu\r\n\r\n", req_length) <
+		struct LSPConnection *connection, const char *req, size_t req_length) {
+	if (fprintf(connection->sender, "Content-Length: %zu\r\n\r\n", req_length) <
 		0) {
 		return -errno;
 	}
-	if (fwrite(req, 1, req_length, client->sender) != req_length) {
+	if (fwrite(req, 1, req_length, connection->sender) != req_length) {
 		return -errno;
 	}
-	fflush(client->sender);
+	fflush(connection->sender);
 	return 0;
 }
 
 int
 lsp_connection_receive(
-		struct LSPCConnection *client, char **res, size_t *res_length) {
-	char buffer[1024];
+		struct LSPConnection *connection, char **res, size_t *res_length) {
+	char buffer[32];
 	size_t content_length = 0;
+	bool content_length_found = false;
+	bool is_new_line = true;
 
-	while (fgets(buffer, sizeof(buffer), client->receiver)) {
-		// Ignore everything until we find the Content-Length header
-		if (sscanf(buffer, "Content-Length: %zu", &content_length) != 1) {
+	while (fgets(buffer, sizeof(buffer), connection->receiver)) {
+		// Skip headers that are bigger than the buffer. The headers that we are
+		// interested in should fit in the buffer.
+		int buffer_len = strlen(buffer);
+		if (buffer_len == 0 || buffer[buffer_len - 1] != '\n') {
+			is_new_line = false;
+			continue;
+		} else if (!is_new_line) {
+			is_new_line = true;
 			continue;
 		}
-		// Skip empty line afterwards
-		if (fgets(buffer, sizeof(buffer), client->receiver) == NULL) {
-			return -errno;
+
+		if (sscanf(buffer, "Content-Length: %zu\r\n", &content_length) == 1) {
+			content_length_found = true;
+		} else if (strcmp(buffer, "\r\n") == 0) {
+			break; // End of headers
 		}
-		break;
+	}
+
+	if (!content_length_found) {
+		return -EINVAL;
 	}
 
 	// Allocate memory for the response
@@ -83,7 +117,7 @@ lsp_connection_receive(
 		return -errno;
 	}
 
-	if (fread(*res, 1, content_length, client->receiver) != content_length) {
+	if (fread(*res, 1, content_length, connection->receiver) != content_length) {
 		free(*res);
 		return -errno;
 	}
@@ -94,15 +128,15 @@ lsp_connection_receive(
 }
 
 void
-lsp_connection_cleanup(struct LSPCConnection *client) {
-	if (client->sender) {
-		fclose(client->sender);
+lsp_connection_cleanup(struct LSPConnection *connection) {
+	if (connection->sender) {
+		fclose(connection->sender);
 	}
-	if (client->receiver) {
-		fclose(client->receiver);
+	if (connection->receiver) {
+		fclose(connection->receiver);
 	}
-	if (client->lsp_pid > 0) {
-		kill(client->lsp_pid, SIGTERM);
-		waitpid(client->lsp_pid, NULL, 0);
+	if (connection->lsp_pid > 0) {
+		kill(connection->lsp_pid, SIGTERM);
+		waitpid(connection->lsp_pid, NULL, 0);
 	}
 }

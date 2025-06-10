@@ -5,7 +5,9 @@ subdir('src')
 subdir('include')
 
 cextras_dep = dependency('cextras')
+#libgrapheme_dep = dependency('libgrapheme')
 
+#librope_dependencies = [cextras_dep, libgrapheme_dep]
 librope_dependencies = [cextras_dep]
 
 c_args = []

@@ -5,7 +5,7 @@ e_test = [
     'node.c',
 ]
 
-utest_dep = dependency('utest')
+testlib_dep = dependency('testlib')
 foreach p : e_test
     sources = [p]
     t = executable(
@@ -13,7 +13,7 @@ foreach p : e_test
         sources,
         install: false,
         dependencies: [
-            utest_dep,
+            testlib_dep,
             librope_dep,
             cextras_dep,
         ],

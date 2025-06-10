@@ -156,7 +156,7 @@ rope_node_new(struct RopePool *pool) {
 static int
 node_set_inline(struct RopeNode *node, const uint8_t *data, size_t byte_size) {
 	node->type = ROPE_NODE_INLINE_LEAF;
-	memcpy(node->data.inline_leaf, data, byte_size);
+	memcpy(node->data.inline_leaf.data, data, byte_size);
 	node->byte_size = byte_size;
 	node_update_leaf(node);
 	return 0;
@@ -293,11 +293,12 @@ rope_node_split(
 		rope_rc_string_retain(node->data.leaf.owned);
 		node->data.leaf.owned = NULL;
 	} else {
-		memcpy(left->data.inline_leaf, value, ROPE_INLINE_LEAF_SIZE);
-		memcpy(right->data.inline_leaf, &value[byte_index], right->byte_size);
+		memcpy(left->data.inline_leaf.data, value, ROPE_INLINE_LEAF_SIZE);
+		memcpy(right->data.inline_leaf.data, &value[byte_index], right->byte_size);
 	}
 
 	node->type = ROPE_NODE_BRANCH;
+	node->data.branch.leafs = 0;
 	*node_left(node) = left;
 	*node_right(node) = right;
 	node_update(node);
@@ -325,8 +326,8 @@ rope_node_merge(
 	assert(extra->type == ROPE_NODE_INLINE_LEAF);
 	assert(target->byte_size + extra->byte_size <= ROPE_INLINE_LEAF_SIZE);
 
-	memcpy(&target->data.inline_leaf[target->byte_size],
-		   extra->data.inline_leaf, extra->byte_size);
+	memcpy(&target->data.inline_leaf.data[target->byte_size],
+		   extra->data.inline_leaf.data, extra->byte_size);
 	target->byte_size += extra->byte_size;
 	node_update(target);
 	// TODO: maybe detach extra too?
@@ -463,7 +464,7 @@ rope_node_value(const struct RopeNode *node, size_t *size) {
 		return node->data.leaf.data;
 	case ROPE_NODE_INLINE_LEAF:
 		*size = node->byte_size;
-		return node->data.inline_leaf;
+		return node->data.inline_leaf.data;
 	case ROPE_NODE_BRANCH:
 		*size = 0;
 		return NULL;
@@ -488,6 +489,22 @@ rope_node_delete(struct RopeNode *node, struct RopePool *pool) {
 		node_update(parent);
 	}
 	return 0;
+}
+
+uint64_t rope_node_tags(struct RopeNode *node) {
+       while (node->type == ROPE_NODE_BRANCH) {
+               node = *node_left(node);
+       }
+       return node->data.leaf.tags;
+}
+
+void rope_node_set_tags(struct RopeNode *node, uint64_t tags) {
+       if (node->type == ROPE_NODE_BRANCH) {
+               rope_node_set_tags(*node_left(node), tags);
+               rope_node_set_tags(*node_right(node), tags);
+       } else {
+               node->data.leaf.tags = tags;
+       }
 }
 
 int
@@ -550,7 +567,7 @@ print_node(struct RopeNode *node, FILE *out) {
 		break;
 	case ROPE_NODE_INLINE_LEAF:
 		fputs(" [label=\"inline_leaf ", out);
-		print_escaped(node->data.inline_leaf, node->byte_size, out);
+		print_escaped(node->data.inline_leaf.data, node->byte_size, out);
 		fprintf(out, " %lu\"]\n", node->char_size);
 		break;
 	case ROPE_NODE_BRANCH:

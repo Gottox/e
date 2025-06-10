@@ -1,1 +1,1 @@
-subdir('meta_model')
+subdir('lsp-model')

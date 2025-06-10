@@ -1,8 +1,8 @@
 #include <rope.h>
 #include <string.h>
-#include <utest.h>
+#include <testlib.h>
 
-UTEST(reader, test_librope_insert) {
+static void test_librope_insert() {
 	int rv = 0;
 	struct Rope r = {0};
 	rv = rope_init(&r);
@@ -25,7 +25,7 @@ UTEST(reader, test_librope_insert) {
 	rv = rope_cleanup(&r);
 }
 
-UTEST(reader, test_librope_split_insert) {
+static void test_librope_split_insert() {
 	bool has_next = false;
 	int rv = 0;
 	struct Rope r = {0};
@@ -65,7 +65,7 @@ UTEST(reader, test_librope_split_insert) {
 	rv = rope_cleanup(&r);
 }
 
-UTEST(reader, test_librope_split_delete) {
+static void test_librope_split_delete() {
 	bool has_next = false;
 	int rv = 0;
 	struct Rope r = {0};
@@ -99,7 +99,7 @@ UTEST(reader, test_librope_split_delete) {
 	rv = rope_cleanup(&r);
 }
 
-UTEST(reader, test_librope_tail_delete) {
+static void test_librope_tail_delete() {
 	bool has_next = false;
 	int rv = 0;
 	struct Rope r = {0};
@@ -126,7 +126,7 @@ UTEST(reader, test_librope_tail_delete) {
 	rv = rope_cleanup(&r);
 }
 
-UTEST(reader, test_librope_head_delete) {
+static void test_librope_head_delete() {
 	bool has_next = false;
 	int rv = 0;
 	struct Rope r = {0};
@@ -153,7 +153,7 @@ UTEST(reader, test_librope_head_delete) {
 	rv = rope_cleanup(&r);
 }
 
-UTEST(reader, test_librope_insert_multiline) {
+static void test_librope_insert_multiline() {
 	int rv = 0;
 	struct Rope r = {0};
 	rv = rope_init(&r);
@@ -198,7 +198,7 @@ UTEST(reader, test_librope_insert_multiline) {
 	rv = rope_cleanup(&r);
 }
 
-UTEST(reader, test_librope_insert_utf8) {
+static void test_librope_insert_utf8() {
 	int rv = 0;
 	struct Rope r = {0};
 	rv = rope_init(&r);
@@ -218,7 +218,7 @@ UTEST(reader, test_librope_insert_utf8) {
 	rv = rope_cleanup(&r);
 }
 
-UTEST(reader, test_librope_delete_utf8) {
+static void test_librope_delete_utf8() {
 	int rv = 0;
 	struct Rope r = {0};
 	rv = rope_init(&r);
@@ -245,7 +245,7 @@ UTEST(reader, test_librope_delete_utf8) {
 	rv = rope_cleanup(&r);
 }
 
-UTEST(reader, test_librope_single_letter_insert) {
+static void test_librope_single_letter_insert() {
 	int rv = 0;
 	struct Rope r = {0};
 	rv = rope_init(&r);
@@ -282,4 +282,14 @@ UTEST(reader, test_librope_single_letter_insert) {
 	rv = rope_cleanup(&r);
 }
 
-UTEST_MAIN()
+DECLARE_TESTS
+TEST(test_librope_insert)
+TEST(test_librope_split_insert)
+TEST(test_librope_split_delete)
+TEST(test_librope_tail_delete)
+TEST(test_librope_head_delete)
+TEST(test_librope_insert_multiline)
+TEST(test_librope_insert_utf8)
+TEST(test_librope_delete_utf8)
+TEST(test_librope_single_letter_insert)
+END_TESTS

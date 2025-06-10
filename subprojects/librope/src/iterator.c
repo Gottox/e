@@ -24,10 +24,10 @@ rope_iterator_next(
 		node = iter->current = iter->left;
 	}
 	const uint8_t *data = rope_node_value(node, size);
-	rope_byte_index_t left_index = utf8_bidx(data, *size, index);
+	rope_byte_index_t left_index = cx_utf8_bidx(data, *size, index);
 	rope_byte_index_t right_index = node->byte_size;
 	if (iter->right == node) {
-		right_index = utf8_bidx(data, *size, iter->end_index);
+		right_index = cx_utf8_bidx(data, *size, iter->end_index);
 	}
 
 	iter->current_index = 0;

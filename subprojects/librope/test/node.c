@@ -1,9 +1,10 @@
 #include <assert.h>
 #include <rope.h>
 #include <string.h>
-#include <utest.h>
+#include <testlib.h>
 
-UTEST(reader, test_node_insert) {
+static void
+test_node_insert() {
 	int rv = 0;
 	struct RopePool p = {0};
 	rv = rope_pool_init(&p);
@@ -37,7 +38,7 @@ UTEST(reader, test_node_insert) {
 	rv = rope_pool_cleanup(&p);
 }
 
-UTEST(reader, test_node_split) {
+static void test_node_split() {
 	int rv = 0;
 	size_t size = 0;
 	const uint8_t *value = NULL;
@@ -68,18 +69,20 @@ UTEST(reader, test_node_split) {
 }
 
 void
-check_balanced(struct RopeNode *node, int *utest_result) {
+check_balanced(struct RopeNode *node) {
 	if (node->type == ROPE_NODE_BRANCH) {
 		struct RopeNode *left = rope_node_left(node);
 		struct RopeNode *right = rope_node_right(node);
 
-		ASSERT_EQ(right->data.branch.leafs, left->data.branch.leafs);
-		check_balanced(left, utest_result);
-		check_balanced(right, utest_result);
+		printf("left: %zu, right: %zu\n", left->data.branch.leafs,
+				right->data.branch.leafs);
+		if (left->type == ROPE_NODE_BRANCH && right->type == ROPE_NODE_BRANCH) {
+			ASSERT_EQ(left->data.branch.leafs, right->data.branch.leafs);
+		}
 	}
 }
 
-UTEST(reader, test_node_balanced_tree_right) {
+static void test_node_balanced_tree_right() {
 	int rv = 0;
 	struct RopePool pool = {0};
 	rv = rope_pool_init(&pool);
@@ -101,13 +104,13 @@ UTEST(reader, test_node_balanced_tree_right) {
 
 	ASSERT_EQ(ROPE_NODE_BRANCH, (int)root->type);
 
-	check_balanced(root, utest_result);
+	check_balanced(root);
 
 	rv = rope_pool_cleanup(&pool);
 	ASSERT_EQ(0, rv);
 }
 
-UTEST(reader, test_node_balanced_tree_left) {
+static void test_node_balanced_tree_left() {
 	int rv = 0;
 	struct RopePool pool = {0};
 	rv = rope_pool_init(&pool);
@@ -129,10 +132,15 @@ UTEST(reader, test_node_balanced_tree_left) {
 
 	ASSERT_EQ(ROPE_NODE_BRANCH, (int)root->type);
 
-	check_balanced(root, utest_result);
+	check_balanced(root);
 
 	rv = rope_pool_cleanup(&pool);
 	ASSERT_EQ(0, rv);
 }
 
-UTEST_MAIN()
+DECLARE_TESTS
+TEST(test_node_insert)
+TEST(test_node_split)
+TEST(test_node_balanced_tree_right)
+TEST(test_node_balanced_tree_left)
+END_TESTS

@@ -1,6 +1,5 @@
 project('libjsonwrap', 'c')
 
-quickjs_dep = dependency('quickjs-ng')
 cextras_dep = subproject('cextras').get_variable('cextras_dep')
 
 subdir('src')
@@ -11,7 +10,10 @@ if get_option('test')
     subdir('test')
 endif
 
-libjsonwrap_dependencies = [quickjs_dep, cextras_dep]
+libjsonwrap_dependencies = [cextras_dep]
+if get_option('json_backend') == 'quickjs'
+    backend_dependencies = [dependency('quickjs-ng')]
+endif
 
 c_args = []
 
@@ -24,7 +26,7 @@ libjsonwrap = static_library(
 
     install: false,
     c_args: c_args,
-    dependencies: libjsonwrap_dependencies,
+    dependencies: libjsonwrap_dependencies + backend_dependencies,
 )
 
 libjsonwrap_dep = declare_dependency(
@@ -32,4 +34,5 @@ libjsonwrap_dep = declare_dependency(
         libjsonwrap_include,
     ],
     link_with: libjsonwrap,
+    dependencies: backend_dependencies
 )

@@ -1,8 +1,9 @@
 #include <rope.h>
 #include <string.h>
-#include <utest.h>
+#include <testlib.h>
 
-UTEST(reader, test_range) {
+static void
+range_basic() {
 	int rv = 0;
 	struct Rope r = {0};
 	rv = rope_init(&r);
@@ -21,4 +22,6 @@ UTEST(reader, test_range) {
 	ASSERT_EQ(0, rv);
 }
 
-UTEST_MAIN()
+DECLARE_TESTS
+TEST(range_basic)
+END_TESTS

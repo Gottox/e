@@ -1850,7 +1850,7 @@
 				"kind": "reference",
 				"name": "ExecuteCommandRegistrationOptions"
 			},
-			"documentation": "A request sent from the client to the server to execute a command. The request might return\na workspace edit which the client will apply to the workspace."
+			"documentation": "A request send from the client to the server to execute a command. The request might return\na workspace edit which the client will apply to the workspace."
 		},
 		{
 			"method": "workspace/applyEdit",
@@ -1863,7 +1863,7 @@
 				"kind": "reference",
 				"name": "ApplyWorkspaceEditParams"
 			},
-			"documentation": "A request sent from the server to the client to modify certain resources."
+			"documentation": "A request sent from the server to the client to modified certain resources."
 		}
 	],
 	"notifications": [
@@ -4710,7 +4710,7 @@
 						"name": "CompletionContext"
 					},
 					"optional": true,
-					"documentation": "The completion context. This is only available it the client specifies\nto send this using the client capability `textDocument.completion.contextSupport === true`"
+					"documentation": "The completion context. This is only available if the client specifies\nto send this using the client capability `textDocument.completion.contextSupport === true`"
 				}
 			],
 			"extends": [
@@ -5197,20 +5197,11 @@
 				{
 					"name": "activeParameter",
 					"type": {
-						"kind": "or",
-						"items": [
-							{
-								"kind": "base",
-								"name": "uinteger"
-							},
-							{
-								"kind": "base",
-								"name": "null"
-							}
-						]
+						"kind": "base",
+						"name": "uinteger"
 					},
 					"optional": true,
-					"documentation": "The active parameter of the active signature.\n\nIf `null`, no parameter of the signature is active (for example a named\nargument that does not match any declared parameters). This is only valid\nsince 3.18.0 and if the client specifies the client capability\n`textDocument.signatureHelp.noActiveParameterSupport === true`\n\nIf omitted or the value lies outside the range of\n`signatures[activeSignature].parameters` defaults to 0 if the active\nsignature has parameters.\n\nIf the active signature has no parameters it is ignored.\n\nIn future version of the protocol this property might become\nmandatory (but still nullable) to better express the active parameter if\nthe active signature does have any."
+					"documentation": "The active parameter of the active signature. If omitted or the value\nlies outside the range of `signatures[activeSignature].parameters`\ndefaults to 0 if the active signature has parameters. If\nthe active signature has no parameters it is ignored.\nIn future version of the protocol this property might become\nmandatory to better express the active parameter if the\nactive signature does have any."
 				}
 			],
 			"documentation": "Signature help represents the signature of something\ncallable. There can be multiple signature but only one\nactive and only one active parameter."
@@ -6336,7 +6327,7 @@
 						"name": "uinteger"
 					},
 					"optional": true,
-					"documentation": "Optional progress percentage to display (value 100 is considered 100%).\nIf not provided infinite progress is assumed and clients are allowed\nto ignore the `percentage` value in subsequent in report notifications.\n\nThe value should be steadily rising. Clients are free to ignore values\nthat are not following this rule. The value range is [0, 100]."
+					"documentation": "Optional progress percentage to display (value 100 is considered 100%).\nIf not provided infinite progress is assumed and clients are allowed\nto ignore the `percentage` value in subsequent report notifications.\n\nThe value should be steadily rising. Clients are free to ignore values\nthat are not following this rule. The value range is [0, 100]."
 				}
 			]
 		},
@@ -6375,7 +6366,7 @@
 						"name": "uinteger"
 					},
 					"optional": true,
-					"documentation": "Optional progress percentage to display (value 100 is considered 100%).\nIf not provided infinite progress is assumed and clients are allowed\nto ignore the `percentage` value in subsequent in report notifications.\n\nThe value should be steadily rising. Clients are free to ignore values\nthat are not following this rule. The value range is [0, 100]"
+					"documentation": "Optional progress percentage to display (value 100 is considered 100%).\nIf not provided infinite progress is assumed and clients are allowed\nto ignore the `percentage` value in subsequent report notifications.\n\nThe value should be steadily rising. Clients are free to ignore values\nthat are not following this rule. The value range is [0, 100]."
 				}
 			]
 		},
@@ -8737,43 +8728,6 @@
 					"proposed": true
 				},
 				{
-					"name": "textDocument",
-					"type": {
-						"kind": "literal",
-						"value": {
-							"properties": [
-								{
-									"name": "diagnostic",
-									"type": {
-										"kind": "literal",
-										"value": {
-											"properties": [
-												{
-													"name": "markupMessageSupport",
-													"type": {
-														"kind": "base",
-														"name": "boolean"
-													},
-													"optional": true,
-													"documentation": "Whether the server supports `MarkupContent` in diagnostic messages.",
-													"since": "3.18.0",
-													"proposed": true
-												}
-											]
-										}
-									},
-									"optional": true,
-									"documentation": "Capabilities specific to the diagnostic pull model.\n\n@since 3.18.0",
-									"since": "3.18.0"
-								}
-							]
-						}
-					},
-					"optional": true,
-					"documentation": "Text document specific server capabilities.\n\n@since 3.18.0\n@proposed",
-					"since": "3.18.0"
-				},
-				{
 					"name": "workspace",
 					"type": {
 						"kind": "literal",
@@ -8957,19 +8911,10 @@
 				{
 					"name": "message",
 					"type": {
-						"kind": "or",
-						"items": [
-							{
-								"kind": "base",
-								"name": "string"
-							},
-							{
-								"kind": "reference",
-								"name": "MarkupContent"
-							}
-						]
+						"kind": "base",
+						"name": "string"
 					},
-					"documentation": "The diagnostic's message. It usually appears in the user interface.\n\n@since 3.18.0 - support for `MarkupContent`. This is guarded by the client capability `textDocument.diagnostic.markupMessageSupport`."
+					"documentation": "The diagnostic's message. It usually appears in the user interface"
 				},
 				{
 					"name": "tags",
@@ -9253,20 +9198,11 @@
 				{
 					"name": "activeParameter",
 					"type": {
-						"kind": "or",
-						"items": [
-							{
-								"kind": "base",
-								"name": "uinteger"
-							},
-							{
-								"kind": "base",
-								"name": "null"
-							}
-						]
+						"kind": "base",
+						"name": "uinteger"
 					},
 					"optional": true,
-					"documentation": "The index of the active parameter.\n\nIf `null`, no parameter of the signature is active (for example a named\nargument that does not match any declared parameters). This is only valid\nsince 3.18.0 and if the client specifies the client capability\n`textDocument.signatureHelp.noActiveParameterSupport === true`\n\nIf provided (or `null`), this is used in place of\n`SignatureHelp.activeParameter`.\n\n@since 3.16.0",
+					"documentation": "The index of the active parameter.\n\nIf provided, this is used in place of `SignatureHelp.activeParameter`.\n\n@since 3.16.0",
 					"since": "3.16.0"
 				}
 			],
@@ -9434,7 +9370,7 @@
 							"name": "Diagnostic"
 						}
 					},
-					"documentation": "An array of diagnostics known on the client side overlapping the range provided to the\n`textDocument/codeAction` request. They are provided so that the server knows which\nerrors are currently presented to the user for the given range. There is no guarantee\nthat these accurately reflect the error state of the resource. The primary parameter\nto compute code actions is the provided range.\n\nNote that the client should check the `textDocument.diagnostic.markupMessageSupport` server capability before sending diagnostics with markup messages to a server."
+					"documentation": "An array of diagnostics known on the client side overlapping the range provided to the\n`textDocument/codeAction` request. They are provided so that the server knows which\nerrors are currently presented to the user for the given range. There is no guarantee\nthat these accurately reflect the error state of the resource. The primary parameter\nto compute code actions is the provided range."
 				},
 				{
 					"name": "only",
@@ -9900,7 +9836,7 @@
 						"kind": "base",
 						"name": "string"
 					},
-					"documentation": "The glob pattern to match. Glob patterns can have the following syntax:\n- `*` to match one or more characters in a path segment\n- `?` to match on one character in a path segment\n- `**` to match any number of path segments, including none\n- `{}` to group sub patterns into an OR expression. (e.g. `**​/*.{ts,js}` matches all TypeScript and JavaScript files)\n- `[]` to declare a range of characters to match in a path segment (e.g., `example.[0-9]` to match on `example.0`, `example.1`, …)\n- `[!...]` to negate a range of characters to match in a path segment (e.g., `example.[!0-9]` to match on `example.a`, `example.b`, but not `example.0`)"
+					"documentation": "The glob pattern to match. Glob patterns can have the following syntax:\n- `*` to match zero or more characters in a path segment\n- `?` to match on one character in a path segment\n- `**` to match any number of path segments, including none\n- `{}` to group sub patterns into an OR expression. (e.g. `**​/*.{ts,js}` matches all TypeScript and JavaScript files)\n- `[]` to declare a range of characters to match in a path segment (e.g., `example.[0-9]` to match on `example.0`, `example.1`, …)\n- `[!...]` to negate a range of characters to match in a path segment (e.g., `example.[!0-9]` to match on `example.a`, `example.b`, but not `example.0`)"
 				},
 				{
 					"name": "matches",
@@ -11956,16 +11892,6 @@
 									"optional": true,
 									"documentation": "The client supports the `activeParameter` property on `SignatureInformation`\nliteral.\n\n@since 3.16.0",
 									"since": "3.16.0"
-								},
-								{
-									"name": "noActiveParameterSupport",
-									"type": {
-										"kind": "base",
-										"name": "boolean"
-									},
-									"optional": true,
-									"documentation": "The client supports the `activeParameter` property on\n`SignatureInformation` being set to `null` to indicate that no\nparameter should be active.\n\n@since 3.18.0",
-									"since": "3.18.0"
 								}
 							]
 						}
@@ -12916,17 +12842,6 @@
 					},
 					"optional": true,
 					"documentation": "Whether the clients supports related documents for document diagnostic pulls."
-				},
-				{
-					"name": "markupMessageSupport",
-					"type": {
-						"kind": "base",
-						"name": "boolean"
-					},
-					"optional": true,
-					"documentation": "Whether the client supports `MarkupContent` in diagnostic messages.",
-					"since": "3.18.0",
-					"proposed": true
 				}
 			],
 			"documentation": "Client capabilities specific to diagnostic pull requests.\n\n@since 3.17.0",
@@ -14795,7 +14710,7 @@
 					}
 				]
 			},
-			"documentation": "A document filter denotes a document by different properties like\nthe {@link TextDocument.languageId language}, the {@link Uri.scheme scheme} of\nits resource, or a glob-pattern that is applied to the {@link TextDocument.fileName path}.\n\nGlob patterns can have the following syntax:\n- `*` to match one or more characters in a path segment\n- `?` to match on one character in a path segment\n- `**` to match any number of path segments, including none\n- `{}` to group sub patterns into an OR expression. (e.g. `**​/*.{ts,js}` matches all TypeScript and JavaScript files)\n- `[]` to declare a range of characters to match in a path segment (e.g., `example.[0-9]` to match on `example.0`, `example.1`, …)\n- `[!...]` to negate a range of characters to match in a path segment (e.g., `example.[!0-9]` to match on `example.a`, `example.b`, but not `example.0`)\n\n@sample A language filter that applies to typescript files on disk: `{ language: 'typescript', scheme: 'file' }`\n@sample A language filter that applies to all package.json paths: `{ language: 'json', pattern: '**package.json' }`\n\n@since 3.17.0",
+			"documentation": "A document filter denotes a document by different properties like\nthe {@link TextDocument.languageId language}, the {@link Uri.scheme scheme} of\nits resource, or a glob-pattern that is applied to the {@link TextDocument.fileName path}.\n\nGlob patterns can have the following syntax:\n- `*` to match zero or more characters in a path segment\n- `?` to match on one character in a path segment\n- `**` to match any number of path segments, including none\n- `{}` to group sub patterns into an OR expression. (e.g. `**​/*.{ts,js}` matches all TypeScript and JavaScript files)\n- `[]` to declare a range of characters to match in a path segment (e.g., `example.[0-9]` to match on `example.0`, `example.1`, …)\n- `[!...]` to negate a range of characters to match in a path segment (e.g., `example.[!0-9]` to match on `example.a`, `example.b`, but not `example.0`)\n\n@sample A language filter that applies to typescript files on disk: `{ language: 'typescript', scheme: 'file' }`\n@sample A language filter that applies to all package.json paths: `{ language: 'json', pattern: '**package.json' }`\n\n@since 3.17.0",
 			"since": "3.17.0"
 		},
 		{
@@ -14913,7 +14828,7 @@
 				"kind": "base",
 				"name": "string"
 			},
-			"documentation": "The glob pattern to watch relative to the base path. Glob patterns can have the following syntax:\n- `*` to match one or more characters in a path segment\n- `?` to match on one character in a path segment\n- `**` to match any number of path segments, including none\n- `{}` to group conditions (e.g. `**​/*.{ts,js}` matches all TypeScript and JavaScript files)\n- `[]` to declare a range of characters to match in a path segment (e.g., `example.[0-9]` to match on `example.0`, `example.1`, …)\n- `[!...]` to negate a range of characters to match in a path segment (e.g., `example.[!0-9]` to match on `example.a`, `example.b`, but not `example.0`)\n\n@since 3.17.0",
+			"documentation": "The glob pattern to watch relative to the base path. Glob patterns can have the following syntax:\n- `*` to match zero or more characters in a path segment\n- `?` to match on one character in a path segment\n- `**` to match any number of path segments, including none\n- `{}` to group conditions (e.g. `**​/*.{ts,js}` matches all TypeScript and JavaScript files)\n- `[]` to declare a range of characters to match in a path segment (e.g., `example.[0-9]` to match on `example.0`, `example.1`, …)\n- `[!...]` to negate a range of characters to match in a path segment (e.g., `example.[!0-9]` to match on `example.a`, `example.b`, but not `example.0`)\n\n@since 3.17.0",
 			"since": "3.17.0"
 		}
 	]
