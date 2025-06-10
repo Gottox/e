@@ -22,9 +22,9 @@ char *
 type_basename(struct JwVal *type) {
     char *kind = NULL;
     size_t kl = 0;
-    if (jw_obj_get_str(type, "kind", &kind, &kl) != 0) {
+    if (jw_obj_get_str(type, "kind", &kind, &kl) != 0)
         return strdup("Anon");
-    }
+
     char *name = NULL;
     if (strcmp(kind, "reference") == 0 || strcmp(kind, "base") == 0) {
         if (jw_obj_get_str(type, "name", &name, &kl) == 0) {
@@ -35,7 +35,99 @@ type_basename(struct JwVal *type) {
             free(kind);
             return res;
         }
+    } else if (strcmp(kind, "array") == 0) {
+        struct JwVal elem = {0};
+        if (jw_obj_get(type, "element", &elem) == 0) {
+            char *inner = type_basename(&elem);
+            size_t sz = strlen(inner) + 6; // "Array" + nul
+            char *res = malloc(sz);
+            snprintf(res, sz, "%sArray", inner);
+            free(inner);
+            jw_cleanup(&elem);
+            free(kind);
+            return res;
+        }
+    } else if (strcmp(kind, "map") == 0) {
+        struct JwVal key = {0}, value = {0};
+        if (jw_obj_get(type, "key", &key) == 0 &&
+            jw_obj_get(type, "value", &value) == 0) {
+            char *kbn = type_basename(&key);
+            char *vbn = type_basename(&value);
+            size_t sz = strlen(kbn) + strlen(vbn) + 6; // "Map" + "To" + nul
+            char *res = malloc(sz);
+            snprintf(res, sz, "Map%sTo%s", kbn, vbn);
+            free(kbn);
+            free(vbn);
+            jw_cleanup(&key);
+            jw_cleanup(&value);
+            free(kind);
+            return res;
+        }
+    } else if (strcmp(kind, "tuple") == 0) {
+        struct JwVal items = {0};
+        if (jw_obj_get(type, "items", &items) == 0) {
+            ssize_t n = jw_arr_len(&items);
+            char namebuf[512] = {0};
+            for (ssize_t i = 0; i < n; ++i) {
+                struct JwVal it = {0};
+                jw_arr_get(&items, i, &it);
+                char *bn = type_basename(&it);
+                strcat(namebuf, bn);
+                free(bn);
+                jw_cleanup(&it);
+            }
+            size_t sz = strlen(namebuf) + 4; // "Tup" + nul
+            char *res = malloc(sz);
+            snprintf(res, sz, "Tup%s", namebuf);
+            jw_cleanup(&items);
+            free(kind);
+            return res;
+        }
+    } else if (strcmp(kind, "literal") == 0) {
+        struct JwVal val = {0};
+        if (jw_obj_get(type, "value", &val) == 0) {
+            struct JwVal props = {0};
+            if (jw_obj_get(&val, "properties", &props) == 0) {
+                ssize_t pc = jw_arr_len(&props);
+                if (pc > 0) {
+                    char namebuf[512] = {0};
+                    for (ssize_t i = 0; i < pc; ++i) {
+                        struct JwVal p = {0};
+                        jw_arr_get(&props, i, &p);
+                        char *pn = NULL;
+                        if (jw_obj_get_str(&p, "name", &pn, &kl) == 0) {
+                            char tmp[256];
+                            to_upper_camel(pn, tmp, sizeof(tmp));
+                            strcat(namebuf, tmp);
+                            bool opt = false;
+                            if (jw_obj_get_bool(&p, "optional", &opt) == 0 &&
+                                opt)
+                                strcat(namebuf, "Opt");
+                            free(pn);
+                        }
+                        jw_cleanup(&p);
+                    }
+                    size_t sz = strlen(namebuf) + 4; // "Lit" + nul
+                    char *res = malloc(sz);
+                    snprintf(res, sz, "Lit%s", namebuf);
+                    jw_cleanup(&props);
+                    jw_cleanup(&val);
+                    free(kind);
+                    return res;
+                } else {
+                    jw_cleanup(&props);
+                    jw_cleanup(&val);
+                    free(kind);
+                    return strdup("Object");
+                }
+            }
+            jw_cleanup(&val);
+        }
+    } else if (strcmp(kind, "stringLiteral") == 0) {
+        free(kind);
+        return strdup("String");
     }
+
     free(kind);
     return strdup("Anon");
 }
@@ -138,6 +230,11 @@ resolve_type(struct JwVal *type, struct NameList *enums) {
                             char tmp[256];
                             to_upper_camel(pn, tmp, sizeof(tmp));
                             strcat(name, tmp);
+                            bool opt = false;
+                            if (jw_obj_get_bool(&p, "optional", &opt) == 0 &&
+                                opt) {
+                                strcat(name, "Opt");
+                            }
                             free(pn);
                         }
                         jw_cleanup(&p);

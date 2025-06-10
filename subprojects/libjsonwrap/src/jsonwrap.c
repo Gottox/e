@@ -33,16 +33,29 @@ out:
 
 int
 jw_obj_get_float(struct JwVal *obj, const char *key, double *number) {
-	int rv = 0;
-	struct JwVal val = {0};
-	rv = jw_obj_get(obj, key, &val);
-	if (rv < 0) {
-		goto out;
-	}
-	rv = jw_float(&val, number);
+        int rv = 0;
+        struct JwVal val = {0};
+        rv = jw_obj_get(obj, key, &val);
+        if (rv < 0) {
+                goto out;
+        }
+        rv = jw_float(&val, number);
 out:
-	jw_cleanup(&val);
-	return rv;
+        jw_cleanup(&val);
+        return rv;
+}
+
+int
+jw_obj_get_bool(struct JwVal *obj, const char *key, bool *boolean) {
+        int rv = 0;
+        struct JwVal val = {0};
+        rv = jw_obj_get(obj, key, &val);
+        if (rv < 0)
+                goto out;
+        rv = jw_bool(&val, boolean);
+out:
+        jw_cleanup(&val);
+        return rv;
 }
 
 int
@@ -75,16 +88,29 @@ out:
 
 int
 jw_arr_get_float(struct JwVal *arr, size_t index, double *number) {
-	int rv = 0;
-	struct JwVal val = {0};
-	rv = jw_arr_get(arr, index, &val);
-	if (rv < 0) {
-		goto out;
-	}
-	rv = jw_float(&val, number);
+        int rv = 0;
+        struct JwVal val = {0};
+        rv = jw_arr_get(arr, index, &val);
+        if (rv < 0) {
+                goto out;
+        }
+        rv = jw_float(&val, number);
 out:
-	jw_cleanup(&val);
-	return rv;
+        jw_cleanup(&val);
+        return rv;
+}
+
+int
+jw_arr_get_bool(struct JwVal *arr, size_t index, bool *boolean) {
+        int rv = 0;
+        struct JwVal val = {0};
+        rv = jw_arr_get(arr, index, &val);
+        if (rv < 0)
+                goto out;
+        rv = jw_bool(&val, boolean);
+out:
+        jw_cleanup(&val);
+        return rv;
 }
 
 void

@@ -176,6 +176,9 @@ add_literal(struct LiteralList *l, struct JwVal *literal, struct NameList *enums
             char tmp[256];
             to_upper_camel(pn, tmp, sizeof(tmp));
             strcat(namebuf, tmp);
+            bool opt = false;
+            if (jw_obj_get_bool(&p, "optional", &opt) == 0 && opt)
+                strcat(namebuf, "Opt");
             free(pn);
         }
         jw_cleanup(&p);
@@ -311,8 +314,6 @@ collect_types(struct JwVal *type, struct TypeCollector *ctx) {
         if (jw_obj_get(type, "value", &val) == 0) {
             struct JwVal props = {0};
             if (jw_obj_get(&val, "properties", &props) == 0) {
-                if (ctx->literals)
-                    add_literal(ctx->literals, type, ctx->enums);
                 ssize_t pc = jw_arr_len(&props);
                 for (ssize_t i = 0; i < pc; ++i) {
                     struct JwVal p = {0};
@@ -324,6 +325,8 @@ collect_types(struct JwVal *type, struct TypeCollector *ctx) {
                     }
                     jw_cleanup(&p);
                 }
+                if (ctx->literals)
+                    add_literal(ctx->literals, type, ctx->enums);
                 jw_cleanup(&props);
             }
             jw_cleanup(&val);

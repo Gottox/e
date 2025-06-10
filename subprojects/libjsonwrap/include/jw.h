@@ -8,6 +8,7 @@
 
 #include <stddef.h>
 #include <unistd.h>
+#include <stdbool.h>
 
 #include <jw_backend.h>
 
@@ -30,6 +31,8 @@ int jw_int(struct JwVal *val, int *int_val);
 
 int jw_float(struct JwVal *val, double *f_val);
 
+int jw_bool(struct JwVal *val, bool *b);
+
 int jw_str(struct JwVal *val, char **str, size_t *size);
 
 int jw_cleanup(struct JwVal *val);
@@ -50,7 +53,8 @@ int
 jw_obj_get_int(struct JwVal *obj, const char *key, int *number);
 
 int jw_obj_get_float(
-		struct JwVal *obj, const char *key, double *number);
+                struct JwVal *obj, const char *key, double *number);
+int jw_obj_get_bool(struct JwVal *obj, const char *key, bool *boolean);
 
 int jw_arr_get_str(
 		struct JwVal *arr, size_t index, char **str,
@@ -59,7 +63,8 @@ int jw_arr_get_str(
 int jw_arr_get_int(struct JwVal *arr, size_t index, int *number);
 
 int jw_arr_get_float(
-		struct JwVal *arr, size_t index, double *number);
+                struct JwVal *arr, size_t index, double *number);
+int jw_arr_get_bool(struct JwVal *arr, size_t index, bool *boolean);
 
 void jw_debug(struct JwVal *val);
 

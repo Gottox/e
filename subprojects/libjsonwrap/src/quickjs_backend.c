@@ -141,6 +141,18 @@ out:
 }
 
 int
+jw_bool(struct JwVal *val, bool *b) {
+        int rv = 0;
+        if (!jw_is_bool(val)) {
+                rv = -1;
+                goto out;
+        }
+        *b = JS_VALUE_GET_BOOL(val->value);
+out:
+        return rv;
+}
+
+int
 jw_str(struct JwVal *val, char **str, size_t *size) {
 	int rv = 0;
 	size_t str_size = 0;
