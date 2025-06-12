@@ -10,7 +10,8 @@
 extern char **environ;
 
 int
-lsp_connection_client_init(struct LSPConnection *connection, const char *lsp_command[]) {
+lsp_connection_client_init(
+		struct LSPConnection *connection, const char *lsp_command[]) {
 	int rv = 0;
 	int sender_pipe[2] = {0};
 	int receiver_pipe[2] = {0};
@@ -53,7 +54,8 @@ out:
 }
 
 int
-lsp_connection_server_init(struct LSPConnection *connection, FILE *in, FILE *out) {
+lsp_connection_server_init(
+		struct LSPConnection *connection, FILE *in, FILE *out) {
 	if (out == NULL) {
 		out = stdout;
 	}
@@ -117,7 +119,8 @@ lsp_connection_receive(
 		return -errno;
 	}
 
-	if (fread(*res, 1, content_length, connection->receiver) != content_length) {
+	if (fread(*res, 1, content_length, connection->receiver) !=
+		content_length) {
 		free(*res);
 		return -errno;
 	}

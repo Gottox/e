@@ -38,7 +38,8 @@ test_node_insert() {
 	rv = rope_pool_cleanup(&p);
 }
 
-static void test_node_split() {
+static void
+test_node_split() {
 	int rv = 0;
 	size_t size = 0;
 	const uint8_t *value = NULL;
@@ -75,14 +76,15 @@ check_balanced(struct RopeNode *node) {
 		struct RopeNode *right = rope_node_right(node);
 
 		printf("left: %zu, right: %zu\n", left->data.branch.leafs,
-				right->data.branch.leafs);
+			   right->data.branch.leafs);
 		if (left->type == ROPE_NODE_BRANCH && right->type == ROPE_NODE_BRANCH) {
 			ASSERT_EQ(left->data.branch.leafs, right->data.branch.leafs);
 		}
 	}
 }
 
-static void test_node_balanced_tree_right() {
+static void
+test_node_balanced_tree_right() {
 	int rv = 0;
 	struct RopePool pool = {0};
 	rv = rope_pool_init(&pool);
@@ -110,7 +112,8 @@ static void test_node_balanced_tree_right() {
 	ASSERT_EQ(0, rv);
 }
 
-static void test_node_balanced_tree_left() {
+static void
+test_node_balanced_tree_left() {
 	int rv = 0;
 	struct RopePool pool = {0};
 	rv = rope_pool_init(&pool);

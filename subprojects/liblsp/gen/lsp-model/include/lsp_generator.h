@@ -2,8 +2,8 @@
 #define LSP_GEN_GENERATOR_H
 
 #include <jw.h>
-#include <stdio.h>
 #include <stddef.h>
+#include <stdio.h>
 
 // Utility helpers
 char *read_file(const char *path);
@@ -13,49 +13,49 @@ void to_upper_camel(const char *in, char *out, size_t max);
 int is_null_type(struct JwVal *type);
 
 struct NameList {
-    char **names;
-    size_t count;
+	char **names;
+	size_t count;
 };
 
 struct OrEnum {
-    char *t1;
-    char *t2;
+	char *t1;
+	char *t2;
 };
 
 struct OrEnumList {
-    struct OrEnum *items;
-    size_t count;
+	struct OrEnum *items;
+	size_t count;
 };
 
 struct TupleDef {
-    char *name;
-    char **field_types;
-    size_t field_count;
+	char *name;
+	char **field_types;
+	size_t field_count;
 };
 
 struct TupleList {
-    struct TupleDef *items;
-    size_t count;
+	struct TupleDef *items;
+	size_t count;
 };
 
 struct LiteralDef {
-    char *name;
-    char **field_names;
-    char **field_types;
-    size_t field_count;
+	char *name;
+	char **field_names;
+	char **field_types;
+	size_t field_count;
 };
 
 struct LiteralList {
-    struct LiteralDef *items;
-    size_t count;
+	struct LiteralDef *items;
+	size_t count;
 };
 
 struct TypeCollector {
-    struct NameList *enums;
-    struct NameList *deps;
-    struct OrEnumList *or_enums;
-    struct TupleList *tuples;
-    struct LiteralList *literals;
+	struct NameList *enums;
+	struct NameList *deps;
+	struct OrEnumList *or_enums;
+	struct TupleList *tuples;
+	struct LiteralList *literals;
 };
 
 int add_name(struct NameList *l, const char *name);
@@ -69,14 +69,15 @@ void free_or_enum_list(struct OrEnumList *l);
 int add_tuple(struct TupleList *l, struct JwVal *tuple, struct NameList *enums);
 void free_tuple_list(struct TupleList *l);
 
-int add_literal(struct LiteralList *l, struct JwVal *literal,
-                struct NameList *enums);
+int add_literal(
+		struct LiteralList *l, struct JwVal *literal, struct NameList *enums);
 void free_literal_list(struct LiteralList *l);
 
 void collect_types(struct JwVal *type, struct TypeCollector *ctx);
 
 char *type_basename(struct JwVal *type);
-void collect_deps(struct JwVal *type, struct NameList *enums, struct NameList *deps);
+void
+collect_deps(struct JwVal *type, struct NameList *enums, struct NameList *deps);
 char *resolve_type(struct JwVal *type, struct NameList *enums);
 
 void generate_enums(struct JwVal *root, FILE *out);

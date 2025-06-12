@@ -15,8 +15,7 @@ struct FieldInfo {
 };
 
 static struct FieldInfo fields_info[] = {
-#define E(n, t) \
-	{ #n, offsetof(struct EditorConfigSegment, n), t }
+#define E(n, t) {#n, offsetof(struct EditorConfigSegment, n), t}
 		E(indent_style, TYPE_STRING),
 		E(indent_size, TYPE_INT),
 		E(tab_width, TYPE_INT),

@@ -6,9 +6,9 @@
 #ifndef JW_H
 #define JW_H
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <unistd.h>
-#include <stdbool.h>
 
 #include <jw_backend.h>
 
@@ -22,8 +22,7 @@ int jw_serialize(struct JwVal *val, char **json, size_t *size);
 
 int jw_obj_get(struct JwVal *object, const char *key, struct JwVal *target);
 
-int jw_arr_get(
-		struct JwVal *arr, size_t index, struct JwVal *target);
+int jw_arr_get(struct JwVal *arr, size_t index, struct JwVal *target);
 
 ssize_t jw_arr_len(struct JwVal *arr);
 
@@ -39,31 +38,23 @@ int jw_cleanup(struct JwVal *val);
 
 // Util functions
 
-typedef int (*jw_arr_foreach_fn)(
-		struct JwVal *val, int index, void *data);
+typedef int (*jw_arr_foreach_fn)(struct JwVal *val, int index, void *data);
 
-int jw_arr_foreach(
-		struct JwVal *arr, jw_arr_foreach_fn fn, void *data);
-
-int jw_obj_get_str(
-		struct JwVal *obj, const char *key, char **str,
-		size_t *size);
+int jw_arr_foreach(struct JwVal *arr, jw_arr_foreach_fn fn, void *data);
 
 int
-jw_obj_get_int(struct JwVal *obj, const char *key, int *number);
+jw_obj_get_str(struct JwVal *obj, const char *key, char **str, size_t *size);
 
-int jw_obj_get_float(
-                struct JwVal *obj, const char *key, double *number);
+int jw_obj_get_int(struct JwVal *obj, const char *key, int *number);
+
+int jw_obj_get_float(struct JwVal *obj, const char *key, double *number);
 int jw_obj_get_bool(struct JwVal *obj, const char *key, bool *boolean);
 
-int jw_arr_get_str(
-		struct JwVal *arr, size_t index, char **str,
-		size_t *size);
+int jw_arr_get_str(struct JwVal *arr, size_t index, char **str, size_t *size);
 
 int jw_arr_get_int(struct JwVal *arr, size_t index, int *number);
 
-int jw_arr_get_float(
-                struct JwVal *arr, size_t index, double *number);
+int jw_arr_get_float(struct JwVal *arr, size_t index, double *number);
 int jw_arr_get_bool(struct JwVal *arr, size_t index, bool *boolean);
 
 void jw_debug(struct JwVal *val);

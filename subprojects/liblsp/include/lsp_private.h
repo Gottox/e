@@ -10,11 +10,11 @@ struct LSPConnection {
 	pid_t lsp_pid;
 };
 
-int
-lsp_connection_client_init(struct LSPConnection *connection, const char *lsp_command[]);
+int lsp_connection_client_init(
+		struct LSPConnection *connection, const char *lsp_command[]);
 
-int
-lsp_connection_server_init(struct LSPConnection *connection, FILE *in, FILE *out);
+int lsp_connection_server_init(
+		struct LSPConnection *connection, FILE *in, FILE *out);
 
 int lsp_connection_send(
 		struct LSPConnection *connection, const char *json_request,

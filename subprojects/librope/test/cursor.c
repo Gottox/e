@@ -2,7 +2,8 @@
 #include <string.h>
 #include <testlib.h>
 
-static void cursor_basic() {
+static void
+cursor_basic() {
 	int rv = 0;
 	struct Rope r = {0};
 	rv = rope_init(&r);
@@ -51,7 +52,8 @@ static void cursor_basic() {
 	ASSERT_EQ(0, rv);
 }
 
-static void cursor_utf8() {
+static void
+cursor_utf8() {
 	int rv = 0;
 	struct Rope r = {0};
 	rv = rope_init(&r);
@@ -100,7 +102,8 @@ static void cursor_utf8() {
 	ASSERT_EQ(0, rv);
 }
 
-static void cursor_event() {
+static void
+cursor_event() {
 	int rv = 0;
 	struct Rope r = {0};
 	rv = rope_init(&r);

@@ -2,7 +2,8 @@
 #include <string.h>
 #include <testlib.h>
 
-static void test_librope_insert() {
+static void
+test_librope_insert() {
 	int rv = 0;
 	struct Rope r = {0};
 	rv = rope_init(&r);
@@ -25,7 +26,8 @@ static void test_librope_insert() {
 	rv = rope_cleanup(&r);
 }
 
-static void test_librope_split_insert() {
+static void
+test_librope_split_insert() {
 	bool has_next = false;
 	int rv = 0;
 	struct Rope r = {0};
@@ -65,7 +67,8 @@ static void test_librope_split_insert() {
 	rv = rope_cleanup(&r);
 }
 
-static void test_librope_split_delete() {
+static void
+test_librope_split_delete() {
 	bool has_next = false;
 	int rv = 0;
 	struct Rope r = {0};
@@ -99,7 +102,8 @@ static void test_librope_split_delete() {
 	rv = rope_cleanup(&r);
 }
 
-static void test_librope_tail_delete() {
+static void
+test_librope_tail_delete() {
 	bool has_next = false;
 	int rv = 0;
 	struct Rope r = {0};
@@ -126,7 +130,8 @@ static void test_librope_tail_delete() {
 	rv = rope_cleanup(&r);
 }
 
-static void test_librope_head_delete() {
+static void
+test_librope_head_delete() {
 	bool has_next = false;
 	int rv = 0;
 	struct Rope r = {0};
@@ -153,7 +158,8 @@ static void test_librope_head_delete() {
 	rv = rope_cleanup(&r);
 }
 
-static void test_librope_insert_multiline() {
+static void
+test_librope_insert_multiline() {
 	int rv = 0;
 	struct Rope r = {0};
 	rv = rope_init(&r);
@@ -198,7 +204,8 @@ static void test_librope_insert_multiline() {
 	rv = rope_cleanup(&r);
 }
 
-static void test_librope_insert_utf8() {
+static void
+test_librope_insert_utf8() {
 	int rv = 0;
 	struct Rope r = {0};
 	rv = rope_init(&r);
@@ -218,7 +225,8 @@ static void test_librope_insert_utf8() {
 	rv = rope_cleanup(&r);
 }
 
-static void test_librope_delete_utf8() {
+static void
+test_librope_delete_utf8() {
 	int rv = 0;
 	struct Rope r = {0};
 	rv = rope_init(&r);
@@ -245,7 +253,8 @@ static void test_librope_delete_utf8() {
 	rv = rope_cleanup(&r);
 }
 
-static void test_librope_single_letter_insert() {
+static void
+test_librope_single_letter_insert() {
 	int rv = 0;
 	struct Rope r = {0};
 	rv = rope_init(&r);

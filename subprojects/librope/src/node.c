@@ -294,7 +294,8 @@ rope_node_split(
 		node->data.leaf.owned = NULL;
 	} else {
 		memcpy(left->data.inline_leaf.data, value, ROPE_INLINE_LEAF_SIZE);
-		memcpy(right->data.inline_leaf.data, &value[byte_index], right->byte_size);
+		memcpy(right->data.inline_leaf.data, &value[byte_index],
+			   right->byte_size);
 	}
 
 	node->type = ROPE_NODE_BRANCH;
@@ -491,20 +492,22 @@ rope_node_delete(struct RopeNode *node, struct RopePool *pool) {
 	return 0;
 }
 
-uint64_t rope_node_tags(struct RopeNode *node) {
-       while (node->type == ROPE_NODE_BRANCH) {
-               node = *node_left(node);
-       }
-       return node->data.leaf.tags;
+uint64_t
+rope_node_tags(struct RopeNode *node) {
+	while (node->type == ROPE_NODE_BRANCH) {
+		node = *node_left(node);
+	}
+	return node->data.leaf.tags;
 }
 
-void rope_node_set_tags(struct RopeNode *node, uint64_t tags) {
-       if (node->type == ROPE_NODE_BRANCH) {
-               rope_node_set_tags(*node_left(node), tags);
-               rope_node_set_tags(*node_right(node), tags);
-       } else {
-               node->data.leaf.tags = tags;
-       }
+void
+rope_node_set_tags(struct RopeNode *node, uint64_t tags) {
+	if (node->type == ROPE_NODE_BRANCH) {
+		rope_node_set_tags(*node_left(node), tags);
+		rope_node_set_tags(*node_right(node), tags);
+	} else {
+		node->data.leaf.tags = tags;
+	}
 }
 
 int
