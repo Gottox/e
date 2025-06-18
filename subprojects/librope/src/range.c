@@ -1,5 +1,6 @@
 #include <rope.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include <string.h>
 
 static bool
@@ -96,6 +97,41 @@ rope_range_delete(struct RopeRange *range) {
 	size_t size = end->index - start->index;
 
 	return rope_cursor_delete(start, size);
+}
+
+char *
+rope_range_to_str(struct RopeRange *range) {
+	struct RopeIterator it = {0};
+	const uint8_t *data = NULL;
+	size_t size = 0;
+	size_t total = 0;
+	int rv = rope_iterator_init(&it, range);
+	if (rv < 0) {
+		return NULL;
+	}
+	while (rope_iterator_next(&it, &data, &size)) {
+		total += size;
+	}
+	rope_iterator_cleanup(&it);
+
+	char *res = calloc(total + 1, sizeof(char));
+	if (res == NULL) {
+		return NULL;
+	}
+
+	rv = rope_iterator_init(&it, range);
+	if (rv < 0) {
+		free(res);
+		return NULL;
+	}
+	size_t off = 0;
+	while (rope_iterator_next(&it, &data, &size)) {
+		memcpy(res + off, data, size);
+		off += size;
+	}
+	rope_iterator_cleanup(&it);
+
+	return res;
 }
 
 int

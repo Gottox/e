@@ -276,6 +276,8 @@ int rope_range_insert_str(struct RopeRange *range, const char *str);
 
 int rope_range_delete(struct RopeRange *range);
 
+char *rope_range_to_str(struct RopeRange *range);
+
 int rope_range_cleanup(struct RopeRange *range);
 
 /**********************************
@@ -283,11 +285,11 @@ int rope_range_cleanup(struct RopeRange *range);
  */
 struct RopeIterator {
 	struct RopeRange *range;
-	struct RopeNode *left;
-	struct RopeNode *current;
-	struct RopeNode *right;
-	rope_char_index_t current_index;
-	rope_char_index_t end_index;
+	struct RopeNode *node;
+	struct RopeNode *end;
+	rope_byte_index_t start_byte;
+	rope_byte_index_t end_byte;
+	bool started;
 };
 
 int rope_iterator_init(struct RopeIterator *iter, struct RopeRange *range);
