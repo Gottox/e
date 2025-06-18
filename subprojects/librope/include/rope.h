@@ -141,6 +141,8 @@ struct RopeNode *rope_node_right(struct RopeNode *node);
 
 struct RopeNode *rope_node_parent(struct RopeNode *node);
 
+bool rope_node_up(struct RopeNode **node);
+
 bool rope_node_next(struct RopeNode **node);
 
 bool rope_node_prev(struct RopeNode **node);
@@ -255,8 +257,6 @@ typedef void (*rope_range_callback_t)(
 struct RopeRange {
 	struct Rope *rope;
 	struct RopeCursor cursors[2];
-	struct RopeCursor *left;
-	struct RopeCursor *right;
 	bool is_collapsed;
 	rope_range_callback_t offset_change_callback;
 	rope_range_callback_t damage_callback;
@@ -268,12 +268,9 @@ int rope_range_init(
 		rope_range_callback_t offset_change_callback,
 		rope_range_callback_t damage_callback, void *userdata);
 
-struct RopeCursor *rope_range_left(struct RopeRange *range);
+struct RopeCursor *rope_range_start(struct RopeRange *range);
 
-struct RopeCursor *rope_range_right(struct RopeRange *range);
-
-int rope_range_insert(
-		struct RopeRange *range, const uint8_t *data, size_t byte_size);
+struct RopeCursor *rope_range_end(struct RopeRange *range);
 
 int rope_range_insert_str(struct RopeRange *range, const char *str);
 

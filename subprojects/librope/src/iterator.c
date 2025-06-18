@@ -1,14 +1,14 @@
 #include <rope.h>
-#include <utf8util.h>
+#include <cextras/unicode.h>
 
 int
 rope_iterator_init(struct RopeIterator *iter, struct RopeRange *range) {
 	iter->range = range;
-	struct RopeCursor *left_cursor = rope_range_left(range);
-	struct RopeCursor *right_cursor = rope_range_right(range);
+	struct RopeCursor *start = rope_range_start(range);
+	struct RopeCursor *end = rope_range_end(range);
 
-	iter->left = rope_cursor_node(left_cursor, &iter->current_index);
-	iter->right = rope_cursor_node(right_cursor, &iter->end_index);
+	iter->left = rope_cursor_node(start, &iter->current_index);
+	iter->right = rope_cursor_node(end, &iter->end_index);
 	return 0;
 }
 

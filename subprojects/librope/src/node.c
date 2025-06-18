@@ -9,6 +9,8 @@
 #include <string.h>
 #include <sys/wait.h>
 
+#define NEWLINE '\n'
+
 static struct RopeNode **
 node_child(struct RopeNode *node, enum RopeNodeDirection direction) {
 	assert(node->type == ROPE_NODE_BRANCH);
@@ -87,13 +89,28 @@ node_neighbour(struct RopeNode *node, enum RopeNodeDirection direction) {
 	return node;
 }
 
+static size_t
+count_lines(const uint8_t *data, size_t byte_size) {
+	const uint8_t *ptr = data;
+	size_t count = 0;
+	while (true) {
+		ptr = memchr(ptr, NEWLINE, byte_size - (ptr - data));
+		if (ptr == NULL) {
+			return count;
+		}
+		count++;
+		ptr++;
+	}
+}
+
 static void
 node_update_leaf(struct RopeNode *node) {
 	size_t byte_size;
 	const uint8_t *data = rope_node_value(node, &byte_size);
 	node->char_size = cx_utf8_clen(data, byte_size);
 	node->utf16_size = cx_utf8_16len(data, byte_size);
-	node->new_lines = data[byte_size - 1] == '\n';
+
+	node->new_lines = count_lines(data, byte_size);
 }
 
 static void
@@ -168,7 +185,6 @@ rope_node_set_value(
 	int rv = 0;
 	assert(node->type != ROPE_NODE_BRANCH);
 	assert(node->byte_size == 0);
-	assert(byte_size <= 2 || memchr(data, '\n', byte_size - 1) == NULL);
 
 	if (byte_size <= ROPE_INLINE_LEAF_SIZE) {
 		rv = node_set_inline(node, data, byte_size);
@@ -336,49 +352,59 @@ rope_node_merge(
 	return 0;
 }
 
+static struct RopeNode *
+find_line(
+		struct RopeNode *node, rope_index_t line,
+		rope_byte_index_t *char_index) {
+	// Quickpath for the first line.
+	if (line == 0) {
+		*char_index = 0;
+		return rope_node_first(node);
+	}
+
+	for (; node && node->type == ROPE_NODE_BRANCH;) {
+		struct RopeNode *left = *node_left(node);
+		if (left->new_lines < line) {
+			line -= left->new_lines;
+			node = *node_right(node);
+		} else {
+			node = left;
+		}
+	}
+
+	size_t byte_size = 0;
+	const uint8_t *value = rope_node_value(node, &byte_size);
+	size_t remaining_size = byte_size;
+	const uint8_t *remaining = value;
+	for (; line;) {
+		remaining = memchr(remaining, NEWLINE, remaining_size);
+		assert(remaining != NULL);
+		line--;
+		remaining++; // Skip the newline character.
+		remaining_size = byte_size - (remaining - value);
+	}
+	*char_index = cx_utf8_bidx(value, byte_size, remaining - value);
+	return node;
+}
+
 struct RopeNode *
 rope_node_find(
 		struct RopeNode *node, rope_index_t line, rope_index_t column,
 		rope_byte_index_t *byte_index) {
-	// Find Line
-	for (; node;) {
-		if (node->type != ROPE_NODE_BRANCH) {
-			break;
-		}
+	rope_index_t drop_chars = 0;
+	node = find_line(node, line, &drop_chars);
+	column += drop_chars;
 
-		struct RopeNode *left = *node_left(node);
-		if (left->new_lines >= line) {
-			node = left;
-		} else {
-			struct RopeNode *right = *node_right(node);
-			line -= left->new_lines;
-			node = right;
-		}
-		if (line == 0) {
-			break;
-		}
-	}
-
-	node = rope_node_first(node);
-
-	while (line > 0) {
-		line -= node->new_lines;
-		rope_node_next(&node);
-	}
-
-	// Find column
-	// TODO: This is a naive implementation, we can do better
-
-	for (; node; rope_node_next(&node)) {
-		if (node->char_size > column) {
-			break;
-		}
+	while (node->char_size <= column) {
 		column -= node->char_size;
+		bool has_next = rope_node_next(&node);
+		assert(has_next);
 	}
-	size_t size;
-	const uint8_t *value = rope_node_value(node, &size);
-	*byte_index = cx_utf8_bidx(value, size, column);
 
+	size_t size = 0;
+	const uint8_t *value = rope_node_value(node, &size);
+
+	*byte_index = cx_utf8_bidx(value, size, column);
 	return node;
 }
 
@@ -387,11 +413,7 @@ rope_node_find_char(
 		struct RopeNode *node, rope_index_t char_index,
 		rope_byte_index_t *byte_index) {
 	*byte_index = 0;
-	for (; node;) {
-		if (node->type != ROPE_NODE_BRANCH) {
-			break;
-		}
-
+	for (; node && node->type == ROPE_NODE_BRANCH;) {
 		struct RopeNode *left = *node_left(node);
 		if (left->char_size >= char_index) {
 			node = left;
@@ -444,6 +466,12 @@ rope_node_next(struct RopeNode **node) {
 bool
 rope_node_prev(struct RopeNode **node) {
 	*node = node_neighbour(*node, ROPE_NODE_LEFT);
+	return *node != NULL;
+}
+
+bool
+rope_node_up(struct RopeNode **node) {
+	*node = (*node)->parent;
 	return *node != NULL;
 }
 

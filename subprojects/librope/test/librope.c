@@ -179,17 +179,17 @@ test_librope_insert_multiline() {
 	size_t size = 0;
 	const uint8_t *data = rope_node_value(node, &size);
 
-	ASSERT_EQ((size_t)12, size);
+	ASSERT_EQ((size_t)5, size);
 	ASSERT_EQ((size_t)0, index);
-	ASSERT_EQ(0, memcmp(&data[index], "HelloWorld,\n", size - index));
+	ASSERT_EQ(0, memcmp(&data[index], "Hello", size - index));
 
 	index = 0;
 	node = rope_node_find(r.root, 1, 0, &index);
 	size = 0;
 	data = rope_node_value(node, &size);
 
-	ASSERT_EQ((size_t)13, size);
-	ASSERT_EQ((size_t)0, index);
+	ASSERT_EQ((size_t)20, size);
+	ASSERT_EQ((size_t)7, index);
 	ASSERT_EQ(0, memcmp(&data[index], "How are you?\n", size - index));
 
 	index = 0;

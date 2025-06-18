@@ -3,6 +3,7 @@ e_test = [
     'cursor.c',
     'range.c',
     'node.c',
+    'iterator.c',
 ]
 
 testlib_dep = dependency('testlib')

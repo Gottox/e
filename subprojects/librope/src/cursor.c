@@ -189,37 +189,22 @@ rope_cursor_insert(
 	int rv = 0;
 	struct Rope *rope = cursor->rope;
 
-	const uint8_t *chunk = data;
 	rope_index_t cursor_index = cursor->index;
 	off_t cursor_offset = 0;
-	do {
-		const uint8_t *chunk_end =
-				memchr(chunk, '\n', byte_size - (chunk - data));
-		size_t chunk_size;
-		if (chunk_end) {
-			chunk_end++;
-			chunk_size = chunk_end - chunk;
-		} else {
-			chunk_size = byte_size - (chunk - data);
-		}
-		struct RopeNode *node = rope_node_new(&rope->pool);
-		if (node == NULL) {
-			rv = -1;
-			goto out;
-		}
-		rv = rope_node_set_value(node, chunk, chunk_size);
-		if (rv < 0) {
-			goto out;
-		}
-		size_t char_size = cx_utf8_clen(chunk, chunk_size);
+	struct RopeNode *node = rope_node_new(&rope->pool);
+	if (node == NULL) {
+		rv = -1;
+		goto out;
+	}
+	rv = rope_node_set_value(node, data, byte_size);
+	if (rv < 0) {
+		goto out;
+	}
 
-		rv = cursor_insert(cursor, cursor_index + cursor_offset, node);
-		if (rv < 0) {
-			goto out;
-		}
-		chunk = chunk_end;
-		cursor_offset += char_size;
-	} while (chunk != NULL && chunk < data + byte_size);
+	rv = cursor_insert(cursor, cursor_index + cursor_offset, node);
+	if (rv < 0) {
+		goto out;
+	}
 
 	cursor_damaged(cursor, cursor->index, cursor_offset);
 out:
