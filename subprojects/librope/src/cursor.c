@@ -269,9 +269,8 @@ rope_cursor_codepoint(struct RopeCursor *cursor) {
 
 	size_t byte_size = 0;
 	const uint8_t *value = rope_node_value(node, &byte_size);
-	size_t char_size = cx_utf8_clen(&value[byte_index], byte_size - byte_index);
 
-	return cx_utf8_cp(&value[byte_index], char_size);
+	return cx_utf8_cp(&value[byte_index], byte_size - byte_index);
 }
 
 int
