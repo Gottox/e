@@ -487,16 +487,11 @@ else
     subdir('shipped')
 endif
 
-parser_table = custom_target(
-    'parser-table',
-    command: [
-        './build_table.sh',
-        '@OUTDIR@',
-    ] + e_external_grammars.keys(),
-    output: [
-        'e-parser-table.c',
-        'e-parser-table.h',
-    ],
+parser_table_def = custom_target(
+    'build-parser-table-def',
+    capture: true,
+    output: 'e-parser-table.def.h',
+    command: [parser_table_def_exec] + e_external_grammars.keys(),
 )
 
 # pack all the parsers into a single library
@@ -523,7 +518,7 @@ tree_sitter_parsers = static_library(
 # pack all the parsers into a single library
 e_parsers = static_library(
     'e_parser',
-    parser_table,
+    [e_parser_src, parser_table_def],
     link_whole: tree_sitter_parsers,
     include_directories: parser_include,
     dependencies: tree_sitter_dep,
@@ -532,7 +527,7 @@ e_parsers = static_library(
 
 e_parsers_dep = declare_dependency(
     include_directories: [parser_include],
-    sources: [parser_table],
+    sources: e_parser_src,
     link_with: e_parsers,
     dependencies: tree_sitter_dep,
 )
