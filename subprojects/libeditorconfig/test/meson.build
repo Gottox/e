@@ -20,4 +20,3 @@ foreach p : e_test
     )
     test(p, t)
 endforeach
-
