@@ -36,4 +36,3 @@ liblsp_dep = declare_dependency(
 if get_option('test')
     subdir('test')
 endif
-
