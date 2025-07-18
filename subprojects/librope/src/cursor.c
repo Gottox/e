@@ -124,8 +124,8 @@ rope_cursor_move_to(
 	return cursor_update(cursor);
 }
 
-bool rope_cursor_is_order(
-		struct RopeCursor *first, struct RopeCursor *second) {
+bool
+rope_cursor_is_order(struct RopeCursor *first, struct RopeCursor *second) {
 	if (first->index < second->index) {
 		return true;
 	}

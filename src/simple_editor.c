@@ -9,8 +9,6 @@ main(int argc, char *argv[]) {
 	tb_sendf("\x1b[?1003;1006h", 1003, 1006);
 	tb_present();
 
-	
-
 	tb_sendf("\x1b[?%d;%dl", 1003, 1006);
 	tb_shutdown();
 
