@@ -1,10 +1,11 @@
+#include <editorconfig.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <testlib.h>
-#include <editorconfig.h>
-#include <stdio.h>
 
-static int match(const char *pat_str, const char *str_str) {
+static int
+match(const char *pat_str, const char *str_str) {
 	const char *pat = pat_str;
 	const char *str = str_str;
 	size_t str_len = strlen(str_str);
@@ -70,4 +71,3 @@ TEST(test_simple_match_braces_set)
 TEST(test_simple_match_braces_range)
 TEST(test_simple_match_slash_and_double_star)
 END_TESTS
-
