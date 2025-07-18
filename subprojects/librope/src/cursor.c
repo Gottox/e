@@ -124,6 +124,21 @@ rope_cursor_move_to(
 	return cursor_update(cursor);
 }
 
+bool rope_cursor_is_order(
+		struct RopeCursor *first, struct RopeCursor *second) {
+	if (first->index < second->index) {
+		return true;
+	}
+
+	while (first && first->index == second->index) {
+		if (first == second) {
+			return true;
+		}
+		first = first->next;
+	}
+	return false;
+}
+
 int
 rope_cursor_move_to_index(struct RopeCursor *cursor, rope_char_index_t index) {
 	struct Rope *rope = cursor->rope;

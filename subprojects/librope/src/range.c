@@ -25,21 +25,35 @@ rope_range_init(
 		struct RopeRange *range, struct Rope *rope,
 		rope_range_callback_t offset_change_callback,
 		rope_range_callback_t damage_callback, void *userdata) {
+	int rv = 0;
 	range->rope = rope;
 	range->offset_change_callback = offset_change_callback;
 	range->damage_callback = damage_callback;
 	range->userdata = userdata;
-	rope_cursor_init(&range->cursors[0], rope);
-	rope_cursor_set_callback(&range->cursors[0], handle_change, range);
-	rope_cursor_init(&range->cursors[1], rope);
-	rope_cursor_set_callback(&range->cursors[1], handle_change, range);
+	rv = rope_cursor_init(&range->cursors[0], rope);
+	if (rv < 0) {
+		goto out;
+	}
+	rv = rope_cursor_set_callback(&range->cursors[0], handle_change, range);
+	if (rv < 0) {
+		goto out;
+	}
+	rv = rope_cursor_init(&range->cursors[1], rope);
+	if (rv < 0) {
+		goto out;
+	}
+	rv = rope_cursor_set_callback(&range->cursors[1], handle_change, range);
+	if (rv < 0) {
+		goto out;
+	}
 
-	return 0;
+out:
+	return rv;
 }
 
 struct RopeCursor *
 rope_range_start(struct RopeRange *range) {
-	if (range->cursors[0].index < range->cursors[1].index) {
+	if (rope_cursor_is_order(&range->cursors[0], &range->cursors[1])) {
 		return &range->cursors[0];
 	} else {
 		return &range->cursors[1];
@@ -48,7 +62,7 @@ rope_range_start(struct RopeRange *range) {
 
 struct RopeCursor *
 rope_range_end(struct RopeRange *range) {
-	if (range->cursors[0].index < range->cursors[1].index) {
+	if (rope_cursor_is_order(&range->cursors[0], &range->cursors[1])) {
 		return &range->cursors[1];
 	} else {
 		return &range->cursors[0];
