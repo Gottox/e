@@ -26,38 +26,30 @@ rope_iterator_next(
 		return false;
 	}
 
-	while (iter->node) {
-		size_t node_size = 0;
-		const uint8_t *data = rope_node_value(iter->node, &node_size);
-		rope_byte_index_t start = iter->started ? 0 : iter->start_byte;
-		rope_byte_index_t end = node_size;
+	size_t node_size = 0;
+	const uint8_t *data = rope_node_value(iter->node, &node_size);
+	rope_byte_index_t start = iter->started ? 0 : iter->start_byte;
+	rope_byte_index_t end = node_size;
 
-		if (iter->node == iter->end) {
-			end = iter->end_byte;
-		}
+	if (iter->node == iter->end) {
+		end = iter->end_byte;
+	}
 
-		if (start < end) {
-			*value = data + start;
-			*size = end - start;
+	if (start > end) {
+		start = end;
+	}
 
-			if (iter->node == iter->end) {
-				iter->node = NULL;
-			} else {
-				rope_node_next(&iter->node);
-				iter->started = true;
-			}
-			return true;
-		}
+	*value = data + start;
+	*size = (end > start) ? end - start : 0;
 
-		if (iter->node == iter->end) {
-			iter->node = NULL;
-			break;
-		}
+	if (iter->node == iter->end) {
+		iter->node = NULL;
+	} else {
 		rope_node_next(&iter->node);
 		iter->started = true;
 	}
 
-	return false;
+	return true;
 }
 
 int

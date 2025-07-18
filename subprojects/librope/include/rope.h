@@ -221,6 +221,8 @@ int rope_cursor_set_callback(
 		struct RopeCursor *cursor, rope_cursor_callback_t callback,
 		void *userdata);
 
+bool rope_cursor_is_order(struct RopeCursor *first, struct RopeCursor *second);
+
 int rope_cursor_move_to_index(
 		struct RopeCursor *cursor, rope_char_index_t char_index);
 
