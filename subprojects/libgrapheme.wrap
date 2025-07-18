@@ -1,8 +1,13 @@
-[wrap-git]
-directory = libgrapheme
-revision = 98f987bcbe963b1e52e7a36e2832eae01b9652bc
-url = https://github.com/Gottox/libgrapheme.git
-depth = 1
+[wrap-file]
+directory = libgrapheme-2.0.2
+source_url = https://dl.suckless.org/libgrapheme/libgrapheme-2.0.2.tar.gz
+source_filename = libgrapheme-2.0.2.tar.gz
+source_hash = a68bbddde76bd55ba5d64116ce5e42a13df045c81c0852de9ab60896aa143125
+patch_filename = libgrapheme_2.0.2-2_patch.zip
+patch_url = https://wrapdb.mesonbuild.com/v2/libgrapheme_2.0.2-2/get_patch
+patch_hash = 8e09b4d1af3e1ea5965b520c2911f6b46084dae857c92258143c45bb5ab94764
+source_fallback_url = https://github.com/mesonbuild/wrapdb/releases/download/libgrapheme_2.0.2-2/libgrapheme-2.0.2.tar.gz
+wrapdb_version = 2.0.2-2
 
 [provide]
-libgrapheme=libgrapheme_dep
+libgrapheme = libgrapheme_dep
