@@ -1,5 +1,5 @@
 #ifndef DEF
-#define DEF(...)
+#	define DEF(...)
 #endif
 
 DEF(indent_style, STR)

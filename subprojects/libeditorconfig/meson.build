@@ -1,4 +1,8 @@
-project('libeditorconfig', 'c')
+project('libeditorconfig', 'c', default_options: [
+    'c_std=c99',
+    'warning_level=3',
+    'werror=true',
+])
 
 subdir('src')
 
