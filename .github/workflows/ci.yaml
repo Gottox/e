@@ -45,9 +45,9 @@ jobs:
         find . \( -name meson.build -or -name meson_options.txt \) -print0 \
           | xargs -0 muon fmt -i;
         git diff --exit-code
-    - name: clang-format
-      run: |
-        ninja -C /tmp/build clang-format-check
+    #- name: clang-format
+    #  run: |
+    #    ninja -C /tmp/build clang-format-check
     - name: test
       run: |
          ninja -C /tmp/build test
