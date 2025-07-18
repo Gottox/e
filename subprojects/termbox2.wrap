@@ -1,0 +1,13 @@
+[wrap-file]
+directory = termbox2-2.5.0
+source_url = https://github.com/termbox/termbox2/archive/refs/tags/v2.5.0.tar.gz
+source_filename = termbox2-2.5.0.tar.gz
+source_hash = 1d7a9811060e3673be417019007acbf4e2575734b6f95baaf6e8aed27f06c65a
+patch_filename = termbox2_2.5.0-2_patch.zip
+patch_url = https://wrapdb.mesonbuild.com/v2/termbox2_2.5.0-2/get_patch
+patch_hash = ce3ca00bc4d92730a8125e53b79ab0cfb6f82d9509ae970e3379ed6e8e5e0ee7
+source_fallback_url = https://github.com/mesonbuild/wrapdb/releases/download/termbox2_2.5.0-2/termbox2-2.5.0.tar.gz
+wrapdb_version = 2.5.0-2
+
+[provide]
+dependency_names = termbox2
