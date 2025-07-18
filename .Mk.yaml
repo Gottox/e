@@ -5,6 +5,7 @@ configure:
   - -Dlibhighlight:test=true
   - -Dliblsp:test=true
   - -Dlibttyui:test=true
+  - -Dlibeditorconfig:test=true
 env:
   CC_LD: mold
 default:

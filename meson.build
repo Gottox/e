@@ -6,22 +6,19 @@ project(
         'warning_level=3',
         'quickjs:warning_level=2',
         'quickjs:werror=false',
+        'termbox2:attr_width=64',
     ],
 )
 
+# system dependencies
 cextras_dep = dependency('cextras')
 tree_sitter_dep = dependency('tree-sitter')
-#tree_sitter_dep = subproject('tree-sitter').get_variable('tree_sitter_dep')
-
-#quickjs_dep = dependency('quickjs', fallback: ['quickjs', 'quickjs_dep'])
+termbox2_dep = dependency('termbox2')
 quickjs_dep = dependency('quickjs-ng')
 
+# project dependencies
 liblsp_dep = subproject('liblsp').get_variable('liblsp_dep')
-
 librope_dep = subproject('librope').get_variable('librope_dep')
-
-libttyui_dep = subproject('libttyui').get_variable('libttyui_dep')
-
 libeditorconfig_dep = subproject(
     'libeditorconfig',
 ).get_variable('libeditorconfig_dep')
@@ -38,7 +35,7 @@ dependencies = [
     quickjs_dep,
     cextras_dep,
     librope_dep,
-    libttyui_dep,
+    termbox2_dep,
     libeditorconfig_dep,
     #tree_sitter_dep,
 ]
