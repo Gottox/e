@@ -27,6 +27,9 @@ libhighlight_dep = declare_dependency(
         libhighlight_include,
     ],
     link_with: libhighlight,
+    dependencies: [
+        tree_sitter_dep,
+    ],
 )
 
 subdir('tinker')
