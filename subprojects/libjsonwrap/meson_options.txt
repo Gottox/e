@@ -5,9 +5,9 @@ option(
     description: 'Run tests',
 )
 option(
-	'json_backend',
-	type: 'combo',
-	value: 'quickjs',
-	choices: ['quickjs'],
-	description: 'Select the backend for the json parser',
+    'json_backend',
+    type: 'combo',
+    value: 'quickjs',
+    choices: ['quickjs'],
+    description: 'Select the backend for the json parser',
 )
