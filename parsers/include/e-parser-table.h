@@ -6,8 +6,7 @@ extern "C" {
 #endif
 
 enum ETreeSitterLanguageId {
-#define DEF(name, upper_name) \
-	E_TREE_SITTER_##upper_name,
+#define DEF(name, upper_name) E_TREE_SITTER_##upper_name,
 #include <e-parser-table.def.h>
 #undef DEF
 };

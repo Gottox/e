@@ -12,6 +12,9 @@ static const uint8_t bit_table[] = {
 
 int
 expose(struct Rope *input, struct Rope *output, int columns, int tab_width) {
+	(void)columns;
+	(void)tab_width;
+	(void)bit_table; // Suppress unused variable warnings
 	int rv = 0;
 	struct RopeCursor input_cursor = {0};
 	struct RopeCursor output_cursor = {0};
