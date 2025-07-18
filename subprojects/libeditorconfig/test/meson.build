@@ -1,11 +1,8 @@
 e_test = [
-    'librope.c',
-    'cursor.c',
-    'range.c',
-    'node.c',
+    'match.c',
 ]
 
-utest_dep = dependency('utest')
+testlib_dep = dependency('testlib')
 foreach p : e_test
     sources = [p]
     t = executable(
@@ -13,9 +10,8 @@ foreach p : e_test
         sources,
         install: false,
         dependencies: [
-            utest_dep,
-            librope_dep,
-            cextras_dep,
+            libeditorconfig_dep,
+            testlib_dep,
         ],
     )
     test(p, t)

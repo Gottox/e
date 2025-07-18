@@ -23,5 +23,6 @@ struct EditorConfig {
 
 int editorconfig_parse(struct EditorConfig *config, const char *filename);
 void editorconfig_cleanup(struct EditorConfig *config);
+int editorconfig_match(const char *pat, const char *str, size_t str_len);
 
 #endif /* EDITORCONFIG_PARSER_H */
