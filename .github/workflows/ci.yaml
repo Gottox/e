@@ -1,0 +1,53 @@
+name: CI
+on:
+  push:
+    branches:
+    - "main"
+    - "add/ci"
+    tags:
+    - 'v[0-9]*.[0-9]*.[0-9]*'
+  pull_request:
+    branches:
+    - "main"
+    - "release/*"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: setup dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          clang-format-19 \
+          meson
+    - name: setup muon
+      run: |
+        git clone --depth 1 https://github.com/muon-build/muon.git /tmp/muon
+        meson setup /tmp/muon_build /tmp/muon --prefix /usr
+        sudo ninja -C /tmp/muon_build install
+    - name: configure
+      run: |
+        meson setup /tmp/build \
+          -Dgenerate_parsers=false \
+          -Dlibrope:test=true \
+          -Dlibhighlight:test=true \
+          -Dliblsp:test=true \
+          -Dlibttyui:test=true \
+          -Dlibeditorconfig:test=true
+    - name: muon fmt
+      run: |
+        find . \( -name meson.build -or -name meson_options.txt \) -print0 \
+          | xargs -0 muon fmt -i;
+        git diff --exit-code
+    - name: clang-format
+      run: |
+        ninja -C /tmp/build clang-format-check
+    - name: test
+      run: |
+         ninja -C /tmp/build test
