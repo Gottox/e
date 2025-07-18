@@ -34,5 +34,5 @@ libjsonwrap_dep = declare_dependency(
         libjsonwrap_include,
     ],
     link_with: libjsonwrap,
-    dependencies: backend_dependencies
+    dependencies: backend_dependencies,
 )

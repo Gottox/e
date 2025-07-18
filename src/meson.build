@@ -1,9 +1,10 @@
 e_src = files(
-    'expose/expose.c',
-    'tree/tree-rope.c',
-    'tree/tree.c',
-    'client.c',
-    'daemon.c',
-    'document.c',
-    'e.c',
+    'simple_editor.c'
+    #'expose/expose.c',
+    #'tree/tree-rope.c',
+    #'tree/tree.c',
+    #'client.c',
+    #'daemon.c',
+    #'document.c',
+    #'e.c',
 )

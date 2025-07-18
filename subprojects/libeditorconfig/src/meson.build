@@ -1,4 +1,4 @@
 libeditorconfig_sources = files(
-    'parser.c',
     'match.c',
+    'parser.c',
 )
