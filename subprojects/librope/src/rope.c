@@ -107,7 +107,7 @@ rope_insert(
 		goto out;
 	}
 
-	rv = rope_cursor_insert(&cursor, data, byte_size);
+	rv = rope_cursor_insert(&cursor, data, byte_size, 0);
 	if (rv < 0) {
 		goto out;
 	}

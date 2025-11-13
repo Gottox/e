@@ -42,7 +42,7 @@ range_insert_delete() {
 	rv = rope_range_init(&range, &r, noop_range_cb, noop_range_cb, NULL);
 	ASSERT_EQ(0, rv);
 
-	rv = rope_range_insert_str(&range, "Hello");
+	rv = rope_range_insert_str(&range, "Hello", 0);
 	ASSERT_EQ(0, rv);
 
 	struct RopeNode *node = rope_first(&r);

@@ -5,12 +5,14 @@ subdir('src')
 subdir('include')
 
 cextras_dep = dependency('cextras')
-#libgrapheme_dep = dependency('libgrapheme')
+libgrapheme_dep = dependency('libgrapheme')
 
-#librope_dependencies = [cextras_dep, libgrapheme_dep]
-librope_dependencies = [cextras_dep]
+librope_dependencies = [cextras_dep, libgrapheme_dep]
 
 c_args = []
+if get_option('single_line_nodes')
+    c_args += ['-DROPE_SINGLE_LINE_NODES']
+endif
 
 librope = static_library(
     'rope',

@@ -45,14 +45,20 @@ test_librope_split_insert() {
 	size_t size = 0;
 	const uint8_t *data;
 	data = rope_node_value(node, &size);
-	ASSERT_EQ((size_t)3, size);
-	ASSERT_EQ(0, memcmp(data, "Hel", size));
+	ASSERT_EQ((size_t)9, size);
+	ASSERT_EQ(0, memcmp(data, "Hello Hel", size));
 
-	has_next = rope_node_next(&node);
-	ASSERT_EQ(true, has_next);
-	data = rope_node_value(node, &size);
-	ASSERT_EQ((size_t)6, size);
-	ASSERT_EQ(0, memcmp(data, "lo Hel", size));
+	// size_t size = 0;
+	// const uint8_t *data;
+	// data = rope_node_value(node, &size);
+	// ASSERT_EQ((size_t)3, size);
+	// ASSERT_EQ(0, memcmp(data, "Hel", size));
+
+	// has_next = rope_node_next(&node);
+	// ASSERT_EQ(true, has_next);
+	// data = rope_node_value(node, &size);
+	// ASSERT_EQ((size_t)6, size);
+	// ASSERT_EQ(0, memcmp(data, "lo Hel", size));
 
 	has_next = rope_node_next(&node);
 	ASSERT_EQ(true, has_next);
@@ -165,35 +171,35 @@ test_librope_insert_multiline() {
 	rv = rope_init(&r);
 	ASSERT_EQ(0, rv);
 
-	rv = rope_append(&r, (uint8_t *)"Hello", 5);
+	rv = rope_append_str(&r, "Hello");
 	ASSERT_EQ(0, rv);
 
-	rv = rope_append(&r, (uint8_t *)"World,\nHow are you?\n", 20);
+	rv = rope_append_str(&r, "World,\nHow are you?\n");
 	ASSERT_EQ(0, rv);
 
-	rv = rope_append(&r, (uint8_t *)"I am fine", 9);
+	rv = rope_append_str(&r, "I am fine");
 	ASSERT_EQ(0, rv);
 
 	rope_byte_index_t index = 0;
-	struct RopeNode *node = rope_node_find(r.root, 0, 0, &index);
+	struct RopeNode *node = rope_node_find(r.root, 0, 0, 0, &index);
 	size_t size = 0;
 	const uint8_t *data = rope_node_value(node, &size);
 
-	ASSERT_EQ((size_t)5, size);
+	ASSERT_EQ((size_t)12, size);
 	ASSERT_EQ((size_t)0, index);
-	ASSERT_EQ(0, memcmp(&data[index], "Hello", size - index));
+	ASSERT_EQ(0, memcmp(&data[index], "HelloWorld,\n", size - index));
 
 	index = 0;
-	node = rope_node_find(r.root, 1, 0, &index);
+	node = rope_node_find(r.root, 1, 0, 0, &index);
 	size = 0;
 	data = rope_node_value(node, &size);
 
-	ASSERT_EQ((size_t)20, size);
-	ASSERT_EQ((size_t)7, index);
+	ASSERT_EQ((size_t)13, size);
+	ASSERT_EQ((size_t)0, index);
 	ASSERT_EQ(0, memcmp(&data[index], "How are you?\n", size - index));
 
 	index = 0;
-	node = rope_node_find(r.root, 2, 0, &index);
+	node = rope_node_find(r.root, 2, 0, 0, &index);
 	size = 0;
 	data = rope_node_value(node, &size);
 
@@ -297,7 +303,11 @@ TEST(test_librope_split_insert)
 TEST(test_librope_split_delete)
 TEST(test_librope_tail_delete)
 TEST(test_librope_head_delete)
+#ifdef ROPE_SINGLE_LINE_NODES
 TEST(test_librope_insert_multiline)
+#else
+NO_TEST(test_librope_insert_multiline)
+#endif
 TEST(test_librope_insert_utf8)
 TEST(test_librope_delete_utf8)
 TEST(test_librope_single_letter_insert)

@@ -12,11 +12,13 @@ test_node_insert() {
 
 	struct RopeNode *n = rope_node_new(&p);
 	ASSERT_TRUE(NULL != n);
+	rope_node_set_tags(n, 1);
 	rv = rope_node_set_value(n, (const uint8_t *)"hello", 5);
 	ASSERT_EQ(0, rv);
 
 	struct RopeNode *n2 = rope_node_new(&p);
 	ASSERT_TRUE(NULL != n2);
+	rope_node_set_tags(n, 2);
 	rv = rope_node_set_value(n2, (const uint8_t *)"world", 5);
 	ASSERT_EQ(0, rv);
 
@@ -95,6 +97,8 @@ test_node_balanced_tree_right() {
 
 	for (int i = 0; i < 32; i++) {
 		struct RopeNode *node = rope_node_new(&pool);
+		// Set unique tags to avoid auto-merging nodes
+		rope_node_set_tags(node, i);
 		ASSERT_TRUE(NULL != node);
 		rv = rope_node_set_value(
 				node, (const uint8_t *)"12345678901234567890123456789012",
@@ -124,6 +128,8 @@ test_node_balanced_tree_left() {
 
 	for (int i = 0; i < 32; i++) {
 		struct RopeNode *node = rope_node_new(&pool);
+		// Set unique tags to avoid auto-merging nodes
+		rope_node_set_tags(node, i);
 		ASSERT_TRUE(NULL != node);
 		rv = rope_node_set_value(
 				node, (const uint8_t *)"12345678901234567890123456789012",
@@ -141,9 +147,49 @@ test_node_balanced_tree_left() {
 	ASSERT_EQ(0, rv);
 }
 
+static void
+test_node_merge() {
+	int rv = 0;
+	struct RopePool p = {0};
+	rv = rope_pool_init(&p);
+	ASSERT_EQ(0, rv);
+
+	struct RopeNode *n = rope_node_new(&p);
+	ASSERT_TRUE(NULL != n);
+	rope_node_set_tags(n, 1);
+	rv = rope_node_set_value(n, (const uint8_t *)"world", 5);
+	ASSERT_EQ(0, rv);
+
+	struct RopeNode *n2 = rope_node_new(&p);
+	ASSERT_TRUE(NULL != n2);
+	rope_node_set_tags(n, 2);
+	rv = rope_node_set_value(n2, (const uint8_t *)"hello", 5);
+	ASSERT_EQ(0, rv);
+
+	rv = rope_node_insert_left(n, n2, &p);
+	ASSERT_EQ(0, rv);
+	ASSERT_EQ(ROPE_NODE_BRANCH, (int)n->type);
+
+	struct RopeNode *to_merge = rope_node_left(n);
+	rv = rope_node_merge(to_merge, ROPE_NODE_RIGHT, &p);
+	ASSERT_GT(0, rv);
+
+	rope_node_set_tags(n, 1);
+	rv = rope_node_merge(to_merge, ROPE_NODE_RIGHT, &p);
+	ASSERT_EQ(0, rv);
+
+	size_t size;
+	const uint8_t *value = rope_node_value(n, &size);
+	ASSERT_EQ((size_t)10, size);
+	ASSERT_EQ(0, memcmp(value, "helloworld", 10));
+
+	rv = rope_pool_cleanup(&p);
+}
+
 DECLARE_TESTS
 TEST(test_node_insert)
 TEST(test_node_split)
 TEST(test_node_balanced_tree_right)
 TEST(test_node_balanced_tree_left)
+TEST(test_node_merge)
 END_TESTS

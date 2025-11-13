@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 static bool
 is_collapsed(struct RopeRange *range) {
@@ -71,7 +72,7 @@ rope_range_end(struct RopeRange *range) {
 
 int
 rope_range_insert(
-		struct RopeRange *range, const uint8_t *data, size_t byte_size) {
+		struct RopeRange *range, const uint8_t *data, size_t byte_size, uint64_t tags) {
 	int rv = 0;
 	rv = rope_range_delete(range);
 	if (rv < 0) {
@@ -82,7 +83,7 @@ rope_range_insert(
 	struct RopeCursor *end = rope_range_end(range);
 	rope_char_index_t start_index = start->index;
 
-	rv = rope_cursor_insert(end, data, byte_size);
+	rv = rope_cursor_insert(end, data, byte_size, tags);
 	if (rv < 0) {
 		goto out;
 	}
@@ -96,11 +97,11 @@ out:
 }
 
 int
-rope_range_insert_str(struct RopeRange *range, const char *str) {
+rope_range_insert_str(struct RopeRange *range, const char *str, uint64_t tags) {
 	size_t byte_size = strlen(str);
 	const uint8_t *data = (const uint8_t *)str;
 
-	return rope_range_insert(range, data, byte_size);
+	return rope_range_insert(range, data, byte_size, tags);
 }
 
 int

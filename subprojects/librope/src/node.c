@@ -1,3 +1,4 @@
+#include <alloca.h>
 #include <assert.h>
 #include <cextras/memory.h>
 #include <cextras/unicode.h>
@@ -9,7 +10,12 @@
 #include <string.h>
 #include <sys/wait.h>
 
-#define NEWLINE '\n'
+static bool
+node_match_tags(struct RopeNode *node, uint64_t tags) {
+	assert(node->type != ROPE_NODE_BRANCH);
+	uint64_t node_tags = rope_node_tags(node);
+	return (node_tags & tags) == tags;
+}
 
 static struct RopeNode **
 node_child(struct RopeNode *node, enum RopeNodeDirection direction) {
@@ -94,7 +100,7 @@ count_lines(const uint8_t *data, size_t byte_size) {
 	const uint8_t *ptr = data;
 	size_t count = 0;
 	while (true) {
-		ptr = memchr(ptr, NEWLINE, byte_size - (ptr - data));
+		ptr = memchr(ptr, ROPE_NEWLINE, byte_size - (ptr - data));
 		if (ptr == NULL) {
 			return count;
 		}
@@ -104,22 +110,17 @@ count_lines(const uint8_t *data, size_t byte_size) {
 }
 
 static void
-node_update_leaf(struct RopeNode *node) {
-	size_t byte_size;
-	const uint8_t *data = rope_node_value(node, &byte_size);
-	node->char_size = cx_utf8_clen(data, byte_size);
-	node->utf16_size = cx_utf8_16len(data, byte_size);
-
-	node->new_lines = count_lines(data, byte_size);
-}
-
-static void
 node_update(struct RopeNode *node) {
 	if (node->type == ROPE_NODE_BRANCH) {
 		(*node_left(node))->parent = node;
 		(*node_right(node))->parent = node;
 	} else {
-		node_update_leaf(node);
+		size_t byte_size;
+		const uint8_t *data = rope_node_value(node, &byte_size);
+		node->char_size = cx_utf8_clen(data, byte_size);
+		node->utf16_size = cx_utf8_16len(data, byte_size);
+		node->new_lines = count_lines(data, byte_size);
+
 		node = node->parent;
 	}
 
@@ -175,7 +176,7 @@ node_set_inline(struct RopeNode *node, const uint8_t *data, size_t byte_size) {
 	node->type = ROPE_NODE_INLINE_LEAF;
 	memcpy(node->data.inline_leaf.data, data, byte_size);
 	node->byte_size = byte_size;
-	node_update_leaf(node);
+	node_update(node);
 	return 0;
 }
 
@@ -184,7 +185,9 @@ rope_node_set_value(
 		struct RopeNode *node, const uint8_t *data, size_t byte_size) {
 	int rv = 0;
 	assert(node->type != ROPE_NODE_BRANCH);
-	assert(node->byte_size == 0);
+	if (node->type == ROPE_NODE_LEAF) {
+		rope_rc_string_release(node->data.leaf.owned);
+	}
 
 	if (byte_size <= ROPE_INLINE_LEAF_SIZE) {
 		rv = node_set_inline(node, data, byte_size);
@@ -203,7 +206,10 @@ int
 rope_node_set_rc_string(
 		struct RopeNode *node, struct RopeRcString *str, size_t byte_index) {
 	assert(node->type != ROPE_NODE_BRANCH);
-	assert(node->byte_size == 0);
+
+	if (node->type == ROPE_NODE_LEAF) {
+		rope_rc_string_release(node->data.leaf.owned);
+	}
 
 	node->type = ROPE_NODE_LEAF;
 	node->data.leaf.owned = rope_rc_string_retain(str);
@@ -215,7 +221,7 @@ rope_node_set_rc_string(
 		return -1;
 	}
 
-	node_update_leaf(node);
+	node_update(node);
 	return 0;
 }
 
@@ -255,6 +261,30 @@ node_insert(
 	return 0;
 }
 
+static int
+node_inline_insert(
+		struct RopeNode *target, struct RopeNode *extra,
+		struct RopePool *pool) {
+	if (target->type != ROPE_NODE_INLINE_LEAF ||
+		extra->type != ROPE_NODE_INLINE_LEAF) {
+		return -1;
+	}
+	if (target->byte_size + extra->byte_size > ROPE_INLINE_LEAF_SIZE) {
+		return -1;
+	}
+	if (rope_node_tags(target) != rope_node_tags(extra)) {
+		return -1;
+	}
+
+	memcpy(&target->data.inline_leaf.data[target->byte_size],
+		   extra->data.inline_leaf.data, extra->byte_size);
+	target->byte_size += extra->byte_size;
+	node_update(target);
+	// TODO: maybe detach extra too?
+	rope_node_free(extra, pool);
+	return 0;
+}
+
 int
 rope_node_insert_left(
 		struct RopeNode *parent, struct RopeNode *new_node,
@@ -266,7 +296,12 @@ int
 rope_node_insert_right(
 		struct RopeNode *parent, struct RopeNode *new_node,
 		struct RopePool *pool) {
-	return node_insert(parent, new_node, pool, ROPE_NODE_RIGHT);
+	int rv = 0;
+	rv = node_inline_insert(parent, new_node, pool);
+	if (rv < 0) {
+		rv = node_insert(parent, new_node, pool, ROPE_NODE_RIGHT);
+	}
+	return rv;
 }
 
 int
@@ -275,6 +310,19 @@ rope_node_split(
 		struct RopeNode **left_ptr, struct RopeNode **right_ptr) {
 	int rv = 0;
 	struct RopeNode *left = NULL, *right = NULL;
+
+	size_t size;
+	const uint8_t *value = rope_node_value(node, &size);
+
+	if (byte_index == 0) {
+		left = NULL;
+		right = node;
+		goto out;
+	} else if (byte_index == node->byte_size) {
+		left = node;
+		right = NULL;
+		goto out;
+	}
 
 	assert(node->type != ROPE_NODE_BRANCH);
 	left = rope_pool_get(pool);
@@ -286,8 +334,6 @@ rope_node_split(
 		goto out;
 	}
 
-	size_t size;
-	const uint8_t *value = rope_node_value(node, &size);
 	size_t char_index = cx_utf8_clen(value, byte_index);
 	size_t utf16_size = cx_utf8_16len(value, byte_index);
 
@@ -320,16 +366,18 @@ rope_node_split(
 	*node_right(node) = right;
 	node_update(node);
 
-	if (left_ptr) {
-		*left_ptr = left;
-	}
-	if (right_ptr) {
-		*right_ptr = right;
-	}
-	left = NULL;
-	right = NULL;
-
 out:
+	if (rv >= 0) {
+		if (left_ptr) {
+			*left_ptr = left;
+		}
+		if (right_ptr) {
+			*right_ptr = right;
+		}
+		left = NULL;
+		right = NULL;
+	}
+
 	rope_node_free(left, pool);
 	rope_node_free(right, pool);
 	return rv;
@@ -337,25 +385,112 @@ out:
 
 int
 rope_node_merge(
-		struct RopeNode *target, struct RopeNode *extra,
+		struct RopeNode *node, enum RopeNodeDirection which,
 		struct RopePool *pool) {
-	assert(target->type == ROPE_NODE_INLINE_LEAF);
-	assert(extra->type == ROPE_NODE_INLINE_LEAF);
-	assert(target->byte_size + extra->byte_size <= ROPE_INLINE_LEAF_SIZE);
+	int rv = 0;
+	struct RopeNode *left = NULL;
+	struct RopeNode *right = NULL;
+	struct RopeRcString *merged = NULL;
 
-	memcpy(&target->data.inline_leaf.data[target->byte_size],
-		   extra->data.inline_leaf.data, extra->byte_size);
-	target->byte_size += extra->byte_size;
-	node_update(target);
-	// TODO: maybe detach extra too?
-	rope_node_free(extra, pool);
-	return 0;
+	struct RopeNode *neighbour = node_neighbour(node, which);
+	if (neighbour == NULL) {
+		goto out;
+	}
+
+	if (rope_node_tags(node) != rope_node_tags(neighbour)) {
+		rv = -1;
+		goto out;
+	}
+
+	if (which == ROPE_NODE_LEFT) {
+		right = node;
+		left = neighbour;
+	} else {
+		left = node;
+		right = neighbour;
+	}
+
+	size_t left_size = 0;
+	size_t right_size = 0;
+	const uint8_t *left_value = rope_node_value(left, &left_size);
+	const uint8_t *right_value = rope_node_value(right, &right_size);
+
+	if (left_size + right_size <= ROPE_INLINE_LEAF_SIZE) {
+		rv = rope_node_set_value(left, (uint8_t *)"", 0);
+		if (rv < 0) {
+			goto out;
+		}
+		memcpy(left->data.inline_leaf.data, left_value, left_size);
+		memcpy(&left->data.inline_leaf.data[left_size], right_value,
+			   right_size);
+		left->byte_size = left_size + right_size;
+		node_update(left);
+	} else {
+		merged = rope_rc_string_new2(
+				left_value, left_size, right_value, right_size);
+		if (merged == NULL) {
+			rv = -1;
+			goto out;
+		}
+		rv = rope_node_set_rc_string(left, merged, 0);
+		if (rv < 0) {
+			goto out;
+		}
+	}
+	rv = rope_node_delete(right, pool);
+	if (rv < 0) {
+		goto out;
+	}
+out:
+	rope_rc_string_release(merged);
+	return rv;
 }
 
 static struct RopeNode *
 find_line(
+		struct RopeNode *node, rope_index_t line, rope_byte_index_t *char_index,
+		uint64_t tags) {
+	node = rope_node_first(node);
+	do {
+		if (node_match_tags(node, tags) == false) {
+			continue;
+		}
+		if (line <= node->new_lines) {
+			break;
+		}
+		line -= node->new_lines;
+	} while (rope_node_next(&node));
+
+	size_t byte_size = 0;
+	const uint8_t *value = rope_node_value(node, &byte_size);
+	// Fastpath for new lines at the end of the node.
+	if (line == node->new_lines && value[byte_size - 1] == ROPE_NEWLINE) {
+		struct RopeNode *next_node = node;
+		if (rope_node_next(&next_node)) {
+			*char_index = 0;
+			return next_node;
+		} else {
+			*char_index = node->char_size;
+			return node;
+		}
+	}
+
+	size_t remaining_size = byte_size;
+	const uint8_t *remaining = value;
+	for (; line;) {
+		remaining = memchr(remaining, ROPE_NEWLINE, remaining_size);
+		assert(remaining != NULL);
+		line--;
+		remaining++; // Skip the newline character.
+		remaining_size = byte_size - (remaining - value);
+	}
+	*char_index = cx_utf8_bidx(value, byte_size, remaining - value);
+	return node;
+}
+/*static struct RopeNode *
+find_line(
 		struct RopeNode *node, rope_index_t line,
-		rope_byte_index_t *char_index) {
+		rope_byte_index_t *char_index, uint64_t tags) {
 	// Quickpath for the first line.
 	if (line == 0) {
 		*char_index = 0;
@@ -377,7 +512,7 @@ find_line(
 	size_t remaining_size = byte_size;
 	const uint8_t *remaining = value;
 	for (; line;) {
-		remaining = memchr(remaining, NEWLINE, remaining_size);
+		remaining = memchr(remaining, ROPE_NEWLINE, remaining_size);
 		assert(remaining != NULL);
 		line--;
 		remaining++; // Skip the newline character.
@@ -385,17 +520,23 @@ find_line(
 	}
 	*char_index = cx_utf8_bidx(value, byte_size, remaining - value);
 	return node;
-}
+}*/
 
 struct RopeNode *
 rope_node_find(
 		struct RopeNode *node, rope_index_t line, rope_index_t column,
-		rope_byte_index_t *byte_index) {
+		uint64_t tags, rope_byte_index_t *byte_index) {
 	rope_index_t drop_chars = 0;
-	node = find_line(node, line, &drop_chars);
+	node = find_line(node, line, &drop_chars, tags);
 	column += drop_chars;
 
-	while (node->char_size <= column) {
+	while (1) {
+		if (!node_match_tags(node, tags)) {
+			continue;
+		}
+		if (node->char_size > column) {
+			break;
+		}
 		column -= node->char_size;
 		bool has_next = rope_node_next(&node);
 		assert(has_next);
@@ -410,17 +551,30 @@ rope_node_find(
 
 struct RopeNode *
 rope_node_find_char(
-		struct RopeNode *node, rope_index_t char_index,
+		struct RopeNode *node, rope_index_t char_index, uint64_t tags,
 		rope_byte_index_t *byte_index) {
 	*byte_index = 0;
-	for (; node && node->type == ROPE_NODE_BRANCH;) {
-		struct RopeNode *left = *node_left(node);
-		if (left->char_size >= char_index) {
-			node = left;
-		} else {
-			char_index -= left->char_size;
-			node = *node_right(node);
+	if (tags == 0) {
+		for (; node && node->type == ROPE_NODE_BRANCH;) {
+			struct RopeNode *left = *node_left(node);
+			if (left->char_size >= char_index) {
+				node = left;
+			} else {
+				char_index -= left->char_size;
+				node = *node_right(node);
+			}
 		}
+	} else {
+		node = rope_node_first(node);
+		do {
+			if (node_match_tags(node, tags) == false) {
+				continue;
+			}
+			if (node->char_size > char_index) {
+				break;
+			}
+			char_index -= node->char_size;
+		} while (rope_node_next(&node));
 	}
 	if (node) {
 		size_t size = 0;
@@ -522,10 +676,15 @@ rope_node_delete(struct RopeNode *node, struct RopePool *pool) {
 
 uint64_t
 rope_node_tags(struct RopeNode *node) {
-	while (node->type == ROPE_NODE_BRANCH) {
-		node = *node_left(node);
+	assert(node->type != ROPE_NODE_BRANCH);
+	switch (node->type) {
+	case ROPE_NODE_INLINE_LEAF:
+		return node->data.inline_leaf.tags;
+	case ROPE_NODE_LEAF:
+		return node->data.leaf.tags;
+	default:
+		__builtin_unreachable();
 	}
-	return node->data.leaf.tags;
 }
 
 void
@@ -535,6 +694,26 @@ rope_node_set_tags(struct RopeNode *node, uint64_t tags) {
 		rope_node_set_tags(*node_right(node), tags);
 	} else {
 		node->data.leaf.tags = tags;
+	}
+}
+
+void
+rope_node_add_tags(struct RopeNode *node, uint64_t tags) {
+	if (node->type == ROPE_NODE_BRANCH) {
+		rope_node_add_tags(*node_left(node), tags);
+		rope_node_add_tags(*node_right(node), tags);
+	} else {
+		rope_node_set_tags(node, rope_node_tags(node) | tags);
+	}
+}
+
+void
+rope_node_remove_tags(struct RopeNode *node, uint64_t tags) {
+	if (node->type == ROPE_NODE_BRANCH) {
+		rope_node_remove_tags(*node_left(node), tags);
+		rope_node_remove_tags(*node_right(node), tags);
+	} else {
+		rope_node_set_tags(node, rope_node_tags(node) & ~tags);
 	}
 }
 
