@@ -184,6 +184,94 @@ test_node_merge() {
 	ASSERT_EQ(0, memcmp(value, "helloworld", 10));
 
 	rv = rope_pool_cleanup(&p);
+	ASSERT_EQ(0, rv);
+}
+
+static void
+test_node_tags() {
+	const uint64_t TAG_RED = 1 << 0;
+	const uint64_t TAG_GREEN = 1 << 1;
+	const uint64_t TAG_BLUE = 1 << 2;
+
+	int rv = 0;
+	struct RopePool p = {0};
+	rv = rope_pool_init(&p);
+	ASSERT_EQ(0, rv);
+
+	struct RopeNode *red_node = rope_node_new(&p);
+	ASSERT_NE(NULL, red_node);
+	rope_node_set_tags(red_node, TAG_RED);
+	rv = rope_node_set_value(red_node, (const uint8_t *)"red\n", 4);
+	ASSERT_EQ(0, rv);
+
+	struct RopeNode *green_node = rope_node_new(&p);
+	ASSERT_NE(NULL, green_node);
+	rope_node_set_tags(green_node, TAG_GREEN);
+	rv = rope_node_set_value(green_node, (const uint8_t *)"green\n", 6);
+	ASSERT_EQ(0, rv);
+
+	struct RopeNode *blue_node = rope_node_new(&p);
+	ASSERT_NE(NULL, blue_node);
+	rope_node_set_tags(blue_node, TAG_BLUE);
+	rv = rope_node_set_value(blue_node, (const uint8_t *)"blue\n", 5);
+	ASSERT_EQ(0, rv);
+
+	rv = rope_node_insert_right(red_node, green_node, &p);
+	ASSERT_EQ(0, rv);
+	rv = rope_node_insert_right(green_node, blue_node, &p);
+	ASSERT_EQ(0, rv);
+
+	rope_byte_index_t byte_index = 0;
+	struct RopeNode *node;
+	const uint8_t *value;
+	size_t size;
+
+	node = rope_node_find_char(red_node, 0, TAG_RED, &byte_index);
+	value = rope_node_value(node, &size);
+	ASSERT_EQ((size_t)4, size);
+	ASSERT_EQ(0, memcmp(value, "red\n", size));
+	ASSERT_EQ(0, byte_index);
+
+	node = rope_node_find_char(red_node, 0, TAG_GREEN, &byte_index);
+	value = rope_node_value(node, &size);
+	ASSERT_EQ((size_t)6, size);
+	ASSERT_EQ(0, memcmp(value, "green\n", size));
+	ASSERT_EQ(0, byte_index);
+
+	node = rope_node_find_char(red_node, 0, TAG_BLUE, &byte_index);
+	value = rope_node_value(node, &size);
+	ASSERT_EQ((size_t)5, size);
+	ASSERT_EQ(0, memcmp(value, "blue\n", size));
+	ASSERT_EQ(0, byte_index);
+
+	node = rope_node_find_char(red_node, 0, 0, &byte_index);
+	value = rope_node_value(node, &size);
+	ASSERT_EQ((size_t)4, size);
+	ASSERT_EQ(0, memcmp(value, "red\n", size));
+	ASSERT_EQ(0, byte_index);
+
+	node = rope_node_find_char(red_node, 5, 0, &byte_index);
+	value = rope_node_value(node, &size);
+	ASSERT_EQ((size_t)6, size);
+	ASSERT_EQ(0, memcmp(value, "green\n", size));
+	ASSERT_EQ(1, byte_index);
+
+	node = rope_node_find_char(red_node, 11, 0, &byte_index);
+	value = rope_node_value(node, &size);
+	ASSERT_EQ((size_t)5, size);
+	ASSERT_EQ(0, memcmp(value, "blue\n", size));
+	ASSERT_EQ(1, byte_index);
+
+
+	rv = rope_pool_recycle(&p, red_node);
+	ASSERT_EQ(0, rv);
+	rv = rope_pool_recycle(&p, green_node);
+	ASSERT_EQ(0, rv);
+	rv = rope_pool_recycle(&p, blue_node);
+	ASSERT_EQ(0, rv);
+
+	rv = rope_pool_cleanup(&p);
+	ASSERT_EQ(0, rv);
 }
 
 DECLARE_TESTS
@@ -192,4 +280,5 @@ TEST(test_node_split)
 TEST(test_node_balanced_tree_right)
 TEST(test_node_balanced_tree_left)
 TEST(test_node_merge)
+TEST(test_node_tags)
 END_TESTS

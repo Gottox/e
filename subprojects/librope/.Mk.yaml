@@ -1,5 +1,5 @@
 configure:
-  - -Db_coverage=true
+  #- -Db_coverage=true
   - -Dtest=true
 env:
   CC: clang

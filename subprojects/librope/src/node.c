@@ -10,13 +10,6 @@
 #include <string.h>
 #include <sys/wait.h>
 
-static bool
-node_match_tags(struct RopeNode *node, uint64_t tags) {
-	assert(node->type != ROPE_NODE_BRANCH);
-	uint64_t node_tags = rope_node_tags(node);
-	return (node_tags & tags) == tags;
-}
-
 static struct RopeNode **
 node_child(struct RopeNode *node, enum RopeNodeDirection direction) {
 	assert(node->type == ROPE_NODE_BRANCH);
@@ -178,6 +171,13 @@ node_set_inline(struct RopeNode *node, const uint8_t *data, size_t byte_size) {
 	node->byte_size = byte_size;
 	node_update(node);
 	return 0;
+}
+
+bool
+rope_node_match_tags(struct RopeNode *node, uint64_t tags) {
+	assert(node->type != ROPE_NODE_BRANCH);
+	uint64_t node_tags = rope_node_tags(node);
+	return (node_tags & tags) == tags;
 }
 
 int
@@ -452,7 +452,7 @@ find_line(
 		uint64_t tags) {
 	node = rope_node_first(node);
 	do {
-		if (node_match_tags(node, tags) == false) {
+		if (rope_node_match_tags(node, tags) == false) {
 			continue;
 		}
 		if (line <= node->new_lines) {
@@ -531,7 +531,7 @@ rope_node_find(
 	column += drop_chars;
 
 	while (1) {
-		if (!node_match_tags(node, tags)) {
+		if (!rope_node_match_tags(node, tags)) {
 			continue;
 		}
 		if (node->char_size > column) {
@@ -567,7 +567,7 @@ rope_node_find_char(
 	} else {
 		node = rope_node_first(node);
 		do {
-			if (node_match_tags(node, tags) == false) {
+			if (rope_node_match_tags(node, tags) == false) {
 				continue;
 			}
 			if (node->char_size > char_index) {
@@ -685,6 +685,29 @@ rope_node_tags(struct RopeNode *node) {
 	default:
 		__builtin_unreachable();
 	}
+}
+
+int
+rope_node_remove_by_tags(
+		struct RopeNode *node, struct RopePool *pool, uint64_t tags) {
+	int rv = 0;
+	assert(rope_node_type(node) == ROPE_NODE_BRANCH);
+
+	node = rope_node_first(node);
+	while (node) {
+		if (!rope_node_match_tags(node, tags)) {
+			rope_node_next(&node);
+			continue;
+		}
+		struct RopeNode *parent = rope_node_parent(node);
+		rv = rope_node_delete(node, pool);
+		if (rv < 0) {
+			goto out;
+		}
+		node = parent;
+	}
+out:
+	return rv;
 }
 
 void

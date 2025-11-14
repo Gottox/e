@@ -46,7 +46,7 @@ rope_delete(
 		goto out;
 	}
 
-	rv = rope_cursor_move_to_index(&cursor, char_index);
+	rv = rope_cursor_move_to_index(&cursor, char_index, 0);
 	if (rv < 0) {
 		goto out;
 	}
@@ -72,7 +72,7 @@ rope_find(
 		goto out;
 	}
 
-	rv = rope_cursor_move_to_index(&cursor, char_index);
+	rv = rope_cursor_move_to_index(&cursor, char_index, 0);
 	if (rv < 0) {
 		goto out;
 	}
@@ -102,7 +102,7 @@ rope_insert(
 		goto out;
 	}
 
-	rv = rope_cursor_move_to_index(&cursor, char_index);
+	rv = rope_cursor_move_to_index(&cursor, char_index, 0);
 	if (rv < 0) {
 		goto out;
 	}

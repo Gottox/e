@@ -87,7 +87,7 @@ rope_range_insert(
 	if (rv < 0) {
 		goto out;
 	}
-	rv = rope_cursor_move_to_index(start, start_index);
+	rv = rope_cursor_move_to_index(start, start_index, 0);
 	if (rv < 0) {
 		goto out;
 	}
@@ -115,12 +115,12 @@ rope_range_delete(struct RopeRange *range) {
 }
 
 char *
-rope_range_to_str(struct RopeRange *range) {
+rope_range_to_str(struct RopeRange *range, uint64_t tags) {
 	struct RopeIterator it = {0};
 	const uint8_t *data = NULL;
 	size_t size = 0;
 	size_t total = 0;
-	int rv = rope_iterator_init(&it, range);
+	int rv = rope_iterator_init(&it, range, tags);
 	if (rv < 0) {
 		return NULL;
 	}
@@ -134,7 +134,7 @@ rope_range_to_str(struct RopeRange *range) {
 		return NULL;
 	}
 
-	rv = rope_iterator_init(&it, range);
+	rv = rope_iterator_init(&it, range, tags);
 	if (rv < 0) {
 		free(res);
 		return NULL;

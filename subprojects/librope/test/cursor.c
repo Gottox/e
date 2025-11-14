@@ -161,7 +161,7 @@ cursor_move_codepoint() {
 	rv = rope_cursor_init(&c, &r);
 	ASSERT_EQ(0, rv);
 
-	rv = rope_cursor_move_to_index(&c, 1);
+	rv = rope_cursor_move_to_index(&c, 1, 0);
 	ASSERT_EQ(0, rv);
 	int32_t cp = rope_cursor_codepoint(&c);
 	ASSERT_EQ(128515, cp);

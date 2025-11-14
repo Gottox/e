@@ -3,7 +3,8 @@
 #include <stdbool.h>
 
 int
-rope_iterator_init(struct RopeIterator *iter, struct RopeRange *range) {
+rope_iterator_init(
+		struct RopeIterator *iter, struct RopeRange *range, uint64_t tags) {
 	iter->range = range;
 	struct RopeCursor *start = rope_range_start(range);
 	struct RopeCursor *end = rope_range_end(range);
@@ -11,6 +12,7 @@ rope_iterator_init(struct RopeIterator *iter, struct RopeRange *range) {
 	iter->node = rope_cursor_node(start, &iter->start_byte);
 	iter->end = rope_cursor_node(end, &iter->end_byte);
 	iter->started = false;
+	iter->tags = tags;
 
 	if (iter->node == iter->end && iter->start_byte >= iter->end_byte) {
 		iter->node = NULL;
@@ -45,7 +47,11 @@ rope_iterator_next(
 	if (iter->node == iter->end) {
 		iter->node = NULL;
 	} else {
-		rope_node_next(&iter->node);
+		do {
+			if (!rope_node_next(&iter->node)) {
+				break;
+			}
+		} while (rope_node_match_tags(iter->node, iter->tags) == false);
 		iter->started = true;
 	}
 

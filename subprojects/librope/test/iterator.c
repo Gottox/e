@@ -18,11 +18,11 @@ iterator_full() {
 	struct RopeRange range = {0};
 	rv = rope_range_init(&range, &r, NULL, NULL, NULL);
 	ASSERT_EQ(0, rv);
-	rv = rope_cursor_move_to_index(&range.cursors[1], rope_char_size(&r));
+	rv = rope_cursor_move_to_index(&range.cursors[1], rope_char_size(&r), 0);
 	ASSERT_EQ(0, rv);
 
 	struct RopeIterator it = {0};
-	rv = rope_iterator_init(&it, &range);
+	rv = rope_iterator_init(&it, &range, 0);
 	ASSERT_EQ(0, rv);
 
 	const uint8_t *data = NULL;
@@ -61,13 +61,13 @@ iterator_partial() {
 	struct RopeRange range = {0};
 	rv = rope_range_init(&range, &r, NULL, NULL, NULL);
 	ASSERT_EQ(0, rv);
-	rv = rope_cursor_move_to_index(&range.cursors[0], 2);
+	rv = rope_cursor_move_to_index(&range.cursors[0], 2, 0);
 	ASSERT_EQ(0, rv);
-	rv = rope_cursor_move_to_index(&range.cursors[1], 8);
+	rv = rope_cursor_move_to_index(&range.cursors[1], 8, 0);
 	ASSERT_EQ(0, rv);
 
 	struct RopeIterator it = {0};
-	rv = rope_iterator_init(&it, &range);
+	rv = rope_iterator_init(&it, &range, 0);
 	ASSERT_EQ(0, rv);
 
 	const uint8_t *data = NULL;
@@ -81,7 +81,7 @@ iterator_partial() {
 	buf[off] = '\0';
 	ASSERT_STREQ(buf, "lloWor");
 
-	char *str = rope_range_to_str(&range);
+	char *str = rope_range_to_str(&range, 0);
 	ASSERT_TRUE(str != NULL);
 	ASSERT_STREQ(str, "lloWor");
 	free(str);
@@ -108,7 +108,7 @@ iterator_empty() {
 	ASSERT_EQ(0, rv);
 
 	struct RopeIterator it = {0};
-	rv = rope_iterator_init(&it, &range);
+	rv = rope_iterator_init(&it, &range, 0);
 	ASSERT_EQ(0, rv);
 
 	const uint8_t *data = NULL;
@@ -116,7 +116,7 @@ iterator_empty() {
 	bool has = rope_iterator_next(&it, &data, &size);
 	ASSERT_FALSE(has);
 
-	char *str = rope_range_to_str(&range);
+	char *str = rope_range_to_str(&range, 0);
 	ASSERT_TRUE(str != NULL);
 	ASSERT_STREQ(str, "");
 	free(str);
@@ -147,11 +147,11 @@ iterator_big_non_inline() {
 	struct RopeRange range = {0};
 	rv = rope_range_init(&range, &r, NULL, NULL, NULL);
 	ASSERT_EQ(0, rv);
-	rv = rope_cursor_move_to_index(&range.cursors[1], rope_char_size(&r));
+	rv = rope_cursor_move_to_index(&range.cursors[1], rope_char_size(&r) , 0);
 	ASSERT_EQ(0, rv);
 
 	struct RopeIterator it = {0};
-	rv = rope_iterator_init(&it, &range);
+	rv = rope_iterator_init(&it, &range, 0);
 	ASSERT_EQ(0, rv);
 
 	const uint8_t *data = NULL;
@@ -189,13 +189,13 @@ iterator_multibyte() {
 	struct RopeRange range = {0};
 	rv = rope_range_init(&range, &r, NULL, NULL, NULL);
 	ASSERT_EQ(0, rv);
-	rv = rope_cursor_move_to_index(&range.cursors[0], 3);
+	rv = rope_cursor_move_to_index(&range.cursors[0], 3, 0);
 	ASSERT_EQ(0, rv);
-	rv = rope_cursor_move_to_index(&range.cursors[1], 4);
+	rv = rope_cursor_move_to_index(&range.cursors[1], 4, 0);
 	ASSERT_EQ(0, rv);
 
 	struct RopeIterator it = {0};
-	rv = rope_iterator_init(&it, &range);
+	rv = rope_iterator_init(&it, &range, 0);
 	ASSERT_EQ(0, rv);
 
 	const uint8_t *data = NULL;
@@ -207,7 +207,7 @@ iterator_multibyte() {
 	has = rope_iterator_next(&it, &data, &size);
 	ASSERT_FALSE(has);
 
-	char *str = rope_range_to_str(&range);
+	char *str = rope_range_to_str(&range, 0);
 	ASSERT_TRUE(str != NULL);
 	ASSERT_STREQ(str, u8"🙂");
 	free(str);

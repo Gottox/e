@@ -140,8 +140,23 @@ rope_cursor_is_order(struct RopeCursor *first, struct RopeCursor *second) {
 }
 
 int
-rope_cursor_move_to_index(struct RopeCursor *cursor, rope_char_index_t index) {
+rope_cursor_move_to_index(
+		struct RopeCursor *cursor, rope_char_index_t index, uint64_t tags) {
 	struct Rope *rope = cursor->rope;
+	if (tags != 0) {
+		rope_index_t global_index = 0;
+		struct RopeNode *node = rope_first(rope);
+		for (; node; rope_node_next(&node)) {
+			if (rope_node_match_tags(node, tags)) {
+				if (index < node->char_size) {
+					break;
+				}
+				index -= node->char_size;
+			}
+			global_index += node->char_size;
+		}
+		index += global_index;
+	}
 	if (index > rope->root->char_size) {
 		return -1;
 	}
