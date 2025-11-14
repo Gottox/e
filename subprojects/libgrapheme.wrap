@@ -1,7 +1,7 @@
 [wrap-git]
 directory = libgrapheme
 url = https://github.com/Gottox/libgrapheme.git
-revision = 68c8c0fc3a7655c95e8b26b8d845b732370b22e5
+revision = d5cfab9407089550ab1502d5beb42bb9f41eed4a
 depth = 1
 
 [provide]
