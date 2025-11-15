@@ -270,8 +270,140 @@ test_node_tags() {
 	rv = rope_pool_recycle(&p, blue_node);
 	ASSERT_EQ(0, rv);
 
-	rv = rope_pool_cleanup(&p);
+        rv = rope_pool_cleanup(&p);
+        ASSERT_EQ(0, rv);
+}
+
+static void
+test_node_delete_by_tags() {
+	const uint64_t TAG_TMP = 1ULL << 0;
+	const uint8_t *value;
+	size_t size;
+	bool has_next;
+
+	int rv = 0;
+	struct RopePool pool = {0};
+	rv = rope_pool_init(&pool);
 	ASSERT_EQ(0, rv);
+
+	struct RopeNode *node1 = rope_node_new(&pool);
+	ASSERT_TRUE(NULL != node1);
+	rv = rope_node_set_value(node1, (const uint8_t *)"leaf1", 5);
+	ASSERT_EQ(0, rv);
+	struct RopeNode *node2 = rope_node_new(&pool);
+	ASSERT_TRUE(NULL != node2);
+	rv = rope_node_set_value(node2, (const uint8_t *)"leaf2", 5);
+	ASSERT_EQ(0, rv);
+
+	struct RopeNode *tmp_leaf = rope_node_new(&pool);
+	ASSERT_TRUE(NULL != tmp_leaf);
+	rv = rope_node_set_value(tmp_leaf, (const uint8_t *)"tmp", 3);
+	ASSERT_EQ(0, rv);
+	rope_node_set_tags(tmp_leaf, TAG_TMP);
+
+	rv = rope_node_insert_right(node1, tmp_leaf, &pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_node_insert_right(node1, node2, &pool);
+
+	struct RopeNode *node = rope_node_first(node1);
+	value = rope_node_value(node, &size);
+	ASSERT_EQ((size_t)5, size);
+	ASSERT_EQ(0, memcmp(value, "leaf1", size));
+	ASSERT_EQ(0, rope_node_tags(node));
+
+	has_next = rope_node_next(&node);
+	ASSERT_TRUE(has_next);
+	value = rope_node_value(node, &size);
+	ASSERT_EQ((size_t)3, size);
+	ASSERT_EQ(0, memcmp(value, "tmp", size));
+	ASSERT_EQ(TAG_TMP, rope_node_tags(node));
+
+	has_next = rope_node_next(&node);
+	ASSERT_TRUE(has_next);
+	value = rope_node_value(node, &size);
+	ASSERT_EQ((size_t)5, size);
+	ASSERT_EQ(0, memcmp(value, "leaf2", size));
+	ASSERT_EQ(0, rope_node_tags(node));
+
+	has_next = rope_node_next(&node);
+	ASSERT_FALSE(has_next);
+	ASSERT_EQ(NULL, node);
+
+	rv = rope_node_delete_by_tags(node1, &pool, TAG_TMP);
+	ASSERT_EQ(0, rv);
+
+	node = rope_node_first(node1);
+
+	value = rope_node_value(node, &size);
+	ASSERT_EQ((size_t)5, size);
+	ASSERT_EQ(0, memcmp(value, "leaf1", size));
+
+	has_next = rope_node_next(&node);
+	ASSERT_TRUE(has_next);
+	value = rope_node_value(node, &size);
+	ASSERT_EQ((size_t)5, size);
+	ASSERT_EQ(0, memcmp(value, "leaf2", size));
+	ASSERT_EQ(0, rope_node_tags(node));
+
+	has_next = rope_node_next(&node);
+	ASSERT_FALSE(has_next);
+	ASSERT_EQ(NULL, node);
+
+	rv = rope_pool_cleanup(&pool);
+}
+
+static void
+test_node_propagate_tags() {
+	const uint64_t TAG_HELLO = 1 << 0;
+	const uint64_t TAG_WORLD = 1 << 1;
+	const uint64_t TAG_PROPAGATED = 1 << 2;
+	int rv = 0;
+	bool has_next;
+	uint64_t tags;
+	const uint8_t *value;
+	size_t size;
+	struct RopePool pool = {0};
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+
+	struct RopeNode *node1 = rope_node_new(&pool);
+	ASSERT_TRUE(NULL != node1);
+	rv = rope_node_set_value(node1, (const uint8_t *)"hello", 5);
+	ASSERT_EQ(0, rv);
+	rope_node_set_tags(node1, TAG_HELLO);
+
+	struct RopeNode *node2 = rope_node_new(&pool);
+	ASSERT_TRUE(NULL != node2);
+	rv = rope_node_set_value(node2, (const uint8_t *)"world", 5);
+	ASSERT_EQ(0, rv);
+	rope_node_set_tags(node2, TAG_WORLD);
+
+	rv = rope_node_insert_right(node1, node2, &pool);
+	ASSERT_EQ(0, rv);
+
+	rope_node_add_tags(node1, TAG_PROPAGATED);
+
+	struct RopeNode *node = rope_node_first(node1);
+
+	value = rope_node_value(node, &size);
+	ASSERT_EQ((size_t)5, size);
+	ASSERT_EQ(0, memcmp(value, "hello", 5));
+	tags = rope_node_tags(node);
+	ASSERT_EQ(TAG_HELLO | TAG_PROPAGATED, tags);
+
+	has_next = rope_node_next(&node);
+	ASSERT_TRUE(has_next);
+	value = rope_node_value(node, &size);
+	ASSERT_EQ((size_t)5, size);
+	ASSERT_EQ(0, memcmp(value, "world", 5));
+	tags = rope_node_tags(node);
+	ASSERT_EQ(TAG_WORLD | TAG_PROPAGATED, tags);
+
+	has_next = rope_node_next(&node);
+	ASSERT_FALSE(has_next);
+	ASSERT_EQ(NULL, node);
+
+	rv = rope_pool_cleanup(&pool);
 }
 
 DECLARE_TESTS
@@ -281,4 +413,6 @@ TEST(test_node_balanced_tree_right)
 TEST(test_node_balanced_tree_left)
 TEST(test_node_merge)
 TEST(test_node_tags)
+TEST(test_node_delete_by_tags)
+TEST(test_node_propagate_tags)
 END_TESTS

@@ -688,7 +688,7 @@ rope_node_tags(struct RopeNode *node) {
 }
 
 int
-rope_node_remove_by_tags(
+rope_node_delete_by_tags(
 		struct RopeNode *node, struct RopePool *pool, uint64_t tags) {
 	int rv = 0;
 	assert(rope_node_type(node) == ROPE_NODE_BRANCH);

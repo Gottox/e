@@ -166,6 +166,12 @@ const uint8_t *rope_node_value(const struct RopeNode *node, size_t *size);
 
 uint64_t rope_node_tags(struct RopeNode *node);
 
+int rope_node_delete_by_tags(struct RopeNode *node, struct RopePool *pool, uint64_t tags);
+
+void rope_node_add_tags(struct RopeNode *node, uint64_t tags);
+
+void rope_node_remove_tags(struct RopeNode *node, uint64_t tags);
+
 void rope_node_set_tags(struct RopeNode *node, uint64_t tags);
 
 int rope_node_free(struct RopeNode *node, struct RopePool *pool);
