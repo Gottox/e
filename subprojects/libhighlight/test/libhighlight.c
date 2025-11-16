@@ -1,10 +1,14 @@
 #include <highlight.h>
 #include <tree_sitter/api.h>
-#include <utest.h>
+#include <testlib.h>
+#include <string.h>
+#include <stdio.h>
 
 const TSLanguage *tree_sitter_markdown_inline(void);
 
 const TSLanguage *(*language)(void) = tree_sitter_markdown_inline;
+
+#define UTEST(x, y) static void test_ ## x ## _ ##y(void)
 
 static struct HighlightConfig *
 new_config(
@@ -20,14 +24,16 @@ new_config(
 #define NEW_CONFIG(source, captures, captures_len) \
 	new_config(source, captures, captures_len, &(struct HighlightConfig){0})
 
-UTEST(highlight, init) {
+static void
+test_highlight_init(void) {
 	struct Highlight hl = {0};
 	int rv = highlight_init(&hl, NEW_CONFIG("", NULL, 0));
 	ASSERT_EQ(rv, 0);
 	highlight_cleanup(&hl);
 }
 
-UTEST(highlight_iterator, init) {
+static void
+test_highlight_iterator_init(void) {
 	const char *source_code = "int main();";
 	TSParser *parser = ts_parser_new();
 	ts_parser_set_language(parser, tree_sitter_markdown_inline());
@@ -49,7 +55,8 @@ UTEST(highlight_iterator, init) {
 	ts_parser_delete(parser);
 }
 
-UTEST(highlight_iterator, plain_text) {
+static void
+test_highlight_iterator_plain_text(void) {
 	const char *source = "text";
 	const size_t source_len = strlen(source);
 	const char *query = "(emphasis) @emphasis\n";
@@ -88,7 +95,8 @@ UTEST(highlight_iterator, plain_text) {
 	ts_parser_delete(parser);
 }
 
-UTEST(highlight_iterator, emphasis) {
+static void
+test_highlight_iterator_emphasis(void) {
 	const char *source = "*text*";
 	const size_t source_len = strlen(source);
 	const char *query = "(emphasis) @emphasis\n";
@@ -137,7 +145,8 @@ UTEST(highlight_iterator, emphasis) {
 	ts_parser_delete(parser);
 }
 
-UTEST(highlight_iterator, nested) {
+static void
+test_highlight_iterator_nested(void) {
 	const char *source = "***text***";
 	const size_t source_len = strlen(source);
 	const char *query = "(strong_emphasis) @strong_emphasis\n"
@@ -221,7 +230,8 @@ UTEST(highlight_iterator, nested) {
 	ts_parser_delete(parser);
 }
 
-UTEST(highlight, captures_filter) {
+static void
+test_highlight_captures_filter(void) {
 	const char *source = "***text***";
 	const size_t source_len = strlen(source);
 	const char *query = "(strong_emphasis) @strong_emphasis\n"
@@ -285,4 +295,11 @@ UTEST(highlight, captures_filter) {
 	ts_parser_delete(parser);
 }
 
-UTEST_MAIN()
+DECLARE_TESTS
+TEST(test_highlight_init)
+TEST(test_highlight_iterator_init)
+TEST(test_highlight_iterator_plain_text)
+TEST(test_highlight_iterator_emphasis)
+TEST(test_highlight_iterator_nested)
+TEST(test_highlight_captures_filter)
+END_TESTS

@@ -1,6 +1,6 @@
 e_test = ['libhighlight.c']
 
-utest_dep = dependency('utest')
+testlib_dep = dependency('testlib')
 foreach p : e_test
     sources = files(
         'tree-sitter-markdown-inline/src/parser.c',
@@ -12,7 +12,7 @@ foreach p : e_test
         sources,
         install: false,
         dependencies: [
-            utest_dep,
+            testlib_dep,
             libhighlight_dep,
             cextras_dep,
         ],
