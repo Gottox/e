@@ -1,6 +1,6 @@
 e_test = []
 
-utest_dep = dependency('utest')
+testlib_dep = dependency('testlib')
 foreach p : e_test
     sources = [p]
     t = executable(
@@ -8,7 +8,7 @@ foreach p : e_test
         sources,
         install: false,
         dependencies: [
-            utest_dep,
+            testlib_dep,
             libttyui_dep,
         ],
     )
