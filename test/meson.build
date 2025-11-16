@@ -1,6 +1,6 @@
 e_test = []
 
-utest_dep = dependency('utest')
+testlib_dep = dependency('testlib')
 foreach p : e_test
     sources = [p]
     t = executable(
