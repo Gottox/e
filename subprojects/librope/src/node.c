@@ -287,19 +287,27 @@ node_inline_insert(
 
 int
 rope_node_insert_left(
-		struct RopeNode *parent, struct RopeNode *new_node,
+		struct RopeNode *target, struct RopeNode *new_node,
 		struct RopePool *pool) {
-	return node_insert(parent, new_node, pool, ROPE_NODE_LEFT);
+	int rv = -1;
+	struct RopeNode *prev = node_neighbour(target, ROPE_NODE_LEFT);
+	if (prev) {
+		rv = node_inline_insert(prev, new_node, pool);
+	}
+	if (rv < 0) {
+		rv = node_insert(target, new_node, pool, ROPE_NODE_LEFT);
+	}
+	return rv;
 }
 
 int
 rope_node_insert_right(
-		struct RopeNode *parent, struct RopeNode *new_node,
+		struct RopeNode *target, struct RopeNode *new_node,
 		struct RopePool *pool) {
 	int rv = 0;
-	rv = node_inline_insert(parent, new_node, pool);
+	rv = node_inline_insert(target, new_node, pool);
 	if (rv < 0) {
-		rv = node_insert(parent, new_node, pool, ROPE_NODE_RIGHT);
+		rv = node_insert(target, new_node, pool, ROPE_NODE_RIGHT);
 	}
 	return rv;
 }

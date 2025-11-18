@@ -115,11 +115,11 @@ int rope_node_set_rc_string(
 		struct RopeNode *node, struct RopeRcString *str, size_t byte_size);
 
 int rope_node_insert_left(
-		struct RopeNode *parent, struct RopeNode *new_node,
+		struct RopeNode *target, struct RopeNode *new_node,
 		struct RopePool *pool);
 
 int rope_node_insert_right(
-		struct RopeNode *parent, struct RopeNode *new_node,
+		struct RopeNode *target, struct RopeNode *new_node,
 		struct RopePool *pool);
 
 int rope_node_delete(struct RopeNode *node, struct RopePool *pool);
