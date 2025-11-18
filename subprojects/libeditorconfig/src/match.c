@@ -60,14 +60,14 @@ match_star(
 		const char *tmp_str = *str;
 		size_t tmp_str_len = *str_len;
 
-		int res = match(&tmp_pat, &tmp_pat_len, &tmp_str, &tmp_str_len);
-		if (res == MATCH_OK) {
+		int rv = match(&tmp_pat, &tmp_pat_len, &tmp_str, &tmp_str_len);
+		if (rv == MATCH_OK) {
 			*pat = tmp_pat;
 			*pat_len = tmp_pat_len;
 			*str = tmp_str;
 			*str_len = tmp_str_len;
 			return MATCH_OK;
-		} else if (res == MATCH_ERROR) {
+		} else if (rv == MATCH_ERROR) {
 			return MATCH_ERROR;
 		}
 
@@ -239,35 +239,36 @@ match_group(
 
 int
 match(const char **pat, size_t *pat_len, const char **str, size_t *str_len) {
+	int rv;
 	while (*pat_len > 0) {
-		int result = MATCH_ERROR;
+		rv = MATCH_ERROR;
 
 		switch (**pat) {
 		case '*':
-			result = match_star(pat, pat_len, str, str_len);
+			rv = match_star(pat, pat_len, str, str_len);
 			break;
 		case '?':
-			result = match_question(pat, pat_len, str, str_len);
+			rv = match_question(pat, pat_len, str, str_len);
 			break;
 		case '[':
 			(*pat)++;
 			(*pat_len)--;
-			result = match_brackets(pat, pat_len, str, str_len);
+			rv = match_brackets(pat, pat_len, str, str_len);
 			break;
 		case '{':
-			result = match_number_range(pat, pat_len, str, str_len);
-			if (result == MATCH_ERROR) {
-				result = match_group(pat, pat_len, str, str_len);
+			rv = match_number_range(pat, pat_len, str, str_len);
+			if (rv == MATCH_ERROR) {
+				rv = match_group(pat, pat_len, str, str_len);
 			}
 			break;
 		default:
-			result = match_literal(pat, pat_len, str, str_len);
+			rv = match_literal(pat, pat_len, str, str_len);
 			break;
 		}
 
-		if (result == MATCH_ERROR) {
+		if (rv == MATCH_ERROR) {
 			return MATCH_ERROR;
-		} else if (result == MATCH_NONE) {
+		} else if (rv == MATCH_NONE) {
 			return MATCH_NONE;
 		}
 
@@ -286,10 +287,10 @@ match(const char **pat, size_t *pat_len, const char **str, size_t *str_len) {
 int
 editorconfig_match(const char *pat, const char *str, size_t str_len) {
 	size_t pat_len = strlen(pat);
-	enum MatchResult res = match(&pat, &pat_len, &str, &str_len);
-	// if (res == MATCH_OK) {
+	enum MatchResult rv = match(&pat, &pat_len, &str, &str_len);
+	// if (rv == MATCH_OK) {
 	//	assert(pat_len == 0);
 	//	assert(str_len == 0);
 	// }
-	return res;
+	return rv;
 }
