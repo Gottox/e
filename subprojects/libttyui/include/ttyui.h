@@ -130,3 +130,6 @@ int ttyui_draw(
 int ttyui_draw_eol(
 		struct TtyUi *ttyui, const struct TtyUiDrawOptions *options,
 		struct TtyUiState *state);
+
+int ttyui_draw_scroll_region(
+		struct TtyUi *ui, int top, int bottom, struct TtyUiState *state);

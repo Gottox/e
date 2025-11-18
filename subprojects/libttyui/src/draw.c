@@ -395,3 +395,13 @@ ttyui_draw_eol(
 
 	return 0;
 }
+
+int
+ttyui_draw_scroll_region(
+		struct TtyUi *ui, int top, int bottom, struct TtyUiState *state) {
+	(void)state;
+	fprintf(ui->fd_file, "\033[%d;%dr", top + 1, bottom + 1);
+	fflush(ui->fd_file);
+
+	return 0;
+}
