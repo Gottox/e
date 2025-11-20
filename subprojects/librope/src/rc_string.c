@@ -4,7 +4,9 @@
 #include <string.h>
 
 struct RopeRcString *
-rope_rc_string_new2(const uint8_t *data1, size_t size1, const uint8_t *data2, size_t size2) {
+rope_rc_string_new2(
+		const uint8_t *data1, size_t size1, const uint8_t *data2,
+		size_t size2) {
 	struct RopeRcString *rc_str;
 	size_t alloc_size;
 

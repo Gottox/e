@@ -262,7 +262,6 @@ test_node_tags() {
 	ASSERT_EQ(0, memcmp(value, "blue\n", size));
 	ASSERT_EQ(1, byte_index);
 
-
 	rv = rope_pool_recycle(&p, red_node);
 	ASSERT_EQ(0, rv);
 	rv = rope_pool_recycle(&p, green_node);
@@ -270,8 +269,8 @@ test_node_tags() {
 	rv = rope_pool_recycle(&p, blue_node);
 	ASSERT_EQ(0, rv);
 
-        rv = rope_pool_cleanup(&p);
-        ASSERT_EQ(0, rv);
+	rv = rope_pool_cleanup(&p);
+	ASSERT_EQ(0, rv);
 }
 
 static void

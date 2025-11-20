@@ -1,8 +1,8 @@
+#include <assert.h>
 #include <rope.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 
 static bool
 is_collapsed(struct RopeRange *range) {
@@ -72,7 +72,8 @@ rope_range_end(struct RopeRange *range) {
 
 int
 rope_range_insert(
-		struct RopeRange *range, const uint8_t *data, size_t byte_size, uint64_t tags) {
+		struct RopeRange *range, const uint8_t *data, size_t byte_size,
+		uint64_t tags) {
 	int rv = 0;
 	rv = rope_range_delete(range);
 	if (rv < 0) {

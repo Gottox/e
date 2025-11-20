@@ -257,7 +257,8 @@ iterator_tagged_filter() {
 	ASSERT_EQ(0, rv);
 	rv = rope_cursor_move_to_index(rope_range_start(&range), 0, 0);
 	ASSERT_EQ(0, rv);
-	rv = rope_cursor_move_to_index(rope_range_end(&range), rope_char_size(&r), 0);
+	rv = rope_cursor_move_to_index(
+			rope_range_end(&range), rope_char_size(&r), 0);
 	ASSERT_EQ(0, rv);
 
 	struct RopeIterator all_it = {0};

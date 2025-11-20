@@ -80,21 +80,21 @@ cursor_utf8() {
 	ASSERT_EQ((size_t)8, size);
 	ASSERT_EQ(0, memcmp(value, u8"👋🙂", size));
 
-	//struct RopeNode *node = rope_first(&r);
-	//ASSERT_TRUE(NULL != node);
-	//size_t size = 0;
-	//const uint8_t *value = rope_node_value(node, &size);
-	//ASSERT_TRUE(NULL != value);
-	//ASSERT_EQ((size_t)4, size);
-	//ASSERT_EQ(0, memcmp(value, u8"👋", size));
+	// struct RopeNode *node = rope_first(&r);
+	// ASSERT_TRUE(NULL != node);
+	// size_t size = 0;
+	// const uint8_t *value = rope_node_value(node, &size);
+	// ASSERT_TRUE(NULL != value);
+	// ASSERT_EQ((size_t)4, size);
+	// ASSERT_EQ(0, memcmp(value, u8"👋", size));
 
-	//bool has_next = rope_node_next(&node);
-	//ASSERT_EQ(true, has_next);
-	//ASSERT_TRUE(NULL != node);
-	//value = rope_node_value(node, &size);
-	//ASSERT_TRUE(NULL != value);
-	//ASSERT_EQ((size_t)4, size);
-	//ASSERT_EQ(0, memcmp(value, u8"🙂", size));
+	// bool has_next = rope_node_next(&node);
+	// ASSERT_EQ(true, has_next);
+	// ASSERT_TRUE(NULL != node);
+	// value = rope_node_value(node, &size);
+	// ASSERT_TRUE(NULL != value);
+	// ASSERT_EQ((size_t)4, size);
+	// ASSERT_EQ(0, memcmp(value, u8"🙂", size));
 
 	bool has_next = rope_node_next(&node);
 	ASSERT_NE(false, has_next);

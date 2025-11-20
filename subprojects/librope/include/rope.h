@@ -105,14 +105,13 @@ struct RopeNode {
 
 struct RopeNode *rope_node_new(struct RopePool *pool);
 
-bool
-rope_node_match_tags(struct RopeNode *node, uint64_t tags);
+bool rope_node_match_tags(struct RopeNode *node, uint64_t tags);
 
 int rope_node_set_value(
 		struct RopeNode *node, const uint8_t *data, size_t byte_size);
 
 int rope_node_set_rc_string(
-		struct RopeNode *node, struct RopeRcString *str, size_t byte_size);
+		struct RopeNode *node, struct RopeRcString *str, size_t byte_index);
 
 int rope_node_insert_left(
 		struct RopeNode *target, struct RopeNode *new_node,
@@ -166,7 +165,8 @@ const uint8_t *rope_node_value(const struct RopeNode *node, size_t *size);
 
 uint64_t rope_node_tags(struct RopeNode *node);
 
-int rope_node_delete_by_tags(struct RopeNode *node, struct RopePool *pool, uint64_t tags);
+int rope_node_delete_by_tags(
+		struct RopeNode *node, struct RopePool *pool, uint64_t tags);
 
 void rope_node_add_tags(struct RopeNode *node, uint64_t tags);
 
