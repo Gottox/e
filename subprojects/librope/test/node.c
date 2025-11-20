@@ -405,6 +405,50 @@ test_node_propagate_tags() {
 	rv = rope_pool_cleanup(&pool);
 }
 
+static void
+test_node_node_left_inline_insert() {
+	const uint64_t TAG_HELLO = 1 << 0;
+	const uint64_t TAG_WORLD = 1 << 1;
+	int rv = 0;
+	const uint8_t *value;
+	size_t size;
+	struct RopePool pool = {0};
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+
+	struct RopeNode *node1 = rope_node_new(&pool);
+	ASSERT_TRUE(NULL != node1);
+	rv = rope_node_set_value(node1, (const uint8_t *)"hello", 5);
+	ASSERT_EQ(0, rv);
+	rope_node_set_tags(node1, TAG_HELLO);
+
+	struct RopeNode *node2 = rope_node_new(&pool);
+	ASSERT_TRUE(NULL != node2);
+	rv = rope_node_set_value(node2, (const uint8_t *)"world", 5);
+	ASSERT_EQ(0, rv);
+	rope_node_set_tags(node2, TAG_WORLD);
+
+	rv = rope_node_insert_right(node1, node2, &pool);
+	ASSERT_EQ(0, rv);
+
+	struct RopeNode *node = rope_node_last(node1);
+
+	struct RopeNode *node3 = rope_node_new(&pool);
+	ASSERT_TRUE(NULL != node3);
+	rv = rope_node_set_value(node3, (const uint8_t *)"cruel", 5);
+	ASSERT_EQ(0, rv);
+	rope_node_set_tags(node3, TAG_HELLO);
+
+	rope_node_insert_left(node, node3, &pool);
+
+	node = rope_node_first(node1);
+	value = rope_node_value(node, &size);
+	ASSERT_EQ((size_t)10, size);
+	ASSERT_EQ(0, memcmp(value, "hellocruel", 10));
+
+	rv = rope_pool_cleanup(&pool);
+}
+
 DECLARE_TESTS
 TEST(test_node_insert)
 TEST(test_node_split)
@@ -414,4 +458,5 @@ TEST(test_node_merge)
 TEST(test_node_tags)
 TEST(test_node_delete_by_tags)
 TEST(test_node_propagate_tags)
+TEST(test_node_node_left_inline_insert)
 END_TESTS
