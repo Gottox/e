@@ -251,11 +251,13 @@ int rope_cursor_move_to(
 		struct RopeCursor *cursor, rope_index_t line, rope_char_index_t column);
 
 int rope_cursor_insert(
-		struct RopeCursor *cursor, const uint8_t *data, size_t byte_size, uint64_t tags);
+		struct RopeCursor *cursor, const uint8_t *data, size_t byte_size,
+		uint64_t tags);
 
 int rope_cursor_move(struct RopeCursor *cursor, off_t offset);
 
-int rope_cursor_insert_str(struct RopeCursor *cursor, const char *str, uint64_t tags);
+int rope_cursor_insert_str(
+		struct RopeCursor *cursor, const char *str, uint64_t tags);
 
 int rope_cursor_delete(struct RopeCursor *cursor, size_t char_count);
 
@@ -299,7 +301,8 @@ void rope_range_set_tags(struct RopeRange *range, uint64_t tags);
 
 uint64_t rope_range_get_tags(struct RopeRange *range);
 
-int rope_range_insert_str(struct RopeRange *range, const char *str, uint64_t tags);
+int
+rope_range_insert_str(struct RopeRange *range, const char *str, uint64_t tags);
 
 int rope_range_delete(struct RopeRange *range);
 
@@ -320,7 +323,8 @@ struct RopeIterator {
 	uint64_t tags;
 };
 
-int rope_iterator_init(struct RopeIterator *iter, struct RopeRange *range, uint64_t tags);
+int rope_iterator_init(
+		struct RopeIterator *iter, struct RopeRange *range, uint64_t tags);
 
 bool rope_iterator_next(
 		struct RopeIterator *iter, const uint8_t **value, size_t *size);
