@@ -171,11 +171,11 @@ test_node_merge() {
 	ASSERT_EQ(ROPE_NODE_BRANCH, (int)n->type);
 
 	struct RopeNode *to_merge = rope_node_left(n);
-	rv = rope_node_merge(to_merge, ROPE_NODE_RIGHT, &p);
+	rv = rope_node_merge_right(to_merge, &p);
 	ASSERT_GT(0, rv);
 
 	rope_node_set_tags(n, 1);
-	rv = rope_node_merge(to_merge, ROPE_NODE_RIGHT, &p);
+	rv = rope_node_merge_right(to_merge, &p);
 	ASSERT_EQ(0, rv);
 
 	size_t size;

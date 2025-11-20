@@ -391,8 +391,8 @@ out:
 	return rv;
 }
 
-int
-rope_node_merge(
+static int
+node_merge_direction(
 		struct RopeNode *node, enum RopeNodeDirection which,
 		struct RopePool *pool) {
 	int rv = 0;
@@ -452,6 +452,16 @@ rope_node_merge(
 out:
 	rope_rc_string_release(merged);
 	return rv;
+}
+
+int
+rope_node_merge_left(struct RopeNode *node, struct RopePool *pool) {
+	return node_merge_direction(node, ROPE_NODE_LEFT, pool);
+}
+
+int
+rope_node_merge_right(struct RopeNode *node, struct RopePool *pool) {
+	return node_merge_direction(node, ROPE_NODE_RIGHT, pool);
 }
 
 static struct RopeNode *

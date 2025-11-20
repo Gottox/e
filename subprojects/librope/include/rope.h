@@ -302,10 +302,39 @@ int rope_node_split(
 		struct RopeNode *node, struct RopePool *pool, rope_index_t byte_index,
 		struct RopeNode **left_ptr, struct RopeNode **right_ptr);
 
-int rope_node_merge(
-		struct RopeNode *node, enum RopeNodeDirection which,
-		struct RopePool *pool);
+/**
+ * Merge a node with its left neighbour when tags and size constraints allow.
+ *
+ * @param node Starting node for the merge.
+ * @param which Direction of the neighbour to merge with.
+ * @param pool Pool used for recycling the removed node.
+ *
+ * @return 0 on success, negative when merge is not possible.
+ */
+int rope_node_merge_left(struct RopeNode *node, struct RopePool *pool);
 
+/**
+ * Merge a node with its right neighbour when tags and size constraints allow.
+ *
+ * @param node Starting node for the merge.
+ * @param which Direction of the neighbour to merge with.
+ * @param pool Pool used for recycling the removed node.
+ *
+ * @return 0 on success, negative when merge is not possible.
+ */
+int rope_node_merge_right(struct RopeNode *node, struct RopePool *pool);
+
+/**
+ * Locate the node that contains the character at the given line and column.
+ *
+ * @param node Root node to search under.
+ * @param line Zero-based line number.
+ * @param column Column measured in codepoints.
+ * @param tags Tag mask that must be present on matching leaves.
+ * @param byte_index Out parameter receiving the byte offset to the character.
+ *
+ * @return Pointer to the matching leaf node or NULL on failure.
+ */
 struct RopeNode *rope_node_find(
 		struct RopeNode *node, rope_index_t line, rope_index_t column,
 		uint64_t tags, rope_byte_index_t *byte_index);
