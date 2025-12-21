@@ -16,9 +16,9 @@ iterator_full() {
 	ASSERT_EQ(0, rv);
 
 	struct RopeRange range = {0};
-	rv = rope_range_init(&range, &r, NULL, NULL, NULL);
+	rv = rope_range_init(&range, &r);
 	ASSERT_EQ(0, rv);
-	rv = rope_cursor_move_to_index(&range.cursors[1], rope_char_size(&r), 0);
+	rv = rope_range_end_move_to_index(&range, rope_char_size(&r), 0);
 	ASSERT_EQ(0, rv);
 
 	struct RopeIterator it = {0};
@@ -59,11 +59,11 @@ iterator_partial() {
 	ASSERT_EQ(0, rv);
 
 	struct RopeRange range = {0};
-	rv = rope_range_init(&range, &r, NULL, NULL, NULL);
+	rv = rope_range_init(&range, &r);
 	ASSERT_EQ(0, rv);
-	rv = rope_cursor_move_to_index(&range.cursors[0], 2, 0);
+	rv = rope_range_start_move_to_index(&range, 2, 0);
 	ASSERT_EQ(0, rv);
-	rv = rope_cursor_move_to_index(&range.cursors[1], 8, 0);
+	rv = rope_range_end_move_to_index(&range, 8, 0);
 	ASSERT_EQ(0, rv);
 
 	struct RopeIterator it = {0};
@@ -104,7 +104,7 @@ iterator_empty() {
 	ASSERT_EQ(0, rv);
 
 	struct RopeRange range = {0};
-	rv = rope_range_init(&range, &r, NULL, NULL, NULL);
+	rv = rope_range_init(&range, &r);
 	ASSERT_EQ(0, rv);
 
 	struct RopeIterator it = {0};
@@ -145,9 +145,9 @@ iterator_big_non_inline() {
 	ASSERT_EQ(0, rv);
 
 	struct RopeRange range = {0};
-	rv = rope_range_init(&range, &r, NULL, NULL, NULL);
+	rv = rope_range_init(&range, &r);
 	ASSERT_EQ(0, rv);
-	rv = rope_cursor_move_to_index(&range.cursors[1], rope_char_size(&r), 0);
+	rv = rope_range_end_move_to_index(&range, rope_char_size(&r), 0);
 	ASSERT_EQ(0, rv);
 
 	struct RopeIterator it = {0};
@@ -187,11 +187,11 @@ iterator_multibyte() {
 	ASSERT_EQ(0, rv);
 
 	struct RopeRange range = {0};
-	rv = rope_range_init(&range, &r, NULL, NULL, NULL);
+	rv = rope_range_init(&range, &r);
 	ASSERT_EQ(0, rv);
-	rv = rope_cursor_move_to_index(&range.cursors[0], 3, 0);
+	rv = rope_range_start_move_to_index(&range, 3, 0);
 	ASSERT_EQ(0, rv);
-	rv = rope_cursor_move_to_index(&range.cursors[1], 4, 0);
+	rv = rope_range_end_move_to_index(&range, 4, 0);
 	ASSERT_EQ(0, rv);
 
 	struct RopeIterator it = {0};
@@ -202,7 +202,7 @@ iterator_multibyte() {
 	size_t size = 0;
 	bool has = rope_iterator_next(&it, &data, &size);
 	ASSERT_TRUE(has);
-	ASSERT_EQ((size_t)4, size);
+	ASSERT_EQ(4, size);
 	ASSERT_EQ(0, memcmp(data, u8"🙂", 4));
 	has = rope_iterator_next(&it, &data, &size);
 	ASSERT_FALSE(has);
@@ -253,12 +253,12 @@ iterator_tagged_filter() {
 	ASSERT_EQ(0, rv);
 
 	struct RopeRange range = {0};
-	rv = rope_range_init(&range, &r, NULL, NULL, NULL);
+	rv = rope_range_init(&range, &r);
 	ASSERT_EQ(0, rv);
-	rv = rope_cursor_move_to_index(rope_range_start(&range), 0, 0);
+	rv = rope_range_start_move_to_index((&range), 0, 0);
 	ASSERT_EQ(0, rv);
-	rv = rope_cursor_move_to_index(
-			rope_range_end(&range), rope_char_size(&r), 0);
+	rv = rope_range_end_move_to_index(
+			(&range), rope_char_size(&r), 0);
 	ASSERT_EQ(0, rv);
 
 	struct RopeIterator all_it = {0};

@@ -10,10 +10,11 @@
  * mutates.
  */
 
-#include <cextras/memory.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <cextras/memory.h>
+#include <sys/types.h>
 
 /** Maximum number of bytes stored directly in an inline leaf node. */
 #define ROPE_INLINE_LEAF_SIZE (sizeof(void *[2]))
@@ -187,10 +188,12 @@ struct RopeNode {
 	union {
 		struct {
 			uint64_t tags;
+			size_t byte_size;
 			uint8_t data[ROPE_INLINE_LEAF_SIZE];
 		} inline_leaf;
 		struct {
 			uint64_t tags;
+			size_t byte_size;
 			struct RopeRcString *owned;
 			const uint8_t *data;
 		} leaf;
@@ -201,10 +204,12 @@ struct RopeNode {
 	} data;
 
 	struct RopeNode *parent;
+#ifdef ROPE_THICK_NODES
 	size_t byte_size;
 	size_t char_size;
 	size_t utf16_size;
 	size_t new_lines;
+#endif
 };
 
 /**
@@ -226,6 +231,33 @@ struct RopeNode *rope_node_new(struct RopePool *pool);
  * @return true when the node contains all requested tags.
  */
 bool rope_node_match_tags(struct RopeNode *node, uint64_t tags);
+
+/**
+ * Count the number of newline characters stored in a leaf node.
+ *
+ * @param node Leaf node to inspect.
+ *
+ * @return Number of newline characters in the node.
+ */
+size_t rope_node_new_lines(struct RopeNode *node);
+
+/**
+ * Count the number of characters stored in a leaf node.
+ *
+ * @param node Leaf node to inspect.
+ *
+ * @return Number of newline characters in the node.
+ */
+size_t rope_node_char_size(struct RopeNode *node);
+
+/**
+ * Count the number of bytes stored in a leaf node.
+ *
+ * @param node Leaf node to inspect.
+ *
+ * @return Number of codepoints in the node.
+ */
+size_t rope_node_byte_size(const struct RopeNode *node);
 
 /**
  * Replace the contents of a node with a copy of the given buffer.
@@ -732,16 +764,6 @@ rope_cursor_node(struct RopeCursor *cursor, rope_char_index_t *byte_index);
 int32_t rope_cursor_codepoint(struct RopeCursor *cursor);
 
 /**
- * Replace the codepoint at the cursor position.
- *
- * @param cursor Cursor to mutate.
- * @param codepoint New codepoint to write.
- *
- * @return 0 on success, negative on failure.
- */
-int rope_cursor_set_codepoint(struct RopeCursor *cursor, int32_t codepoint);
-
-/**
  * Detach a cursor from the rope and release resources.
  *
  * @param cursor Cursor to clean up.
@@ -760,18 +782,20 @@ struct RopeRange;
  * Callback signature used by ranges to signal offset changes or damage.
  */
 typedef void (*rope_range_callback_t)(
-		struct Rope *rope, struct RopeRange *cursor, void *userdata);
+		struct Rope *rope, struct RopeRange *range, bool damaged,
+		void *userdata);
 
 /**
  * Represents a half-open selection spanning two cursors.
  */
 struct RopeRange {
 	struct Rope *rope;
-	struct RopeCursor cursors[2];
+	// struct RopeCursor cursors[2];
+	struct RopeCursor cursor_start;
+	struct RopeCursor cursor_end;
 	bool is_collapsed;
-	rope_range_callback_t offset_change_callback;
-	rope_range_callback_t damage_callback;
-	void *userdata;
+	rope_range_callback_t callback;
+	void *callback_userdata;
 };
 
 /**
@@ -785,16 +809,23 @@ struct RopeRange {
  *
  * @return 0 on success, negative on error.
  */
-int rope_range_init(
-		struct RopeRange *range, struct Rope *rope,
-		rope_range_callback_t offset_change_callback,
-		rope_range_callback_t damage_callback, void *userdata);
+int rope_range_init(struct RopeRange *range, struct Rope *rope);
 
-/** Return the earlier cursor in the range. */
-struct RopeCursor *rope_range_start(struct RopeRange *range);
+int rope_range_set_callback(
+		struct RopeRange *range, rope_range_callback_t callback,
+		void *userdata);
 
-/** Return the later cursor in the range. */
-struct RopeCursor *rope_range_end(struct RopeRange *range);
+int rope_range_start_move_to(
+		struct RopeRange *range, rope_index_t line, rope_char_index_t column);
+
+int rope_range_end_move_to(
+		struct RopeRange *range, rope_index_t line, rope_char_index_t column);
+
+int rope_range_start_move_to_index(
+		struct RopeRange *range, rope_char_index_t index, uint64_t tags);
+
+int rope_range_end_move_to_index(
+		struct RopeRange *range, rope_char_index_t index, uint64_t tags);
 
 /**
  * Update the tag mask stored on the range for later operations.
@@ -826,6 +857,34 @@ int
 rope_range_insert_str(struct RopeRange *range, const char *str, uint64_t tags);
 
 /**
+ * Insert a length terminated  string, replacing the current selection if any.
+ *
+ * @param range Range to mutate.
+ * @param data String to insert.
+ * @param byte_size
+ * @param tags Tags to associate with inserted data.
+ *
+ * @return 0 on success, negative on failure.
+ */
+int rope_range_insert_codepoints(
+		struct RopeRange *range, const uint32_t *data, size_t byte_size,
+		uint64_t tags);
+
+/**
+ * Insert a length terminated  string, replacing the current selection if any.
+ *
+ * @param range Range to mutate.
+ * @param data String to insert.
+ * @param byte_size
+ * @param tags Tags to associate with inserted data.
+ *
+ * @return 0 on success, negative on failure.
+ */
+int rope_range_insert(
+		struct RopeRange *range, const uint8_t *data, size_t byte_size,
+		uint64_t tags);
+
+/**
  * Delete the contents of the range.
  *
  * @param range Range to mutate.
@@ -833,6 +892,17 @@ rope_range_insert_str(struct RopeRange *range, const char *str, uint64_t tags);
  * @return 0 on success.
  */
 int rope_range_delete(struct RopeRange *range);
+
+/**
+ * Select a full line by setting the range to span from the start of @p line
+ * to the start of the next line (or EOF).
+ *
+ * @param range Range to update.
+ * @param line Zero-based line number to select.
+ *
+ * @return 0 on success, negative if the line is out of bounds.
+ */
+int rope_range_line(struct RopeRange *range, rope_index_t line);
 
 /**
  * Materialise the text represented by the range into a newly allocated string.

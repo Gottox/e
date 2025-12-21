@@ -19,6 +19,7 @@ quickjs_dep = dependency('quickjs-ng')
 # project dependencies
 liblsp_dep = subproject('liblsp').get_variable('liblsp_dep')
 librope_dep = subproject('librope').get_variable('librope_dep')
+libttyui_dep = subproject('libttyui').get_variable('libttyui_dep')
 libeditorconfig_dep = subproject(
     'libeditorconfig',
 ).get_variable('libeditorconfig_dep')
@@ -35,6 +36,7 @@ dependencies = [
     quickjs_dep,
     cextras_dep,
     librope_dep,
+    libttyui_dep,
     termbox2_dep,
     libeditorconfig_dep,
     #tree_sitter_dep,

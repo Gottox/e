@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
-#include <sys/select.h>
+#include <poll.h>
 #include <testlib.h>
 #include <ttyui.h>
 #include <unistd.h>
@@ -15,27 +15,18 @@ struct TtyUiHarness {
 	char *no_color;
 };
 
-static int
-noop_handler(struct TtyUi *ui, struct TtyUiEvent *event, void *user_data) {
-	(void)ui;
-	(void)event;
-	(void)user_data;
-
-	return 0;
-}
-
 static size_t
 read_available(int fd, char *buf, size_t buf_len) {
 	size_t total = 0;
 
 	while (total < buf_len) {
-		fd_set read_set;
-		FD_ZERO(&read_set);
-		FD_SET(fd, &read_set);
+		struct pollfd pfd = {
+				.fd = fd,
+				.events = POLLIN,
+		};
 
-		struct timeval tv = {.tv_sec = 0, .tv_usec = 100000};
-		int ready = select(fd + 1, &read_set, NULL, NULL, &tv);
-		if (ready <= 0 || !FD_ISSET(fd, &read_set)) {
+		int ready = poll(&pfd, 1, 100);
+		if (ready <= 0 || !(pfd.revents & POLLIN)) {
 			break;
 		}
 
@@ -75,7 +66,7 @@ setup_ttyui(struct TtyUiHarness *harness) {
 	setenv("COLORTERM", "truecolor", 1);
 	unsetenv("NO_COLOR");
 
-	rv = ttyui_init(&harness->ui, slave_fd, noop_handler, NULL);
+	rv = ttyui_init(&harness->ui, slave_fd);
 	ASSERT_TRUE(rv >= 0);
 
 	char drain[128];

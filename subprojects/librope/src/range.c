@@ -4,9 +4,19 @@
 #include <stdlib.h>
 #include <string.h>
 
+static void
+dummy_callback(
+		struct Rope *rope, struct RopeRange *range, bool damaged,
+		void *userdata) {
+	(void)rope;
+	(void)range;
+	(void)damaged;
+	(void)userdata;
+}
+
 static bool
 is_collapsed(struct RopeRange *range) {
-	return range->cursors[0].index == range->cursors[1].index;
+	return range->cursor_start.index == range->cursor_end.index;
 }
 
 static void
@@ -14,36 +24,91 @@ handle_change(struct Rope *rope, struct RopeCursor *cursor, void *userdata) {
 	(void)rope;
 	(void)cursor;
 	struct RopeRange *range = userdata;
-	if (cursor == rope_range_start(range)) {
-		range->offset_change_callback(rope, range, range->userdata);
+	if (cursor == &range->cursor_start) {
+		range->callback(rope, range, false, range->callback_userdata);
 	} else if (!is_collapsed(range)) {
-		range->damage_callback(rope, range, range->userdata);
+		range->callback(rope, range, true, range->callback_userdata);
 	}
 }
 
 int
-rope_range_init(
-		struct RopeRange *range, struct Rope *rope,
-		rope_range_callback_t offset_change_callback,
-		rope_range_callback_t damage_callback, void *userdata) {
+rope_range_start_move_to(
+		struct RopeRange *range, rope_index_t line, rope_char_index_t column) {
+	struct RopeCursor *start = &range->cursor_start;
+	struct RopeCursor *end = &range->cursor_end;
+	int rv = rope_cursor_move_to(start, line, column);
+	if (rv < 0) {
+		return rv;
+	}
+	if (!rope_cursor_is_order(start, end)) {
+		rv = rope_cursor_move_to_index(end, start->index, 0);
+	}
+	return rv;
+}
+
+int
+rope_range_end_move_to(
+		struct RopeRange *range, rope_index_t line, rope_char_index_t column) {
+	struct RopeCursor *start = &range->cursor_start;
+	struct RopeCursor *end = &range->cursor_end;
+	int rv = rope_cursor_move_to(end, line, column);
+	if (rv < 0) {
+		return rv;
+	}
+	if (!rope_cursor_is_order(start, end)) {
+		rv = rope_cursor_move_to_index(start, end->index, 0);
+	}
+	return rv;
+}
+
+int
+rope_range_start_move_to_index(
+		struct RopeRange *range, rope_char_index_t index, uint64_t tags) {
+	struct RopeCursor *start = &range->cursor_start;
+	struct RopeCursor *end = &range->cursor_end;
+	int rv = rope_cursor_move_to_index(start, index, tags);
+	if (rv < 0) {
+		return rv;
+	}
+	if (!rope_cursor_is_order(start, end)) {
+		rv = rope_cursor_move_to_index(end, start->index, 0);
+	}
+	return rv;
+}
+
+int
+rope_range_end_move_to_index(
+		struct RopeRange *range, rope_char_index_t index, uint64_t tags) {
+	struct RopeCursor *start = &range->cursor_start;
+	struct RopeCursor *end = &range->cursor_end;
+	int rv = rope_cursor_move_to_index(end, index, tags);
+	if (rv < 0) {
+		return rv;
+	}
+	if (!rope_cursor_is_order(start, end)) {
+		rv = rope_cursor_move_to_index(start, end->index, 0);
+	}
+	return rv;
+}
+
+int
+rope_range_init(struct RopeRange *range, struct Rope *rope) {
 	int rv = 0;
 	range->rope = rope;
-	range->offset_change_callback = offset_change_callback;
-	range->damage_callback = damage_callback;
-	range->userdata = userdata;
-	rv = rope_cursor_init(&range->cursors[0], rope);
+	range->callback = dummy_callback;
+	rv = rope_cursor_init(&range->cursor_start, rope);
 	if (rv < 0) {
 		goto out;
 	}
-	rv = rope_cursor_set_callback(&range->cursors[0], handle_change, range);
+	rv = rope_cursor_set_callback(&range->cursor_start, handle_change, range);
 	if (rv < 0) {
 		goto out;
 	}
-	rv = rope_cursor_init(&range->cursors[1], rope);
+	rv = rope_cursor_init(&range->cursor_end, rope);
 	if (rv < 0) {
 		goto out;
 	}
-	rv = rope_cursor_set_callback(&range->cursors[1], handle_change, range);
+	rv = rope_cursor_set_callback(&range->cursor_end, handle_change, range);
 	if (rv < 0) {
 		goto out;
 	}
@@ -52,22 +117,13 @@ out:
 	return rv;
 }
 
-struct RopeCursor *
-rope_range_start(struct RopeRange *range) {
-	if (rope_cursor_is_order(&range->cursors[0], &range->cursors[1])) {
-		return &range->cursors[0];
-	} else {
-		return &range->cursors[1];
-	}
-}
-
-struct RopeCursor *
-rope_range_end(struct RopeRange *range) {
-	if (rope_cursor_is_order(&range->cursors[0], &range->cursors[1])) {
-		return &range->cursors[1];
-	} else {
-		return &range->cursors[0];
-	}
+int
+rope_range_set_callback(
+		struct RopeRange *range, rope_range_callback_t callback,
+		void *userdata) {
+	range->callback = callback;
+	range->callback_userdata = userdata;
+	return 0;
 }
 
 int
@@ -80,15 +136,9 @@ rope_range_insert(
 		goto out;
 	}
 
-	struct RopeCursor *start = rope_range_start(range);
-	struct RopeCursor *end = rope_range_end(range);
-	rope_char_index_t start_index = start->index;
+	struct RopeCursor *end = &range->cursor_end;
 
 	rv = rope_cursor_insert(end, data, byte_size, tags);
-	if (rv < 0) {
-		goto out;
-	}
-	rv = rope_cursor_move_to_index(start, start_index, 0);
 	if (rv < 0) {
 		goto out;
 	}
@@ -107,12 +157,34 @@ rope_range_insert_str(struct RopeRange *range, const char *str, uint64_t tags) {
 
 int
 rope_range_delete(struct RopeRange *range) {
-	struct RopeCursor *start = rope_range_start(range);
-	struct RopeCursor *end = rope_range_end(range);
+	struct RopeCursor *start = &range->cursor_start;
+	struct RopeCursor *end = &range->cursor_end;
 
 	size_t size = end->index - start->index;
 
 	return rope_cursor_delete(start, size);
+}
+
+int
+rope_range_line(struct RopeRange *range, rope_index_t line) {
+	struct RopeCursor *start = &range->cursor_start;
+	struct RopeCursor *end = &range->cursor_end;
+
+	int rv = rope_cursor_move_to(start, line, 0);
+	if (rv < 0) {
+		return rv;
+	}
+
+	rv = rope_cursor_move_to(end, line + 1, 0);
+	if (rv < 0) {
+		int size = rope_char_size(range->rope);
+		if (size < 0) {
+			return size;
+		}
+		rv = rope_cursor_move_to_index(end, (rope_char_index_t)size, 0);
+	}
+
+	return rv;
 }
 
 char *
@@ -152,7 +224,10 @@ rope_range_to_str(struct RopeRange *range, uint64_t tags) {
 
 int
 rope_range_cleanup(struct RopeRange *range) {
-	rope_cursor_cleanup(&range->cursors[0]);
-	rope_cursor_cleanup(&range->cursors[1]);
+	if (range == NULL) {
+		return 0;
+	}
+	rope_cursor_cleanup(&range->cursor_start);
+	rope_cursor_cleanup(&range->cursor_end);
 	return 0;
 }

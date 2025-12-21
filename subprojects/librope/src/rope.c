@@ -32,7 +32,7 @@ rope_append_str(struct Rope *rope, const char *str) {
 
 int
 rope_append(struct Rope *rope, const uint8_t *data, size_t byte_size) {
-	size_t char_count = rope->root->char_size;
+	size_t char_count = rope_node_char_size(rope->root);
 	return rope_insert(rope, char_count, data, byte_size);
 }
 
@@ -118,12 +118,12 @@ out:
 
 int
 rope_char_size(struct Rope *rope) {
-	return rope->root->char_size;
+	return rope_node_char_size(rope->root);
 }
 
 int
 rope_byte_size(struct Rope *rope) {
-	return rope->root->byte_size;
+	return rope_node_byte_size(rope->root);
 }
 
 int

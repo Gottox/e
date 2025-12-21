@@ -12,10 +12,9 @@ struct EventCapture {
 };
 
 static int
-capture_handler(struct TtyUi *ui, struct TtyUiEvent *event, void *user_data) {
+capture_handler(struct TtyUi *ui, struct TtyUiEvent *event, struct EventCapture *capture) {
 	(void)ui;
 
-	struct EventCapture *capture = user_data;
 	ASSERT_TRUE(
 			capture->count <
 			(sizeof(capture->events) / sizeof(capture->events[0])));
@@ -39,13 +38,19 @@ set_raw_mode(int fd) {
 static void
 write_and_process(
 		int master_fd, struct TtyUi *ui, struct EventCapture *capture,
-		const char *seq, size_t len) {
+		const char *seq, size_t len, size_t expected_events) {
+	struct TtyUiEvent event = {0};
 	ssize_t written = write(master_fd, seq, len);
 	ASSERT_EQ((ssize_t)len, written);
 
-	int rv = ttyui_process(ui);
-	ASSERT_EQ(0, rv);
-	ASSERT_TRUE(capture->count > 0);
+	size_t target = capture->count + expected_events;
+	while (capture->count < target) {
+		int rv = ttyui_event_next(ui, &event);
+		ASSERT_EQ(0, rv);
+		capture_handler(ui, &event, capture);
+	}
+
+	ASSERT_EQ(target, capture->count);
 }
 
 static void
@@ -58,8 +63,9 @@ init_ttyui(
 	set_raw_mode(*slave_fd);
 
 	ui->fd = *slave_fd;
-	ui->handler = capture_handler;
-	ui->user_data = capture;
+	ui->sigwinch_pipe[0] = -1;
+	ui->sigwinch_pipe[1] = -1;
+	ui->input_buffer_len = 0;
 }
 
 static void
@@ -72,7 +78,8 @@ test_ttyui_csi_sequences() {
 	init_ttyui(&ui, &master_fd, &slave_fd, &capture);
 
 	const char seq[] = "\x1b[A\x1b[<0;5;10M\x1b[I\x1b[O";
-	write_and_process(master_fd, &ui, &capture, seq, sizeof(seq) - 1);
+	write_and_process(
+			master_fd, &ui, &capture, seq, sizeof(seq) - 1, 4);
 
 	ASSERT_EQ((size_t)4, capture.count);
 
@@ -111,7 +118,7 @@ test_ttyui_utf8_key_sequence() {
 
 	const char euro_symbol[] = "\u20ac";
 	write_and_process(
-			master_fd, &ui, &capture, euro_symbol, strlen(euro_symbol));
+			master_fd, &ui, &capture, euro_symbol, strlen(euro_symbol), 1);
 
 	ASSERT_EQ((size_t)1, capture.count);
 

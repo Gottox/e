@@ -13,14 +13,6 @@
 #define EXPECTED_INIT_SEQ "\x1b[?1049;1004;1003;1006h\x1b[?7l"
 #define EXPECTED_EXIT_SEQ "\x1b[?1049;1004;1003;1006l\x1b[?7h"
 
-static int
-noop_handler(struct TtyUi *ui, struct TtyUiEvent *event, void *user_data) {
-	(void)ui;
-	(void)event;
-	(void)user_data;
-	return 0;
-}
-
 static void
 signal_probe(int signum) {
 	(void)signum;
@@ -56,7 +48,7 @@ check_ttyui_init_and_cleanup() {
 	ASSERT_NE(SIG_ERR, prior_sigwinch);
 
 	struct TtyUi ui = {0};
-	rv = ttyui_init(&ui, ui_fd, noop_handler, NULL);
+	rv = ttyui_init(&ui, ui_fd);
 	ASSERT_TRUE(rv >= 0);
 
 	expect_sequence(master_fd, EXPECTED_INIT_SEQ);

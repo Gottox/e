@@ -1,14 +1,18 @@
+e_test_extra_src = files(
+    '../fuzzer/deser.c',
+)
 e_test = [
     'librope.c',
     'cursor.c',
     'range.c',
     'node.c',
     'iterator.c',
+    'fuzzer_repro.c',
 ]
 
 testlib_dep = dependency('testlib')
 foreach p : e_test
-    sources = [p]
+    sources = [p] + e_test_extra_src
     t = executable(
         p.underscorify(),
         sources,

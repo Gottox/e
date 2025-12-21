@@ -6,8 +6,8 @@ int
 rope_iterator_init(
 		struct RopeIterator *iter, struct RopeRange *range, uint64_t tags) {
 	iter->range = range;
-	struct RopeCursor *start = rope_range_start(range);
-	struct RopeCursor *end = rope_range_end(range);
+	struct RopeCursor *start = &range->cursor_start;
+	struct RopeCursor *end = &range->cursor_end;
 
 	iter->node = rope_cursor_node(start, &iter->start_byte);
 	iter->end = rope_cursor_node(end, &iter->end_byte);

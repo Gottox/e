@@ -20,8 +20,8 @@ static const char EXIT_SEQ[] = "\x1b[?" TERMINAL_MODES_ENABLE "l"
 
 static struct TtyUi *ttyui;
 
-static int
-update_size(struct TtyUi *ui) {
+int
+ttyui_update_size(struct TtyUi *ui) {
 	struct winsize winsz;
 	int rv = ioctl(0, TIOCGWINSZ, &winsz);
 	if (rv < 0) {
@@ -34,17 +34,18 @@ update_size(struct TtyUi *ui) {
 }
 static void
 handle_sigwinch(int signum) {
-	if (signum != SIGWINCH) {
+	if (signum != SIGWINCH || ttyui == NULL) {
 		return;
 	}
 
-	int rv = update_size(ttyui);
-	if (rv < 0) {
+	if (ttyui->sigwinch_pipe[1] < 0) {
 		return;
 	}
 
-	struct TtyUiEvent event = {.type = TTYUI_EVENT_RESIZE};
-	ttyui->handler(ttyui, &event, ttyui->user_data);
+	ssize_t rv = 0;
+	do {
+		rv = write(ttyui->sigwinch_pipe[1], "w", 1);
+	} while (rv < 0 && errno == EINTR);
 }
 
 static int
@@ -86,7 +87,7 @@ init_terminal(struct TtyUi *ui) {
 		ui->color_mode = TTYUI_COLOR_MODE_256;
 	}
 
-	rv = update_size(ui);
+	rv = ttyui_update_size(ui);
 	if (rv < 0) {
 		goto out;
 	}
@@ -95,26 +96,52 @@ out:
 	return rv;
 }
 
+static void
+close_signal_pipe(struct TtyUi *ui) {
+	if (ui->sigwinch_pipe[0] >= 0) {
+		close(ui->sigwinch_pipe[0]);
+		ui->sigwinch_pipe[0] = -1;
+	}
+
+	if (ui->sigwinch_pipe[1] >= 0) {
+		close(ui->sigwinch_pipe[1]);
+		ui->sigwinch_pipe[1] = -1;
+	}
+}
+
 static int
 init_signals(struct TtyUi *ui) {
+	int rv = pipe(ui->sigwinch_pipe);
+	if (rv < 0) {
+		rv = -errno;
+		goto out;
+	}
+
 	void (*old_sigwinch)(int) = signal(SIGWINCH, handle_sigwinch);
 	if (old_sigwinch == SIG_ERR) {
-		return -errno;
+		rv = -errno;
+		goto out;
 	}
 
 	ui->old_sigwinch = old_sigwinch;
-	return 0;
+
+out:
+	if (rv < 0) {
+		close_signal_pipe(ui);
+	}
+	return rv;
 }
 
 int
-ttyui_init(
-		struct TtyUi *ui, int fd, ttyui_event_handler handler,
-		void *user_data) {
+ttyui_init(struct TtyUi *ui, int fd) {
 	int rv = 0;
 
 	ttyui = ui;
 
 	ui->fd = fd;
+	ui->sigwinch_pipe[0] = -1;
+	ui->sigwinch_pipe[1] = -1;
+	ui->input_buffer_len = 0;
 
 	ui->fd_file = fdopen(ui->fd, "w");
 	if (ui->fd_file == NULL) {
@@ -138,16 +165,21 @@ ttyui_init(
 		goto out;
 	}
 
-	ui->handler = handler;
-	ui->user_data = user_data;
-
 out:
+	if (rv < 0) {
+		close_signal_pipe(ui);
+		ttyui = NULL;
+	}
 	return rv;
 }
 
 int
 ttyui_cleanup(struct TtyUi *ui) {
 	int rv = 0;
+	if (ui == NULL || ui->fd_file == NULL) {
+		return 0;
+	}
+
 	rv = write(ui->fd, EXIT_SEQ, sizeof(EXIT_SEQ) - 1);
 	if (rv < 0) {
 		rv = -errno;
@@ -165,7 +197,62 @@ ttyui_cleanup(struct TtyUi *ui) {
 		rv = -errno;
 		goto out;
 	}
+	close_signal_pipe(ui);
 	ttyui = NULL;
 out:
 	return rv;
+}
+
+int
+ttyui_move_cursor(struct TtyUi *ui, unsigned int row, unsigned int col) {
+	int rv = fprintf(ui->fd_file, "\033[%u;%uH", row + 1, col + 1);
+	if (rv < 0) {
+		return -errno;
+	}
+	return 0;
+}
+
+int
+ttyui_reset_cursor(struct TtyUi *ui) {
+	int rv = fputs("\033[H", ui->fd_file);
+	if (rv < 0) {
+		return -errno;
+	}
+	return 0;
+}
+
+int
+ttyui_clear_screen(struct TtyUi *ui) {
+	int rv = fputs("\033[2J", ui->fd_file);
+	if (rv < 0) {
+		return -errno;
+	}
+	return 0;
+}
+
+int
+ttyui_hide_cursor(struct TtyUi *ui) {
+	int rv = fputs("\033[?25l", ui->fd_file);
+	if (rv < 0) {
+		return -errno;
+	}
+	return 0;
+}
+
+int
+ttyui_show_cursor(struct TtyUi *ui) {
+	int rv = fputs("\033[?25h", ui->fd_file);
+	if (rv < 0) {
+		return -errno;
+	}
+	return 0;
+}
+
+int
+ttyui_flush(struct TtyUi *ui) {
+	int rv = fflush(ui->fd_file);
+	if (rv != 0) {
+		return -errno;
+	}
+	return 0;
 }

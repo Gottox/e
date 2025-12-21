@@ -1,14 +1,14 @@
 #include <highlight.h>
-#include <tree_sitter/api.h>
-#include <testlib.h>
-#include <string.h>
 #include <stdio.h>
+#include <string.h>
+#include <testlib.h>
+#include <tree_sitter/api.h>
 
 const TSLanguage *tree_sitter_markdown_inline(void);
 
 const TSLanguage *(*language)(void) = tree_sitter_markdown_inline;
 
-#define UTEST(x, y) static void test_ ## x ## _ ##y(void)
+#define UTEST(x, y) static void test_##x##_##y(void)
 
 static struct HighlightConfig *
 new_config(

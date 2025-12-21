@@ -10,3 +10,15 @@ option(
     value: false,
     description: 'Run tests',
 )
+option(
+    'fuzzer',
+    type: 'boolean',
+    value: false,
+    description: 'Build libFuzzer target for librope',
+)
+option(
+    'fuzzer_timeout',
+    type: 'integer',
+    value: 10,
+    description: 'set the fuzzer timeout',
+)

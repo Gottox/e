@@ -105,7 +105,7 @@ e_client(int argc, char *argv[]) {
 	}
 
 	while (1) {
-		rv = ttyui_process(&ui);
+		rv = ttyui_poll(&ui);
 		if (rv < 0) {
 			fprintf(stderr, "Failed to poll TTY UI\n");
 			goto out;

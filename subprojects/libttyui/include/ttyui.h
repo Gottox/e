@@ -2,16 +2,21 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <sys/select.h>
 #include <termios.h>
 
+#define TTYUI_INPUT_BUFFER_SIZE 128
+
 #define MAX_OPTIONS 16
+
+enum TtyUiError {
+	TTYUI_ERROR_SUCCESS = 0,
+	TTYUI_ERROR_BEGIN = 1 << 8,
+	TTYUI_ERROR_CSI_PARSE = 1 << 8,
+};
 
 struct TtyUi;
 struct TtyUiEvent;
 
-typedef int (*ttyui_event_handler)(
-		struct TtyUi *ttyui, struct TtyUiEvent *event, void *user_data);
 
 enum TtyUiCursorKey {
 	TTYUI_CURSOR_UP = 'A',
@@ -27,6 +32,7 @@ enum TtyUiCursorKey {
 };
 
 enum TtyUiEventType {
+	TTYUI_EVENT_NONE,
 	TTYUI_EVENT_KEY,
 	TTYUI_EVENT_CURSOR,
 	TTYUI_EVENT_MOUSE,
@@ -36,9 +42,9 @@ enum TtyUiEventType {
 
 enum TtyUiModifier {
 	TTYUI_MODIFIER_NONE = 0,
-	TTYUI_MODIFIER_SHIFT = 1,
-	TTYUI_MODIFIER_ALT = 2,
-	TTYUI_MODIFIER_CTRL = 4,
+	TTYUI_MODIFIER_SHIFT = 1 << 0,
+	TTYUI_MODIFIER_ALT = 1 << 1,
+	TTYUI_MODIFIER_CTRL = 1 << 2,
 };
 
 enum TtyColorMode {
@@ -94,30 +100,40 @@ struct TtyUiDrawOptions {
 
 struct TtyUi {
 	int fd;
+	int sigwinch_pipe[2];
 	FILE *fd_file;
 	struct termios old_termios;
 	void (*old_sigwinch)(int);
-	ttyui_event_handler handler;
 	unsigned int columns;
 	unsigned int rows;
-	void *user_data;
 	enum TtyColorMode color_mode;
+	char input_buffer[TTYUI_INPUT_BUFFER_SIZE];
+	size_t input_buffer_len;
 };
 
 /***************************************
  * ttyui.c
  */
-int ttyui_init(
-		struct TtyUi *ttyui, int fd, ttyui_event_handler event_cb,
-		void *user_data);
-
+int ttyui_init(struct TtyUi *ttyui, int fd);
 int ttyui_cleanup(struct TtyUi *ttyui);
+int ttyui_update_size(struct TtyUi *ttyui);
+
+/***************************************
+ * cursor.c
+ */
+int ttyui_move_cursor(struct TtyUi *ttyui, unsigned int row, unsigned int col);
+int ttyui_reset_cursor(struct TtyUi *ttyui);
+int ttyui_clear_screen(struct TtyUi *ttyui);
+int ttyui_hide_cursor(struct TtyUi *ttyui);
+int ttyui_show_cursor(struct TtyUi *ttyui);
+int ttyui_flush(struct TtyUi *ttyui);
 
 /***************************************
  * event.c
  */
 
-int ttyui_process(struct TtyUi *ttyui);
+int ttyui_event_next(struct TtyUi *ttyui, struct TtyUiEvent *event);
+int ttyui_event_fds(struct TtyUi *ttyui, int *pty_fd, int *sig_fd);
 
 /***************************************
  * draw.c
