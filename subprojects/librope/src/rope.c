@@ -18,7 +18,7 @@ rope_init(struct Rope *rope) {
 	}
 
 	rope->bias = ROPE_BIAS_LEFT;
-	rope->cursors = NULL;
+	rope->last_cursor = NULL;
 
 out:
 	return rv;

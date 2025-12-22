@@ -28,13 +28,13 @@ deser_read_command(
 	*data += sizeof(command->range_index);
 	*length -= sizeof(command->range_index);
 
-	size_t command_args_size;
+	size_t command_args_size = 0;
 	switch (type) {
 	case ROPE_DESER_INSERT:
 		command_args_size = sizeof(command->args.insert);
 		break;
 	case ROPE_DESER_DELETE:
-		command_args_size = sizeof(command->args.delete);
+		//command_args_size = sizeof(command->args.delete);
 		break;
 	case ROPE_DESER_RANGE_START:
 	case ROPE_DESER_RANGE_END:

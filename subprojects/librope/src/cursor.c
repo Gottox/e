@@ -4,11 +4,6 @@
 #include <rope.h>
 #include <string.h>
 
-#define SEARCH(first, cond, res) \
-	for (struct RopeCursor *c = (first); c && (cond); c = c->next) { \
-		(res) = c; \
-	}
-
 static void
 dummy_callback(struct Rope *rope, struct RopeCursor *cursor, void *user) {
 	(void)rope;
@@ -18,30 +13,25 @@ dummy_callback(struct Rope *rope, struct RopeCursor *cursor, void *user) {
 
 static void
 cursor_detach(struct RopeCursor *cursor) {
-	assert(cursor->rope != NULL);
-	struct RopeCursor *first = cursor->rope->cursors;
+	struct RopeCursor **ptr = &cursor->rope->last_cursor;
+	struct RopeCursor *c = *ptr;
 
-	struct RopeCursor *prev = NULL;
-	SEARCH(first, c != cursor, prev);
-	if (prev) {
-		prev->next = cursor->next;
-	} else if (first == cursor) {
-		cursor->rope->cursors = cursor->next;
+	for (; c != cursor; c = c->prev) {
+		ptr = &c->prev;
 	}
+	*ptr = cursor->prev;
 }
 
 static void
 cursor_attach(struct RopeCursor *cursor) {
-	struct RopeCursor *first = cursor->rope->cursors;
-	struct RopeCursor *prev = NULL;
-	SEARCH(first, c->index <= cursor->index, prev);
-	if (prev) {
-		cursor->next = prev->next;
-		prev->next = cursor;
-	} else {
-		cursor->next = first;
-		cursor->rope->cursors = cursor;
+	struct RopeCursor **ptr = &cursor->rope->last_cursor;
+	struct RopeCursor *c = *ptr;
+
+	for (; c && c->index > cursor->index; c = c->prev) {
+		ptr = &c->prev;
 	}
+	cursor->prev = *ptr;
+	*ptr = cursor;
 }
 
 static void
@@ -51,30 +41,35 @@ cursor_update_location(struct RopeCursor *cursor) {
 	struct RopeNode *node = rope_node_find_char(
 			cursor->rope->root, index, /*tags=*/0, &byte_index);
 	size_t size = 0;
-	const uint8_t *value = rope_node_value(node, &size);
+	const uint8_t *value;
 
 	cursor->line = 0;
-	cursor->column = cx_utf8_bidx(value, size, byte_index);
-	while (rope_node_prev(&node)) {
-		if (cursor->line == 0) {
-			value = rope_node_value(node, &size);
-			const uint8_t *p = memrchr(value, ROPE_NEWLINE, size);
-			if (p) {
-				cursor->column += cx_utf8_bidx(value, size, p - value + 1);
-			} else {
-				cursor->column += rope_node_char_size(node);
-			}
-		}
-		cursor->line += rope_node_new_lines(node);
-	}
-}
+	cursor->column = 0;
+	do {
+		value = rope_node_value(node, &size);
 
-static int
-cursor_update(struct RopeCursor *cursor) {
-	cursor_detach(cursor);
-	cursor_attach(cursor);
-	cursor_update_location(cursor);
-	return 0;
+		if (byte_index < size) {
+			size = byte_index;
+			byte_index = SIZE_MAX;
+		}
+
+		const uint8_t *new_line = memrchr(value, ROPE_NEWLINE, size);
+		if (new_line) {
+			cursor->column +=
+					cx_utf8_csize(&new_line[1], size - (new_line - value) - 1);
+			break;
+		} else {
+			cursor->column += rope_node_char_size(node);
+		}
+	} while (rope_node_prev(&node));
+
+	if (!node) {
+		return;
+	}
+
+	do {
+		cursor->line += rope_node_new_lines(node);
+	} while (rope_node_prev(&node));
 }
 
 static void
@@ -85,26 +80,34 @@ cursor_move_back(struct RopeCursor *cursor) {
 	cursor_attach(cursor);
 }
 
+static int
+cursor_update(struct RopeCursor *cursor) {
+	cursor_move_back(cursor);
+	cursor_update_location(cursor);
+	return 0;
+}
+
 static void
 cursor_damaged(
 		struct RopeCursor *cursor, rope_char_index_t lower_bound,
 		off_t offset) {
-	if (cursor == NULL) {
-		return;
-	}
+	struct RopeCursor *last = cursor->rope->last_cursor;
+	struct RopeCursor *barrier = cursor->prev;
+	struct RopeCursor *c = last;
 
-	//  First pass: Update indices and locations
-	for (struct RopeCursor *c = cursor; c; c = c->next) {
-		if (CX_ADD_OVERFLOW(c->index, offset, &c->index) ||
-			c->index < lower_bound) {
-			c->index = lower_bound;
+	for (; c != barrier; c = c->prev) {
+		if (offset < 0 && c->index < -offset) {
+			// underflow
+			break;
+		} else if (c->index < lower_bound) {
+			break;
 		}
-		// Note: We don't need to call update_cursor here as the order
-		// is preserved. We do need to update the location though.
-		cursor_update_location(c);
+		c->index += offset;
 	}
-	// Second pass: Let the cursor callback know
-	for (struct RopeCursor *c = cursor; c; c = c->next) {
+	for (; c != barrier; c = c->prev) {
+		c->index = lower_bound;
+	}
+	for (c = last; c != barrier; c = c->prev) {
 		c->callback(c->rope, c, c->userdata);
 	}
 }
@@ -115,7 +118,7 @@ rope_cursor_init(struct RopeCursor *cursor, struct Rope *rope) {
 	cursor->userdata = NULL;
 	cursor->rope = rope;
 	cursor->index = 0;
-	cursor->next = NULL;
+	cursor->prev = NULL;
 	cursor_attach(cursor);
 	return 0;
 }
@@ -160,11 +163,11 @@ rope_cursor_is_order(struct RopeCursor *first, struct RopeCursor *second) {
 		return true;
 	}
 
-	while (first && first->index == second->index) {
+	while (second && first->index == second->index) {
 		if (first == second) {
 			return true;
 		}
-		first = first->next;
+		second = second->prev;
 	}
 	return false;
 }
@@ -367,7 +370,7 @@ rope_cursor_delete(struct RopeCursor *cursor, size_t char_count) {
 		deleted += remaining;
 	}
 	cursor_move_back(cursor);
-	cursor_damaged(cursor->next, cursor->index, -(off_t)deleted);
+	cursor_damaged(cursor, cursor->index, -(off_t)deleted);
 
 	return 0;
 }
@@ -405,6 +408,6 @@ rope_cursor_cleanup(struct RopeCursor *cursor) {
 		return 0;
 	}
 	cursor_detach(cursor);
-	cursor->next = NULL;
+	cursor->prev = NULL;
 	return 0;
 }

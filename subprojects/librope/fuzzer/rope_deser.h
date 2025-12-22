@@ -32,9 +32,6 @@ struct RopeDeserCommand {
 			uint8_t length;
 			uint64_t tags;
 		} insert;
-		struct {
-			char empty[0];
-		} delete;
 	} args;
 };
 

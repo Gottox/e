@@ -516,7 +516,7 @@ enum RopeBias {
  */
 struct Rope {
 	struct RopeNode *root;
-	struct RopeCursor *cursors;
+	struct RopeCursor *last_cursor;
 	struct RopePool pool;
 	enum RopeBias bias;
 };
@@ -635,7 +635,7 @@ struct RopeCursor {
 	rope_index_t line;
 	rope_char_index_t column;
 	struct Rope *rope;
-	struct RopeCursor *next;
+	struct RopeCursor *prev;
 	rope_cursor_callback_t callback;
 	void *userdata;
 };
