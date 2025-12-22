@@ -1,4 +1,5 @@
-executable('gen',
-  sources: ['gen.c'],
-  native: true,
+executable(
+    'gen',
+    sources: ['gen.c'],
+    native: true,
 )
