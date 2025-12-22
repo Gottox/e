@@ -1,62 +1,57 @@
-/*  Written in 2019 by David Blackman and Sebastiano Vigna (vigna@acm.org)
-
-To the extent possible under law, the author has dedicated all copyright
-and related and neighboring rights to this software to the public domain
-worldwide.
-
-Permission to use, copy, modify, and/or distribute this software for any
-purpose with or without fee is hereby granted.
-
-THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
-WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
-ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
-ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
-IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. */
-
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <sys/random.h>
+#include <time.h>
+#include <unistd.h>
 
-/* This is xoshiro256++ 1.0, one of our all-purpose, rock-solid generators.
-   It has excellent (sub-ns) speed, a state (256 bits) that is large
-   enough for any parallel application, and it passes all tests we are
-   aware of.
-
-   For generating just floating-point numbers, xoshiro256+ is even faster.
-
-   The state must be seeded so that it is not everywhere zero. If you have
-   a 64-bit seed, we suggest to seed a splitmix64 generator and use its
-   output to fill s. */
-
-static inline uint64_t
-rotl(const uint64_t x, int k) {
-	return (x << k) | (x >> (64 - k));
-}
-
-struct ERand {
-	uint64_t state[4];
+struct ERandGen {
+	uint32_t counter;
+	uint32_t key;
 };
 
-int
-e_rand_init(struct ERand *state) {
-	return getrandom(state->state, sizeof(state->state), 0);
+static uint16_t
+round_function(uint16_t val, uint32_t key, int round) {
+	uint32_t subkey;
+	if (round % 2) {
+		subkey = (uint16_t)(key >> 16);
+	} else {
+		subkey = (uint16_t)(key & 0xFFFF);
+	}
+
+	uint32_t x = ((uint32_t)val ^ subkey) * 0x9E3779B9;
+
+	return (uint16_t)((x >> 16) ^ (x & 0xFFFF));
 }
 
-uint64_t
-e_rand_next(struct ERand *state) {
-	const uint64_t result = rotl(state->state[0] + state->state[3], 23) + state->state[0];
+int
+e_rand_init(struct ERandGen *randgen) {
+	struct timespec ts;
+	clock_gettime(CLOCK_MONOTONIC, &ts);
 
-	const uint64_t t = state->state[1] << 17;
+	uint32_t seed1 = (uint32_t)ts.tv_nsec;
+	uint32_t seed2 = (uint32_t)ts.tv_sec ^ (uint32_t)getpid();
 
-	state->state[2] ^= state->state[0];
-	state->state[3] ^= state->state[1];
-	state->state[1] ^= state->state[2];
-	state->state[0] ^= state->state[3];
+	randgen->counter = seed1;
+	randgen->key = seed2 ^ 0x9E3779B9;
 
-	state->state[2] ^= t;
+	return 0;
+}
 
-	state->state[3] = rotl(state->state[3], 45);
+uint32_t
+e_rand_next(struct ERandGen *randgen) {
+	randgen->counter++;
+	uint32_t val = randgen->counter;
 
-	return result;
+	uint16_t left = (uint16_t)(val >> 16);
+	uint16_t right = (uint16_t)(val & 0xFFFF);
+	uint16_t temp;
+
+	for (int i = 0; i < 8; i++) {
+		temp = left;
+		left = right;
+		right = temp ^ round_function(right, randgen->key, i);
+	}
+
+	return ((uint32_t)left << 16) | right;
 }
