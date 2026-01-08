@@ -313,6 +313,12 @@ rope_cursor_delete(struct RopeCursor *cursor, size_t char_count) {
 		return 0;
 	}
 
+	if (rope_node_byte_size(node) == byte_index) {
+		const bool has_next = rope_node_next(&node);
+		start_index = index = 0;
+		assert(has_next);
+	}
+
 	if (index != 0) {
 		rope_node_split(node, &rope->pool, byte_index, NULL, &node);
 	}
@@ -336,7 +342,9 @@ rope_cursor_delete(struct RopeCursor *cursor, size_t char_count) {
 		rope_node_split(node, &rope->pool, byte_index, &node, NULL);
 		rope_node_delete(node, &rope->pool);
 		deleted += remaining;
+		remaining = 0;
 	}
+	assert(remaining == 0);
 	cursor_bubble_up(cursor);
 	cursor_damaged(cursor, cursor->index, -(off_t)deleted);
 
