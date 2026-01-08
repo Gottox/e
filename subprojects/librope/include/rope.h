@@ -597,6 +597,9 @@ int rope_insert(
  */
 int rope_delete(struct Rope *rope, size_t index, size_t char_count);
 
+char *
+rope_to_str(struct Rope *rope, uint64_t tags);
+
 /** Return the first leaf node in the rope. */
 struct RopeNode *rope_first(struct Rope *rope);
 

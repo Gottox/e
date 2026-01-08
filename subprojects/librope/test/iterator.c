@@ -4,7 +4,7 @@
 #include <testlib.h>
 
 static void
-iterator_full() {
+iterator_full(void) {
 	int rv = 0;
 	struct Rope r = {0};
 	rv = rope_init(&r);
@@ -45,7 +45,7 @@ iterator_full() {
 }
 
 static void
-iterator_partial() {
+iterator_partial(void) {
 	int rv = 0;
 	struct Rope r = {0};
 	rv = rope_init(&r);
@@ -95,7 +95,7 @@ iterator_partial() {
 }
 
 static void
-iterator_empty() {
+iterator_empty(void) {
 	int rv = 0;
 	struct Rope r = {0};
 	rv = rope_init(&r);
@@ -130,7 +130,7 @@ iterator_empty() {
 }
 
 static void
-iterator_big_non_inline() {
+iterator_big_non_inline(void) {
 	int rv = 0;
 	struct Rope r = {0};
 	rv = rope_init(&r);
@@ -177,7 +177,7 @@ iterator_big_non_inline() {
 }
 
 static void
-iterator_multibyte() {
+iterator_multibyte(void) {
 	int rv = 0;
 	struct Rope r = {0};
 	rv = rope_init(&r);
@@ -221,7 +221,7 @@ iterator_multibyte() {
 }
 
 static void
-iterator_tagged_filter() {
+iterator_tagged_filter(void) {
 	const uint64_t TAG_RED = 1ULL << 0;
 	const uint64_t TAG_BLUE = 1ULL << 1;
 

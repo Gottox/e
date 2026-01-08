@@ -11,15 +11,26 @@ dummy_callback(struct Rope *rope, struct RopeCursor *cursor, void *user) {
 	(void)user;
 }
 
-static void
+static struct RopeCursor **
 cursor_detach(struct RopeCursor *cursor) {
 	struct RopeCursor **ptr = &cursor->rope->last_cursor;
 	struct RopeCursor *c = *ptr;
 
+	for (; c->index > cursor->index; c = c->prev) {
+		ptr = &c->prev;
+	}
+	struct RopeCursor **insert_ptr = ptr;
 	for (; c != cursor; c = c->prev) {
 		ptr = &c->prev;
 	}
 	*ptr = cursor->prev;
+	return insert_ptr;
+}
+
+static void
+cursor_attach_at(struct RopeCursor *cursor, struct RopeCursor **ptr) {
+	cursor->prev = *ptr;
+	*ptr = cursor;
 }
 
 static void
@@ -30,8 +41,7 @@ cursor_attach(struct RopeCursor *cursor) {
 	for (; c && c->index > cursor->index; c = c->prev) {
 		ptr = &c->prev;
 	}
-	cursor->prev = *ptr;
-	*ptr = cursor;
+	cursor_attach_at(cursor, ptr);
 }
 
 static void
@@ -73,16 +83,19 @@ cursor_update_location(struct RopeCursor *cursor) {
 }
 
 static void
-cursor_move_back(struct RopeCursor *cursor) {
-	// Reattach cursor. This makes sure, that the current cursor is the last one
-	// with the index.
-	cursor_detach(cursor);
-	cursor_attach(cursor);
+cursor_bubble_up(struct RopeCursor *cursor) {
+	struct RopeCursor **ptr = cursor_detach(cursor);
+	cursor_attach_at(cursor, ptr);
 }
 
 static int
 cursor_update(struct RopeCursor *cursor) {
-	cursor_move_back(cursor);
+	if (cursor->prev && cursor->prev->index <= cursor->index) {
+		cursor_bubble_up(cursor);
+	} else {
+		cursor_detach(cursor);
+		cursor_attach(cursor);
+	}
 	cursor_update_location(cursor);
 	return 0;
 }
@@ -96,13 +109,14 @@ cursor_damaged(
 	struct RopeCursor *c = last;
 
 	for (; c != barrier; c = c->prev) {
-		if (offset < 0 && c->index < -offset) {
+		if (offset < 0 && c->index < (size_t)-offset) {
 			// underflow
-			break;
-		} else if (c->index < lower_bound) {
 			break;
 		}
 		c->index += offset;
+		if (c->index < lower_bound) {
+			break;
+		}
 	}
 	for (; c != barrier; c = c->prev) {
 		c->index = lower_bound;
@@ -163,12 +177,14 @@ rope_cursor_is_order(struct RopeCursor *first, struct RopeCursor *second) {
 		return true;
 	}
 
-	while (second && first->index == second->index) {
-		if (first == second) {
+	do {
+		if (first->index != second->index) {
+			return false;
+		} else if (first == second) {
 			return true;
 		}
-		second = second->prev;
-	}
+	} while ((second = second->prev));
+
 	return false;
 }
 
@@ -241,53 +257,6 @@ out:
 	return rv;
 }
 
-#ifdef ROPE_SINGLE_LINE_NODES
-int
-rope_cursor_insert(
-		struct RopeCursor *cursor, const uint8_t *data, size_t byte_size,
-		uint64_t tags) {
-	int rv = 0;
-	struct Rope *rope = cursor->rope;
-
-	const uint8_t *chunk = data;
-	rope_index_t cursor_index = cursor->index;
-	off_t cursor_offset = 0;
-
-	while (chunk != NULL && chunk < data + byte_size) {
-		const uint8_t *chunk_end =
-				memchr(chunk, ROPE_NEWLINE, byte_size - (chunk - data));
-		size_t chunk_size;
-		if (chunk_end) {
-			chunk_end++;
-			chunk_size = chunk_end - chunk;
-		} else {
-			chunk_size = byte_size - (chunk - data);
-		}
-		struct RopeNode *node = rope_node_new(&rope->pool);
-		if (node == NULL) {
-			rv = -1;
-			goto out;
-		}
-		rope_node_set_tags(node, tags);
-
-		rv = rope_node_set_value(node, chunk, chunk_size);
-		if (rv < 0) {
-			goto out;
-		}
-		size_t char_size = cx_utf8_clen(chunk, chunk_size);
-		rv = cursor_insert(cursor, cursor_index + cursor_offset, node);
-		if (rv < 0) {
-			goto out;
-		}
-		chunk = chunk_end;
-		cursor_offset += char_size;
-	}
-
-	cursor_damaged(cursor, cursor_offset);
-out:
-	return rv;
-}
-#else /* ROPE_SINGLE_LINE_NODES */
 int
 rope_cursor_insert(
 		struct RopeCursor *cursor, const uint8_t *data, size_t byte_size,
@@ -317,12 +286,11 @@ rope_cursor_insert(
 		goto out;
 	}
 
-	cursor_move_back(cursor);
+	cursor_bubble_up(cursor);
 	cursor_damaged(cursor, 0, char_count);
 out:
 	return rv;
 }
-#endif
 
 int
 rope_cursor_insert_str(
@@ -369,7 +337,7 @@ rope_cursor_delete(struct RopeCursor *cursor, size_t char_count) {
 		rope_node_delete(node, &rope->pool);
 		deleted += remaining;
 	}
-	cursor_move_back(cursor);
+	cursor_bubble_up(cursor);
 	cursor_damaged(cursor, cursor->index, -(off_t)deleted);
 
 	return 0;

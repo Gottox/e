@@ -1,3 +1,7 @@
+testlib_dep = dependency('testlib')
+
+subdir('editing-traces')
+
 e_test_extra_src = files(
     '../fuzzer/deser.c',
 )
@@ -10,7 +14,6 @@ e_test = [
     'fuzzer_repro.c',
 ]
 
-testlib_dep = dependency('testlib')
 foreach p : e_test
     sources = [p] + e_test_extra_src
     t = executable(

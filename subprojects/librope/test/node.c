@@ -4,7 +4,7 @@
 #include <testlib.h>
 
 static void
-test_node_insert() {
+test_node_insert(void) {
 	int rv = 0;
 	struct RopePool p = {0};
 	rv = rope_pool_init(&p);
@@ -41,7 +41,7 @@ test_node_insert() {
 }
 
 static void
-test_node_split() {
+test_node_split(void) {
 	int rv = 0;
 	size_t size = 0;
 	const uint8_t *value = NULL;
@@ -86,7 +86,7 @@ check_balanced(struct RopeNode *node) {
 }
 
 static void
-test_node_balanced_tree_right() {
+test_node_balanced_tree_right(void) {
 	int rv = 0;
 	struct RopePool pool = {0};
 	rv = rope_pool_init(&pool);
@@ -117,7 +117,7 @@ test_node_balanced_tree_right() {
 }
 
 static void
-test_node_balanced_tree_left() {
+test_node_balanced_tree_left(void) {
 	int rv = 0;
 	struct RopePool pool = {0};
 	rv = rope_pool_init(&pool);
@@ -148,7 +148,7 @@ test_node_balanced_tree_left() {
 }
 
 static void
-test_node_merge() {
+test_node_merge(void) {
 	int rv = 0;
 	struct RopePool p = {0};
 	rv = rope_pool_init(&p);
@@ -188,7 +188,7 @@ test_node_merge() {
 }
 
 static void
-test_node_tags() {
+test_node_tags(void) {
 	const uint64_t TAG_RED = 1 << 0;
 	const uint64_t TAG_GREEN = 1 << 1;
 	const uint64_t TAG_BLUE = 1 << 2;
@@ -274,7 +274,7 @@ test_node_tags() {
 }
 
 static void
-test_node_delete_by_tags() {
+test_node_delete_by_tags(void) {
 	const uint64_t TAG_TMP = 1ULL << 0;
 	const uint8_t *value;
 	size_t size;
@@ -352,7 +352,7 @@ test_node_delete_by_tags() {
 }
 
 static void
-test_node_propagate_tags() {
+test_node_propagate_tags(void) {
 	const uint64_t TAG_HELLO = 1 << 0;
 	const uint64_t TAG_WORLD = 1 << 1;
 	const uint64_t TAG_PROPAGATED = 1 << 2;
@@ -406,7 +406,7 @@ test_node_propagate_tags() {
 }
 
 static void
-test_node_node_left_inline_insert() {
+test_node_node_left_inline_insert(void) {
 	const uint64_t TAG_HELLO = 1 << 0;
 	const uint64_t TAG_WORLD = 1 << 1;
 	int rv = 0;

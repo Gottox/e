@@ -1,4 +1,4 @@
-project('librope', 'c', default_options: ['c_std=c11'])
+project('librope', 'c', default_options: ['c_std=c11', 'warning_level=3'])
 
 subdir('src')
 
@@ -10,10 +10,6 @@ libgrapheme_dep = dependency('libgrapheme')
 librope_dependencies = [cextras_dep, libgrapheme_dep]
 
 c_args = []
-#c_args += ['-DROPE_THICK_NODES']
-if get_option('single_line_nodes')
-    c_args += ['-DROPE_SINGLE_LINE_NODES']
-endif
 
 librope = static_library(
     'rope',

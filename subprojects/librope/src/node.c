@@ -304,7 +304,6 @@ node_insert(
 
 		node_update(parent);
 	}
-	rope_node_print(parent, "/tmp/node_insert.dot");
 
 	return 0;
 }

@@ -5,6 +5,5 @@ configure:
 env:
   CC: clang
   CC_LD: mold
-  CFLAGS: -fsanitize=memory
 default:
   - test

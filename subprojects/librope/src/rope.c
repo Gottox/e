@@ -126,6 +126,28 @@ rope_byte_size(struct Rope *rope) {
 	return rope_node_byte_size(rope->root);
 }
 
+char *
+rope_to_str(struct Rope *rope, uint64_t tags) {
+	char *str = NULL;
+	int rv = 0;
+	struct RopeRange range = {0};
+	rope_char_index_t char_size = rope_char_size(rope);
+
+	rv = rope_range_init(&range, rope);
+	if (rv < 0) {
+		goto out;
+	}
+	rv = rope_range_start_move_to_index(&range, 0, 0);
+	if (rv < 0) {
+		goto out;
+	}
+	rv = rope_range_end_move_to_index(&range, char_size, 0);
+
+	str = rope_range_to_str(&range, tags);
+out:
+	rope_range_cleanup(&range);
+	return str;
+}
 int
 rope_cleanup(struct Rope *rope) {
 	return rope_pool_cleanup(&rope->pool);

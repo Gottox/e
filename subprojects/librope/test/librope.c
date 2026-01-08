@@ -3,7 +3,7 @@
 #include <testlib.h>
 
 static void
-test_librope_insert() {
+test_librope_insert(void) {
 	int rv = 0;
 	struct Rope r = {0};
 	rv = rope_init(&r);
@@ -27,7 +27,7 @@ test_librope_insert() {
 }
 
 static void
-test_librope_split_insert() {
+test_librope_split_insert(void) {
 	bool has_next = false;
 	int rv = 0;
 	struct Rope r = {0};
@@ -74,7 +74,7 @@ test_librope_split_insert() {
 }
 
 static void
-test_librope_split_delete() {
+test_librope_split_delete(void) {
 	bool has_next = false;
 	int rv = 0;
 	struct Rope r = {0};
@@ -109,7 +109,7 @@ test_librope_split_delete() {
 }
 
 static void
-test_librope_tail_delete() {
+test_librope_tail_delete(void) {
 	bool has_next = false;
 	int rv = 0;
 	struct Rope r = {0};
@@ -137,7 +137,7 @@ test_librope_tail_delete() {
 }
 
 static void
-test_librope_head_delete() {
+test_librope_head_delete(void) {
 	bool has_next = false;
 	int rv = 0;
 	struct Rope r = {0};
@@ -165,53 +165,7 @@ test_librope_head_delete() {
 }
 
 static void
-test_librope_insert_multiline() {
-	int rv = 0;
-	struct Rope r = {0};
-	rv = rope_init(&r);
-	ASSERT_EQ(0, rv);
-
-	rv = rope_append_str(&r, "Hello");
-	ASSERT_EQ(0, rv);
-
-	rv = rope_append_str(&r, "World,\nHow are you?\n");
-	ASSERT_EQ(0, rv);
-
-	rv = rope_append_str(&r, "I am fine");
-	ASSERT_EQ(0, rv);
-
-	rope_byte_index_t index = 0;
-	struct RopeNode *node = rope_node_find(r.root, 0, 0, 0, &index);
-	size_t size = 0;
-	const uint8_t *data = rope_node_value(node, &size);
-
-	ASSERT_EQ((size_t)12, size);
-	ASSERT_EQ((size_t)0, index);
-	ASSERT_EQ(0, memcmp(&data[index], "HelloWorld,\n", size - index));
-
-	index = 0;
-	node = rope_node_find(r.root, 1, 0, 0, &index);
-	size = 0;
-	data = rope_node_value(node, &size);
-
-	ASSERT_EQ((size_t)13, size);
-	ASSERT_EQ((size_t)0, index);
-	ASSERT_EQ(0, memcmp(&data[index], "How are you?\n", size - index));
-
-	index = 0;
-	node = rope_node_find(r.root, 2, 0, 0, &index);
-	size = 0;
-	data = rope_node_value(node, &size);
-
-	ASSERT_EQ((size_t)9, size);
-	ASSERT_EQ((size_t)0, index);
-	ASSERT_EQ(0, memcmp(&data[index], "I am fine", size - index));
-
-	rv = rope_cleanup(&r);
-}
-
-static void
-test_librope_insert_utf8() {
+test_librope_insert_utf8(void) {
 	int rv = 0;
 	struct Rope r = {0};
 	rv = rope_init(&r);
@@ -232,7 +186,7 @@ test_librope_insert_utf8() {
 }
 
 static void
-test_librope_delete_utf8() {
+test_librope_delete_utf8(void) {
 	int rv = 0;
 	struct Rope r = {0};
 	rv = rope_init(&r);
@@ -260,7 +214,7 @@ test_librope_delete_utf8() {
 }
 
 static void
-test_librope_single_letter_insert() {
+test_librope_single_letter_insert(void) {
 	int rv = 0;
 	struct Rope r = {0};
 	rv = rope_init(&r);
@@ -303,11 +257,6 @@ TEST(test_librope_split_insert)
 TEST(test_librope_split_delete)
 TEST(test_librope_tail_delete)
 TEST(test_librope_head_delete)
-#ifdef ROPE_SINGLE_LINE_NODES
-TEST(test_librope_insert_multiline)
-#else
-NO_TEST(test_librope_insert_multiline)
-#endif
 TEST(test_librope_insert_utf8)
 TEST(test_librope_delete_utf8)
 TEST(test_librope_single_letter_insert)

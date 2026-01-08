@@ -1,10 +1,4 @@
 option(
-    'single_line_nodes',
-    type: 'boolean',
-    value: false,
-    description: 'makes sure that nodes never span multiple lines',
-)
-option(
     'test',
     type: 'boolean',
     value: false,

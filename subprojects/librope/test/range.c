@@ -3,7 +3,7 @@
 #include <testlib.h>
 
 static void
-range_basic() {
+range_basic(void) {
 	int rv = 0;
 	struct Rope r = {0};
 	rv = rope_init(&r);
@@ -23,7 +23,7 @@ range_basic() {
 }
 
 static void
-range_insert_delete() {
+range_insert_delete(void) {
 	int rv = 0;
 	struct Rope r = {0};
 	rv = rope_init(&r);
