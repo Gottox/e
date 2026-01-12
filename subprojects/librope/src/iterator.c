@@ -48,7 +48,8 @@ rope_iterator_next(
 		iter->node = NULL;
 	} else {
 		do {
-			if (!rope_node_next(&iter->node)) {
+			iter->node = rope_node_next(iter->node);
+			if (!iter->node) {
 				break;
 			}
 		} while (rope_node_match_tags(iter->node, iter->tags) == false);

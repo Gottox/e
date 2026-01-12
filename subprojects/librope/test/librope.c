@@ -19,8 +19,7 @@ test_librope_insert(void) {
 	ASSERT_EQ((size_t)5, size);
 	ASSERT_EQ(0, memcmp(data, "Hello", size));
 
-	bool has_next = rope_node_next(&node);
-	ASSERT_EQ(false, has_next);
+	node = rope_node_next(node);
 	ASSERT_TRUE(NULL == node);
 
 	rv = rope_cleanup(&r);
@@ -28,7 +27,6 @@ test_librope_insert(void) {
 
 static void
 test_librope_split_insert(void) {
-	bool has_next = false;
 	int rv = 0;
 	struct Rope r = {0};
 	rv = rope_init(&r);
@@ -54,20 +52,16 @@ test_librope_split_insert(void) {
 	// ASSERT_EQ((size_t)3, size);
 	// ASSERT_EQ(0, memcmp(data, "Hel", size));
 
-	// has_next = rope_node_next(&node);
-	// ASSERT_EQ(true, has_next);
 	// data = rope_node_value(node, &size);
 	// ASSERT_EQ((size_t)6, size);
 	// ASSERT_EQ(0, memcmp(data, "lo Hel", size));
 
-	has_next = rope_node_next(&node);
-	ASSERT_EQ(true, has_next);
+	node = rope_node_next(node);
 	data = rope_node_value(node, &size);
 	ASSERT_EQ((size_t)2, size);
 	ASSERT_EQ(0, memcmp(data, "lo", size));
 
-	has_next = rope_node_next(&node);
-	ASSERT_EQ(false, has_next);
+	node = rope_node_next(node);
 	ASSERT_TRUE(NULL == node);
 
 	rv = rope_cleanup(&r);
@@ -75,7 +69,6 @@ test_librope_split_insert(void) {
 
 static void
 test_librope_split_delete(void) {
-	bool has_next = false;
 	int rv = 0;
 	struct Rope r = {0};
 	rv = rope_init(&r);
@@ -95,14 +88,12 @@ test_librope_split_delete(void) {
 	ASSERT_EQ((size_t)2, size);
 	ASSERT_EQ(0, memcmp(data, "He", size));
 
-	has_next = rope_node_next(&node);
-	ASSERT_EQ(true, has_next);
+	node = rope_node_next(node);
 	data = rope_node_value(node, &size);
 	ASSERT_EQ((size_t)1, size);
 	ASSERT_EQ(0, memcmp(data, "o", size));
 
-	has_next = rope_node_next(&node);
-	ASSERT_EQ(false, has_next);
+	node = rope_node_next(node);
 	ASSERT_TRUE(NULL == node);
 
 	rv = rope_cleanup(&r);
@@ -110,7 +101,6 @@ test_librope_split_delete(void) {
 
 static void
 test_librope_tail_delete(void) {
-	bool has_next = false;
 	int rv = 0;
 	struct Rope r = {0};
 	rv = rope_init(&r);
@@ -130,15 +120,13 @@ test_librope_tail_delete(void) {
 	ASSERT_EQ((size_t)2, size);
 	ASSERT_EQ(0, memcmp(data, "He", size));
 
-	has_next = rope_node_next(&node);
-	ASSERT_EQ(false, has_next);
+	node = rope_node_next(node);
 
 	rv = rope_cleanup(&r);
 }
 
 static void
 test_librope_head_delete(void) {
-	bool has_next = false;
 	int rv = 0;
 	struct Rope r = {0};
 	rv = rope_init(&r);
@@ -158,8 +146,7 @@ test_librope_head_delete(void) {
 	ASSERT_EQ((size_t)2, size);
 	ASSERT_EQ(0, memcmp(data, "lo", size));
 
-	has_next = rope_node_next(&node);
-	ASSERT_EQ(false, has_next);
+	node = rope_node_next(node);
 
 	rv = rope_cleanup(&r);
 }
@@ -202,13 +189,11 @@ test_librope_delete_utf8(void) {
 	const uint8_t *data = rope_node_value(node, &size);
 	ASSERT_EQ(0, memcmp(data, "Hello ", size));
 
-	bool has_next = rope_node_next(&node);
-	ASSERT_EQ(true, has_next);
+	node = rope_node_next(node);
 	data = rope_node_value(node, &size);
 	ASSERT_EQ(0, memcmp(data, "World", size));
 
-	has_next = rope_node_next(&node);
-	ASSERT_EQ(false, has_next);
+	node = rope_node_next(node);
 	ASSERT_TRUE(NULL == node);
 	rv = rope_cleanup(&r);
 }
@@ -240,13 +225,11 @@ test_librope_single_letter_insert(void) {
 	const uint8_t *data = rope_node_value(node, &size);
 	ASSERT_EQ(0, memcmp(data, first, size));
 
-	bool has_next = rope_node_next(&node);
-	ASSERT_EQ(true, has_next);
+	node = rope_node_next(node);
 	data = rope_node_value(node, &size);
 	ASSERT_EQ(0, memcmp(data, "123", size));
 
-	has_next = rope_node_next(&node);
-	ASSERT_EQ(false, has_next);
+	node = rope_node_next(node);
 	ASSERT_TRUE(NULL == node);
 	rv = rope_cleanup(&r);
 }

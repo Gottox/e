@@ -1,13 +1,14 @@
 project('librope', 'c', default_options: ['c_std=c11', 'warning_level=3'])
 
+cextras_dep = dependency('cextras')
+libgrapheme_dep = dependency('libgrapheme')
+jsonc_dep = dependency('json-c', required: get_option('serialization'))
+
+librope_dependencies = [cextras_dep, libgrapheme_dep, jsonc_dep]
+
 subdir('src')
 
 subdir('include')
-
-cextras_dep = dependency('cextras')
-libgrapheme_dep = dependency('libgrapheme')
-
-librope_dependencies = [cextras_dep, libgrapheme_dep]
 
 c_args = []
 

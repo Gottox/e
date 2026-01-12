@@ -1,11 +1,15 @@
 #define _GNU_SOURCE
 
 #include <assert.h>
+#include <getopt.h>
 #include <json.h>
 #include <rope.h>
 #include <stdio.h>
 #include <string.h>
 #include <testlib.h>
+
+static const char *opts = "i";
+static bool intermediate = false;
 
 static int
 naive_patch(char **naive_content, size_t pos, size_t del, const char *ins) {
@@ -58,8 +62,10 @@ run_patch(
 	if (rv < 0) {
 		goto out;
 	}
-	rope_content = rope_to_str(cursor->rope, 0);
-	ASSERT_STREQ(*naive_content, rope_content);
+	if (intermediate) {
+		rope_content = rope_to_str(cursor->rope, 0);
+		ASSERT_STREQ(*naive_content, rope_content);
+	}
 out:
 	free(rope_content);
 	// json_object_put(pos_obj);
@@ -101,7 +107,6 @@ run_trace(json_object *trace) {
 	struct Rope rope = {0};
 	struct RopeCursor cursor = {0};
 	int rv = 0;
-
 	rv = rope_init(&rope);
 	if (rv < 0) {
 		goto out;
@@ -135,6 +140,7 @@ run_trace(json_object *trace) {
 	const char *end_content = json_object_get_string(end_content_obj);
 	actual_content = rope_to_str(&rope, 0);
 	ASSERT_STREQ(end_content, actual_content);
+	//rope_node_print(rope.root, "/tmp/node.dot");
 
 out:
 	free(naive_content);
@@ -151,9 +157,27 @@ main(int argc, char *argv[]) {
 	int rv = 0;
 	json_object *trace = NULL;
 
-	assert(argc == 2);
+	int opt;
 
-	trace = json_object_from_file(argv[1]);
+	while ((opt = getopt(argc, argv, opts)) != -1) {
+		switch (opt) {
+		case 'i':
+			intermediate = true;
+			break;
+		default:
+			fprintf(stderr, "Unknown option: %c\n", opt);
+			return -1;
+		}
+	}
+	argc -= optind;
+	argv += optind;
+
+	if (argc < 1) {
+		fprintf(stderr, "Usage: %s [options] <trace-file>\n", argv[0]);
+		return EXIT_FAILURE;
+	}
+
+	trace = json_object_from_file(argv[0]);
 	if (!trace) {
 		rv = -1;
 		goto out;

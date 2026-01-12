@@ -16,14 +16,12 @@ rope_pool_get(struct RopePool *pool) {
 	return cx_prealloc_pool_get(&pool->pool);
 }
 
-int
+void
 rope_pool_recycle(struct RopePool *pool, struct RopeNode *node) {
 	cx_prealloc_pool_recycle(&pool->pool, node);
-	return 0;
 }
 
-int
+void
 rope_pool_cleanup(struct RopePool *pool) {
 	cx_prealloc_pool_cleanup(&pool->pool);
-	return 0;
 }

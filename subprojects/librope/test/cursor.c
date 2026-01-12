@@ -1,6 +1,7 @@
 #include <rope.h>
 #include <string.h>
 #include <testlib.h>
+#include "common.h"
 
 static void
 cursor_basic(void) {
@@ -28,21 +29,19 @@ cursor_basic(void) {
 	const uint8_t *value = rope_node_value(node, &size);
 	ASSERT_TRUE(NULL != value);
 	ASSERT_EQ((size_t)9, size);
-	ASSERT_EQ(0, memcmp(value, "This is a", size));
+	ASSERT_STREQS("This is a", (const char *)value, size);
 
-	bool has_next = rope_node_next(&node);
-	ASSERT_EQ(true, has_next);
+	node = rope_node_next(node);
 	ASSERT_TRUE(NULL != node);
 	value = rope_node_value(node, &size);
 	ASSERT_TRUE(NULL != value);
 	ASSERT_EQ((size_t)9, size);
 	ASSERT_EQ(0, memcmp(value, "n awesome", size));
 
-	has_next = rope_node_next(&node);
-	ASSERT_NE(false, has_next);
-	ASSERT_TRUE(NULL != node);
+	node = rope_node_next(node);
+	ASSERT_NOT_NULL(node);
 	value = rope_node_value(node, &size);
-	ASSERT_TRUE(NULL != value);
+	ASSERT_NOT_NULL(value);
 	ASSERT_EQ((size_t)7, size);
 	ASSERT_EQ(0, memcmp(value, " string", size));
 
@@ -96,8 +95,7 @@ cursor_utf8(void) {
 	// ASSERT_EQ((size_t)4, size);
 	// ASSERT_EQ(0, memcmp(value, u8"🙂", size));
 
-	bool has_next = rope_node_next(&node);
-	ASSERT_NE(false, has_next);
+	node = rope_node_next(node);
 	ASSERT_TRUE(NULL != node);
 	value = rope_node_value(node, &size);
 	ASSERT_TRUE(NULL != value);
@@ -416,6 +414,32 @@ cursor_delete_edit_traces_error1(void) {
 	rope_cleanup(&r);
 }
 
+static void test_cursor_delete_multi_node(void) {
+	struct Rope r = {0};
+	struct RopeCursor c = {0};
+	int rv = 0;
+
+	rv = rope_init(&r);
+	ASSERT_EQ(0, rv);
+
+	rope_node_free(r.root, &r.pool);
+
+	r.root = from_str(&r.pool, "[[['HE','L'],['L','O']],[['W','O'],['R','LD']]]");
+
+	rv = rope_cursor_init(&c, &r);
+	ASSERT_EQ(0, rv);
+
+	rv = rope_cursor_move_to_index(&c, 1, 0);
+	ASSERT_EQ(0, rv);
+
+	rv = rope_cursor_delete(&c, 8);
+
+	assert_json("['H','D']", r.root);
+
+	rope_cursor_cleanup(&c);
+	rope_cleanup(&r);
+}
+
 DECLARE_TESTS
 TEST(cursor_basic)
 TEST(cursor_utf8)
@@ -426,4 +450,5 @@ TEST(cursor_delete_collapses_following)
 TEST(cursor_delete_updates_tagged_cursors)
 TEST(cursor_delete_at_eof)
 TEST(cursor_delete_edit_traces_error1)
+TEST(test_cursor_delete_multi_node)
 END_TESTS

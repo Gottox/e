@@ -1,462 +1,178 @@
+#include "common.h"
+#include "rope_node.h"
 #include <assert.h>
+#include <ctype.h>
 #include <rope.h>
-#include <string.h>
 #include <testlib.h>
 
 static void
-test_node_insert(void) {
+test_node_split_inline_middle(void) {
 	int rv = 0;
-	struct RopePool p = {0};
-	rv = rope_pool_init(&p);
-	ASSERT_EQ(0, rv);
-
-	struct RopeNode *n = rope_node_new(&p);
-	ASSERT_TRUE(NULL != n);
-	rope_node_set_tags(n, 1);
-	rv = rope_node_set_value(n, (const uint8_t *)"hello", 5);
-	ASSERT_EQ(0, rv);
-
-	struct RopeNode *n2 = rope_node_new(&p);
-	ASSERT_TRUE(NULL != n2);
-	rope_node_set_tags(n, 2);
-	rv = rope_node_set_value(n2, (const uint8_t *)"world", 5);
-	ASSERT_EQ(0, rv);
-
-	rv = rope_node_insert_right(n, n2, &p);
-
-	ASSERT_EQ(ROPE_NODE_BRANCH, (int)n->type);
-
-	struct RopeNode *left = rope_node_left(n);
-	size_t size;
-	const uint8_t *value = rope_node_value(left, &size);
-	ASSERT_EQ((size_t)5, size);
-	ASSERT_EQ(0, memcmp(value, "hello", 5));
-
-	struct RopeNode *right = rope_node_right(n);
-	value = rope_node_value(right, &size);
-	ASSERT_EQ((size_t)5, size);
-	ASSERT_EQ(0, memcmp(value, "world", 5));
-
-	rv = rope_pool_cleanup(&p);
-}
-
-static void
-test_node_split(void) {
-	int rv = 0;
-	size_t size = 0;
-	const uint8_t *value = NULL;
 	struct RopePool pool = {0};
+
 	rv = rope_pool_init(&pool);
 	ASSERT_EQ(0, rv);
 
-	struct RopeNode *node = rope_node_new(&pool);
-	ASSERT_TRUE(NULL != node);
-	rv = rope_node_set_value(node, (const uint8_t *)"helloworld", 10);
+	struct RopeNode *root = from_str(&pool, "'HELO'");
+
+	struct RopeNode *left, *right;
+	rv = rope_node_split(root, &pool, 2, &left, &right);
 	ASSERT_EQ(0, rv);
 
-	struct RopeNode *left = NULL;
-	struct RopeNode *right = NULL;
-	rv = rope_node_split(node, &pool, 5, &left, &right);
+	assert_json("['HE','LO']", root);
 
-	ASSERT_TRUE(NULL != left);
-	value = rope_node_value(left, &size);
-	ASSERT_EQ((size_t)5, size);
-	ASSERT_EQ(0, memcmp(value, "hello", 5));
-	ASSERT_TRUE(NULL != right);
+	rope_node_free(root, &pool);
+	rope_pool_cleanup(&pool);
+}
 
-	value = rope_node_value(right, &size);
-	ASSERT_EQ((size_t)5, size);
-	ASSERT_EQ(0, memcmp(value, "world", 5));
+static void
+test_node_insert_right(void) {
+	int rv = 0;
+	struct RopePool pool = {0};
 
-	rv = rope_pool_cleanup(&pool);
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+
+	struct RopeNode *root = from_str(&pool, "'HE'");
+	struct RopeNode *new_node = from_str(&pool, "'LO'");
+
+	rv = rope_node_insert(root, new_node, &pool, ROPE_RIGHT);
+
+	ASSERT_EQ(ROPE_NODE_BRANCH, rope_node_type(root));
+	struct RopeNode *left = rope_node_left(root);
+	struct RopeNode *right = rope_node_right(root);
+
+	ASSERT_EQ(new_node, right);
+	ASSERT_EQ(root, rope_node_parent(right));
+	ASSERT_EQ(root, rope_node_parent(left));
+
+	assert_json("['HE','LO']", root);
+
+	rope_node_free(root, &pool);
+	rope_pool_cleanup(&pool);
+}
+
+static void
+test_node_delete(void) {
+	int rv = 0;
+	struct RopePool pool = {0};
+
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+
+	struct RopeNode *root = from_str(&pool, "['HE','LO']");
+
+	rope_node_delete(rope_node_left(root), &pool);
+
+	assert_json("'LO'", root);
+
+	rope_node_free(root, &pool);
+	rope_pool_cleanup(&pool);
+}
+
+static void
+test_node_rotate_right(void) {
+	int rv = 0;
+	struct RopePool pool = {0};
+
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+
+	struct RopeNode *root = from_str(&pool, "['HE',['LL','O']]");
+
+	rope_node_rotate(root, ROPE_LEFT);
+
+	assert_json("[['HE','LL'],'O']", root);
+
+	rope_node_free(root, &pool);
+	rope_pool_cleanup(&pool);
+}
+
+static void
+test_node_balance_left(void) {
+	int rv = 0;
+	struct RopePool pool = {0};
+
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+
+	struct RopeNode *root = from_str(&pool, "[[[['H','E'],'L'],'L'],'O']");
+
+	struct RopeNode *hel_node = rope_node_left(root);
+	hel_node = rope_node_left(hel_node);
+
+	rope_node_balance_up(hel_node);
+
+	assert_json("[['H','E'],[['L','L'],'O']]", root);
+
+	rope_node_free(root, &pool);
+	rope_pool_cleanup(&pool);
+}
+
+static void
+test_node_balance_right(void) {
+	int rv = 0;
+	struct RopePool pool = {0};
+
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+
+	struct RopeNode *root = from_str(&pool, "['H',['E',['L',['L','O']]]]");
+
+	struct RopeNode *lo_node = rope_node_right(root);
+	lo_node = rope_node_right(lo_node);
+
+	rope_node_balance_up(lo_node);
+
+	assert_json("[['H',['E','L']],['L','O']]", root);
+
+	rope_node_free(root, &pool);
+	rope_pool_cleanup(&pool);
+}
+
+static bool
+node_delete_while_cb(const struct RopeNode *node, void *userdata) {
+	(void)userdata;
+	size_t size;
+	const uint8_t *data = rope_node_value(node, &size);
+	return isupper(data[0]);
+}
+
+static void
+test_node_delete_while_left(void) {
+	int rv = 0;
+	struct RopePool pool = {0};
+
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+
+	struct RopeNode *root = from_str(&pool, "[[['H','E'],['L','L']],'o']");
+
+	struct RopeNode *node = rope_node_first(root);
+	node = rope_node_next(node);
+
+
+	rope_node_delete_while(node, &pool, node_delete_while_cb, NULL);
+
+	assert_json("['H','o']", root);
+
+	rope_node_free(root, &pool);
+	rope_pool_cleanup(&pool);
 }
 
 void
-check_balanced(struct RopeNode *node) {
-	if (node->type == ROPE_NODE_BRANCH) {
-		struct RopeNode *left = rope_node_left(node);
-		struct RopeNode *right = rope_node_right(node);
+test_node_delete_crash1(void) {
 
-		printf("left: %zu, right: %zu\n", left->data.branch.leafs,
-			   right->data.branch.leafs);
-		if (left->type == ROPE_NODE_BRANCH && right->type == ROPE_NODE_BRANCH) {
-			ASSERT_EQ(left->data.branch.leafs, right->data.branch.leafs);
-		}
-	}
 }
 
-static void
-test_node_balanced_tree_right(void) {
-	int rv = 0;
-	struct RopePool pool = {0};
-	rv = rope_pool_init(&pool);
-	ASSERT_EQ(0, rv);
-
-	struct RopeNode *root = rope_node_new(&pool);
-	ASSERT_TRUE(NULL != root);
-
-	for (int i = 0; i < 32; i++) {
-		struct RopeNode *node = rope_node_new(&pool);
-		// Set unique tags to avoid auto-merging nodes
-		rope_node_set_tags(node, i);
-		ASSERT_TRUE(NULL != node);
-		rv = rope_node_set_value(
-				node, (const uint8_t *)"12345678901234567890123456789012",
-				i + 1);
-		ASSERT_EQ(0, rv);
-		rv = rope_node_insert_right(root, node, &pool);
-		ASSERT_EQ(0, rv);
-	}
-
-	ASSERT_EQ(ROPE_NODE_BRANCH, (int)root->type);
-
-	check_balanced(root);
-
-	rv = rope_pool_cleanup(&pool);
-	ASSERT_EQ(0, rv);
-}
-
-static void
-test_node_balanced_tree_left(void) {
-	int rv = 0;
-	struct RopePool pool = {0};
-	rv = rope_pool_init(&pool);
-	ASSERT_EQ(0, rv);
-
-	struct RopeNode *root = rope_node_new(&pool);
-	ASSERT_TRUE(NULL != root);
-
-	for (int i = 0; i < 32; i++) {
-		struct RopeNode *node = rope_node_new(&pool);
-		// Set unique tags to avoid auto-merging nodes
-		rope_node_set_tags(node, i);
-		ASSERT_TRUE(NULL != node);
-		rv = rope_node_set_value(
-				node, (const uint8_t *)"12345678901234567890123456789012",
-				i + 1);
-		ASSERT_EQ(0, rv);
-		rv = rope_node_insert_right(root, node, &pool);
-		ASSERT_EQ(0, rv);
-	}
-
-	ASSERT_EQ(ROPE_NODE_BRANCH, (int)root->type);
-
-	check_balanced(root);
-
-	rv = rope_pool_cleanup(&pool);
-	ASSERT_EQ(0, rv);
-}
-
-static void
-test_node_merge(void) {
-	int rv = 0;
-	struct RopePool p = {0};
-	rv = rope_pool_init(&p);
-	ASSERT_EQ(0, rv);
-
-	struct RopeNode *n = rope_node_new(&p);
-	ASSERT_TRUE(NULL != n);
-	rope_node_set_tags(n, 1);
-	rv = rope_node_set_value(n, (const uint8_t *)"world", 5);
-	ASSERT_EQ(0, rv);
-
-	struct RopeNode *n2 = rope_node_new(&p);
-	ASSERT_TRUE(NULL != n2);
-	rope_node_set_tags(n, 2);
-	rv = rope_node_set_value(n2, (const uint8_t *)"hello", 5);
-	ASSERT_EQ(0, rv);
-
-	rv = rope_node_insert_left(n, n2, &p);
-	ASSERT_EQ(0, rv);
-	ASSERT_EQ(ROPE_NODE_BRANCH, (int)n->type);
-
-	struct RopeNode *to_merge = rope_node_left(n);
-	rv = rope_node_merge_right(to_merge, &p);
-	ASSERT_GT(0, rv);
-
-	rope_node_set_tags(n, 1);
-	rv = rope_node_merge_right(to_merge, &p);
-	ASSERT_EQ(0, rv);
-
-	size_t size;
-	const uint8_t *value = rope_node_value(n, &size);
-	ASSERT_EQ((size_t)10, size);
-	ASSERT_EQ(0, memcmp(value, "helloworld", 10));
-
-	rv = rope_pool_cleanup(&p);
-	ASSERT_EQ(0, rv);
-}
-
-static void
-test_node_tags(void) {
-	const uint64_t TAG_RED = 1 << 0;
-	const uint64_t TAG_GREEN = 1 << 1;
-	const uint64_t TAG_BLUE = 1 << 2;
-
-	int rv = 0;
-	struct RopePool p = {0};
-	rv = rope_pool_init(&p);
-	ASSERT_EQ(0, rv);
-
-	struct RopeNode *red_node = rope_node_new(&p);
-	ASSERT_NE(NULL, red_node);
-	rope_node_set_tags(red_node, TAG_RED);
-	rv = rope_node_set_value(red_node, (const uint8_t *)"red\n", 4);
-	ASSERT_EQ(0, rv);
-
-	struct RopeNode *green_node = rope_node_new(&p);
-	ASSERT_NE(NULL, green_node);
-	rope_node_set_tags(green_node, TAG_GREEN);
-	rv = rope_node_set_value(green_node, (const uint8_t *)"green\n", 6);
-	ASSERT_EQ(0, rv);
-
-	struct RopeNode *blue_node = rope_node_new(&p);
-	ASSERT_NE(NULL, blue_node);
-	rope_node_set_tags(blue_node, TAG_BLUE);
-	rv = rope_node_set_value(blue_node, (const uint8_t *)"blue\n", 5);
-	ASSERT_EQ(0, rv);
-
-	rv = rope_node_insert_right(red_node, green_node, &p);
-	ASSERT_EQ(0, rv);
-	rv = rope_node_insert_right(green_node, blue_node, &p);
-	ASSERT_EQ(0, rv);
-
-	rope_byte_index_t byte_index = 0;
-	struct RopeNode *node;
-	const uint8_t *value;
-	size_t size;
-
-	node = rope_node_find_char(red_node, 0, TAG_RED, &byte_index);
-	value = rope_node_value(node, &size);
-	ASSERT_EQ((size_t)4, size);
-	ASSERT_EQ(0, memcmp(value, "red\n", size));
-	ASSERT_EQ(0, byte_index);
-
-	node = rope_node_find_char(red_node, 0, TAG_GREEN, &byte_index);
-	value = rope_node_value(node, &size);
-	ASSERT_EQ((size_t)6, size);
-	ASSERT_EQ(0, memcmp(value, "green\n", size));
-	ASSERT_EQ(0, byte_index);
-
-	node = rope_node_find_char(red_node, 0, TAG_BLUE, &byte_index);
-	value = rope_node_value(node, &size);
-	ASSERT_EQ((size_t)5, size);
-	ASSERT_EQ(0, memcmp(value, "blue\n", size));
-	ASSERT_EQ(0, byte_index);
-
-	node = rope_node_find_char(red_node, 0, 0, &byte_index);
-	value = rope_node_value(node, &size);
-	ASSERT_EQ((size_t)4, size);
-	ASSERT_EQ(0, memcmp(value, "red\n", size));
-	ASSERT_EQ(0, byte_index);
-
-	node = rope_node_find_char(red_node, 5, 0, &byte_index);
-	value = rope_node_value(node, &size);
-	ASSERT_EQ((size_t)6, size);
-	ASSERT_EQ(0, memcmp(value, "green\n", size));
-	ASSERT_EQ(1, byte_index);
-
-	node = rope_node_find_char(red_node, 11, 0, &byte_index);
-	value = rope_node_value(node, &size);
-	ASSERT_EQ((size_t)5, size);
-	ASSERT_EQ(0, memcmp(value, "blue\n", size));
-	ASSERT_EQ(1, byte_index);
-
-	rv = rope_pool_recycle(&p, red_node);
-	ASSERT_EQ(0, rv);
-	rv = rope_pool_recycle(&p, green_node);
-	ASSERT_EQ(0, rv);
-	rv = rope_pool_recycle(&p, blue_node);
-	ASSERT_EQ(0, rv);
-
-	rv = rope_pool_cleanup(&p);
-	ASSERT_EQ(0, rv);
-}
-
-static void
-test_node_delete_by_tags(void) {
-	const uint64_t TAG_TMP = 1ULL << 0;
-	const uint8_t *value;
-	size_t size;
-	bool has_next;
-
-	int rv = 0;
-	struct RopePool pool = {0};
-	rv = rope_pool_init(&pool);
-	ASSERT_EQ(0, rv);
-
-	struct RopeNode *node1 = rope_node_new(&pool);
-	ASSERT_TRUE(NULL != node1);
-	rv = rope_node_set_value(node1, (const uint8_t *)"leaf1", 5);
-	ASSERT_EQ(0, rv);
-	struct RopeNode *node2 = rope_node_new(&pool);
-	ASSERT_TRUE(NULL != node2);
-	rv = rope_node_set_value(node2, (const uint8_t *)"leaf2", 5);
-	ASSERT_EQ(0, rv);
-
-	struct RopeNode *tmp_leaf = rope_node_new(&pool);
-	ASSERT_TRUE(NULL != tmp_leaf);
-	rv = rope_node_set_value(tmp_leaf, (const uint8_t *)"tmp", 3);
-	ASSERT_EQ(0, rv);
-	rope_node_set_tags(tmp_leaf, TAG_TMP);
-
-	rv = rope_node_insert_right(node1, tmp_leaf, &pool);
-	ASSERT_EQ(0, rv);
-	rv = rope_node_insert_right(node1, node2, &pool);
-
-	struct RopeNode *node = rope_node_first(node1);
-	value = rope_node_value(node, &size);
-	ASSERT_EQ((size_t)5, size);
-	ASSERT_EQ(0, memcmp(value, "leaf1", size));
-	ASSERT_EQ(0, rope_node_tags(node));
-
-	has_next = rope_node_next(&node);
-	ASSERT_TRUE(has_next);
-	value = rope_node_value(node, &size);
-	ASSERT_EQ((size_t)3, size);
-	ASSERT_EQ(0, memcmp(value, "tmp", size));
-	ASSERT_EQ(TAG_TMP, rope_node_tags(node));
-
-	has_next = rope_node_next(&node);
-	ASSERT_TRUE(has_next);
-	value = rope_node_value(node, &size);
-	ASSERT_EQ((size_t)5, size);
-	ASSERT_EQ(0, memcmp(value, "leaf2", size));
-	ASSERT_EQ(0, rope_node_tags(node));
-
-	has_next = rope_node_next(&node);
-	ASSERT_FALSE(has_next);
-	ASSERT_EQ(NULL, node);
-
-	rv = rope_node_delete_by_tags(node1, &pool, TAG_TMP);
-	ASSERT_EQ(0, rv);
-
-	node = rope_node_first(node1);
-
-	value = rope_node_value(node, &size);
-	ASSERT_EQ((size_t)5, size);
-	ASSERT_EQ(0, memcmp(value, "leaf1", size));
-
-	has_next = rope_node_next(&node);
-	ASSERT_TRUE(has_next);
-	value = rope_node_value(node, &size);
-	ASSERT_EQ((size_t)5, size);
-	ASSERT_EQ(0, memcmp(value, "leaf2", size));
-	ASSERT_EQ(0, rope_node_tags(node));
-
-	has_next = rope_node_next(&node);
-	ASSERT_FALSE(has_next);
-	ASSERT_EQ(NULL, node);
-
-	rv = rope_pool_cleanup(&pool);
-}
-
-static void
-test_node_propagate_tags(void) {
-	const uint64_t TAG_HELLO = 1 << 0;
-	const uint64_t TAG_WORLD = 1 << 1;
-	const uint64_t TAG_PROPAGATED = 1 << 2;
-	int rv = 0;
-	bool has_next;
-	uint64_t tags;
-	const uint8_t *value;
-	size_t size;
-	struct RopePool pool = {0};
-	rv = rope_pool_init(&pool);
-	ASSERT_EQ(0, rv);
-
-	struct RopeNode *node1 = rope_node_new(&pool);
-	ASSERT_TRUE(NULL != node1);
-	rv = rope_node_set_value(node1, (const uint8_t *)"hello", 5);
-	ASSERT_EQ(0, rv);
-	rope_node_set_tags(node1, TAG_HELLO);
-
-	struct RopeNode *node2 = rope_node_new(&pool);
-	ASSERT_TRUE(NULL != node2);
-	rv = rope_node_set_value(node2, (const uint8_t *)"world", 5);
-	ASSERT_EQ(0, rv);
-	rope_node_set_tags(node2, TAG_WORLD);
-
-	rv = rope_node_insert_right(node1, node2, &pool);
-	ASSERT_EQ(0, rv);
-
-	rope_node_add_tags(node1, TAG_PROPAGATED);
-
-	struct RopeNode *node = rope_node_first(node1);
-
-	value = rope_node_value(node, &size);
-	ASSERT_EQ((size_t)5, size);
-	ASSERT_EQ(0, memcmp(value, "hello", 5));
-	tags = rope_node_tags(node);
-	ASSERT_EQ(TAG_HELLO | TAG_PROPAGATED, tags);
-
-	has_next = rope_node_next(&node);
-	ASSERT_TRUE(has_next);
-	value = rope_node_value(node, &size);
-	ASSERT_EQ((size_t)5, size);
-	ASSERT_EQ(0, memcmp(value, "world", 5));
-	tags = rope_node_tags(node);
-	ASSERT_EQ(TAG_WORLD | TAG_PROPAGATED, tags);
-
-	has_next = rope_node_next(&node);
-	ASSERT_FALSE(has_next);
-	ASSERT_EQ(NULL, node);
-
-	rv = rope_pool_cleanup(&pool);
-}
-
-static void
-test_node_node_left_inline_insert(void) {
-	const uint64_t TAG_HELLO = 1 << 0;
-	const uint64_t TAG_WORLD = 1 << 1;
-	int rv = 0;
-	const uint8_t *value;
-	size_t size;
-	struct RopePool pool = {0};
-	rv = rope_pool_init(&pool);
-	ASSERT_EQ(0, rv);
-
-	struct RopeNode *node1 = rope_node_new(&pool);
-	ASSERT_TRUE(NULL != node1);
-	rv = rope_node_set_value(node1, (const uint8_t *)"hello", 5);
-	ASSERT_EQ(0, rv);
-	rope_node_set_tags(node1, TAG_HELLO);
-
-	struct RopeNode *node2 = rope_node_new(&pool);
-	ASSERT_TRUE(NULL != node2);
-	rv = rope_node_set_value(node2, (const uint8_t *)"world", 5);
-	ASSERT_EQ(0, rv);
-	rope_node_set_tags(node2, TAG_WORLD);
-
-	rv = rope_node_insert_right(node1, node2, &pool);
-	ASSERT_EQ(0, rv);
-
-	struct RopeNode *node = rope_node_last(node1);
-
-	struct RopeNode *node3 = rope_node_new(&pool);
-	ASSERT_TRUE(NULL != node3);
-	rv = rope_node_set_value(node3, (const uint8_t *)"cruel", 5);
-	ASSERT_EQ(0, rv);
-	rope_node_set_tags(node3, TAG_HELLO);
-
-	rope_node_insert_left(node, node3, &pool);
-
-	node = rope_node_first(node1);
-	value = rope_node_value(node, &size);
-	ASSERT_EQ((size_t)10, size);
-	ASSERT_EQ(0, memcmp(value, "hellocruel", 10));
-
-	rv = rope_pool_cleanup(&pool);
-}
 
 DECLARE_TESTS
-TEST(test_node_insert)
-TEST(test_node_split)
-TEST(test_node_balanced_tree_right)
-TEST(test_node_balanced_tree_left)
-TEST(test_node_merge)
-TEST(test_node_tags)
-TEST(test_node_delete_by_tags)
-TEST(test_node_propagate_tags)
-TEST(test_node_node_left_inline_insert)
+TEST(test_node_split_inline_middle)
+TEST(test_node_insert_right)
+TEST(test_node_delete)
+TEST(test_node_rotate_right)
+TEST(test_node_balance_left)
+TEST(test_node_balance_right)
+TEST(test_node_delete_while_left)
+TEST(test_node_delete_crash1)
 END_TESTS

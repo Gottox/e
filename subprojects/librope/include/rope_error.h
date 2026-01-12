@@ -1,0 +1,11 @@
+#ifndef ROPE_ERROR_H
+#define ROPE_ERROR_H
+
+enum RopeError {
+	ROPE_SUCCESS = 0,
+	ROPE_ERROR_OOM,
+	ROPE_ERROR_INVALID_TYPE,
+	ROPE_ERROR_OOB,
+};
+
+#endif /* ROPE_ERROR_H */

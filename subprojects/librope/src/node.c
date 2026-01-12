@@ -1,3 +1,4 @@
+#include "rope_node.h"
 #include <alloca.h>
 #include <assert.h>
 #include <cextras/memory.h>
@@ -9,6 +10,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/wait.h>
+
+#define ROPE_NOPE_BALANCE_THRESHOLD 3
 
 static struct RopeNode **
 node_child(struct RopeNode *node, enum RopeNodeDirection direction) {
@@ -32,15 +35,6 @@ node_outer(struct RopeNode *node, enum RopeNodeDirection direction) {
 		node = *node_child(node, direction);
 	}
 	return node;
-}
-
-static size_t
-node_leafs(struct RopeNode *node) {
-	if (node->type == ROPE_NODE_BRANCH) {
-		return node->data.branch.leafs;
-	} else {
-		return 1;
-	}
 }
 
 static size_t
@@ -119,6 +113,15 @@ rope_node_new_lines(struct RopeNode *node) {
 #endif
 }
 
+static size_t
+node_child_depth(const struct RopeNode *node) {
+	if (node->type == ROPE_NODE_BRANCH) {
+		return node->data.branch.child_depth;
+	} else {
+		return 0;
+	}
+}
+
 static void
 node_update(struct RopeNode *node) {
 	if (node->type == ROPE_NODE_BRANCH) {
@@ -145,7 +148,13 @@ node_update(struct RopeNode *node) {
 		node->utf16_size = left->utf16_size + right->utf16_size;
 		node->new_lines = left->new_lines + right->new_lines;
 #endif
-		node->data.branch.leafs = node_leafs(left) + node_leafs(right);
+
+		const size_t child_depth =
+				CX_MAX(node_child_depth(left), node_child_depth(right)) + 1;
+		// if (node_child_depth(node) == child_depth) {
+		//	break;
+		// }
+		node->data.branch.child_depth = child_depth;
 	}
 }
 
@@ -167,7 +176,7 @@ node_find_insertion_point(
 	for (; node->type == ROPE_NODE_BRANCH;) {
 		struct RopeNode *bad_child = *node_child(node, !*which);
 		struct RopeNode *good_child = *node_child(node, *which);
-		if (node_leafs(good_child) >= node_leafs(bad_child)) {
+		if (node_child_depth(good_child) >= node_child_depth(bad_child)) {
 			break;
 		}
 		node = good_child;
@@ -281,6 +290,52 @@ node_move(struct RopeNode *target, struct RopeNode *source) {
 }
 
 static int
+node_rotate(struct RopeNode *node, enum RopeNodeDirection direction) {
+	(void)node;
+	(void)direction;
+	struct RopeNode *rotator = *node_child(node, !direction);
+	if (rotator->type != ROPE_NODE_BRANCH || node->type != ROPE_NODE_BRANCH) {
+		return 0;
+	}
+	struct RopeNode *child1 = *node_child(rotator, !direction);
+	struct RopeNode *child2 = *node_child(rotator, direction);
+	struct RopeNode *child3 = *node_child(node, direction);
+
+	assert(node->type == ROPE_NODE_BRANCH);
+	assert(rotator->type == ROPE_NODE_BRANCH);
+
+	*node_child(node, !direction) = child1;
+	*node_child(node, direction) = rotator;
+	*node_child(rotator, !direction) = child2;
+	*node_child(rotator, direction) = child3;
+	node_update(child1);
+	node_update(child2);
+	node_update(child3);
+	node_update(rotator);
+	node_update(node);
+
+	return 0;
+}
+
+static int
+node_balance_up(struct RopeNode *node) {
+	while ((node = rope_node_parent(node))) {
+		struct RopeNode *left = *node_left(node);
+		struct RopeNode *right = *node_right(node);
+		size_t left_depth = node_child_depth(left);
+		size_t right_depth = node_child_depth(right);
+		if (left_depth < right_depth) {
+			node_rotate(node, ROPE_NODE_LEFT);
+		} else if (right_depth < left_depth) {
+			node_rotate(node, ROPE_NODE_RIGHT);
+		} else {
+			break;
+		}
+	}
+	return 0;
+}
+
+static int
 node_insert(
 		struct RopeNode *parent, struct RopeNode *new_node,
 		struct RopePool *pool, enum RopeNodeDirection which) {
@@ -288,6 +343,7 @@ node_insert(
 		new_node->parent = parent->parent;
 		node_move(parent, new_node);
 		rope_node_free(new_node, pool);
+		return 0;
 	} else {
 		parent = node_find_insertion_point(parent, &which);
 
@@ -303,9 +359,10 @@ node_insert(
 		*node_child(parent, which) = new_node;
 
 		node_update(parent);
-	}
 
-	return 0;
+		return node_balance_up(parent);
+		// return 0;
+	}
 }
 
 static int
@@ -433,7 +490,7 @@ rope_node_split(
 	}
 
 	node->type = ROPE_NODE_BRANCH;
-	node->data.branch.leafs = 0;
+	node->data.branch.child_depth = 0;
 	*node_left(node) = left;
 	*node_right(node) = right;
 	node_update(node);
@@ -867,76 +924,4 @@ rope_node_free(struct RopeNode *node, struct RopePool *pool) {
 		break;
 	}
 	return rope_pool_recycle(pool, node);
-}
-
-void
-print_escaped(const uint8_t *data, size_t size, FILE *out) {
-	for (size_t i = 0; i < size; i++) {
-		switch (data[i]) {
-		case '\n':
-			fputs("\\n", out);
-			break;
-		case '\r':
-			fputs("\\r", out);
-			break;
-		case '\t':
-			fputs("\\t", out);
-			break;
-		case '"':
-			fputs("\\\"", out);
-			break;
-		case '\\':
-			fputs("\\\\", out);
-			break;
-		default:
-			fputc(data[i], out);
-			break;
-		}
-	}
-}
-
-static void
-print_node(struct RopeNode *node, FILE *out) {
-	fprintf(out, "node%p", (void *)node);
-	if (node == NULL) {
-		fprintf(out, " [label=\"NULL\"]\n");
-		return;
-	}
-	switch (node->type) {
-	case ROPE_NODE_LEAF:
-		fputs(" [label=\"leaf ", out);
-		print_escaped(node->data.leaf.data, rope_node_byte_size(node), out);
-		fprintf(out, " %lu\"]\n", rope_node_char_size(node));
-		break;
-	case ROPE_NODE_INLINE_LEAF:
-		fputs(" [label=\"inline_leaf ", out);
-		print_escaped(
-				node->data.inline_leaf.data, rope_node_byte_size(node), out);
-		fprintf(out, " %lu\"]\n", rope_node_char_size(node));
-		break;
-	case ROPE_NODE_BRANCH:
-		fprintf(out, " [label=\"branch %lu\"]\n", rope_node_char_size(node));
-		fprintf(out, "node%p -> node%p\n", (void *)node,
-				(void *)*node_left(node));
-		fprintf(out, "node%p -> node%p\n", (void *)node,
-				(void *)*node_right(node));
-		print_node(*node_left(node), out);
-		print_node(*node_right(node), out);
-		break;
-	}
-}
-
-void
-rope_node_print(struct RopeNode *root, const char *file) {
-	FILE *out = fopen(file, "w");
-	if (!out) {
-		return;
-	}
-	while (root->parent) {
-		root = root->parent;
-	}
-	fputs("digraph G {\n", out);
-	print_node(root, out);
-	fputs("}\n", out);
-	fclose(out);
 }

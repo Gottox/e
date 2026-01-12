@@ -17,7 +17,6 @@ rope_init(struct Rope *rope) {
 		goto out;
 	}
 
-	rope->bias = ROPE_BIAS_LEFT;
 	rope->last_cursor = NULL;
 
 out:
@@ -150,5 +149,6 @@ out:
 }
 int
 rope_cleanup(struct Rope *rope) {
-	return rope_pool_cleanup(&rope->pool);
+	rope_pool_cleanup(&rope->pool);
+	return 0;
 }

@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <testlib.h>
+#include "common.h"
 
 static void
 iterator_full(void) {
