@@ -16,3 +16,9 @@ option(
     value: 10,
     description: 'set the fuzzer timeout',
 )
+option(
+    'inline_leaves',
+    type: 'boolean',
+    value: true,
+    description: 'Enable inline leaves in rope implementation. Disabling is useful for debugging.',
+)

@@ -14,6 +14,7 @@ rope_node_new(struct RopePool *pool) {
 int
 rope_node_append_value(
 		struct RopeNode *node, const uint8_t *data, size_t byte_size) {
+#ifdef ROPE_ENABLE_INLINE_LEAVES
 	int rv = 0;
 	assert(ROPE_NODE_IS_LEAF(node));
 
@@ -33,16 +34,26 @@ rope_node_append_value(
 
 out:
 	return rv;
+#else
+	(void)node;
+	(void)data;
+	(void)byte_size;
+	return -ROPE_ERROR_INVALID_TYPE;
+#endif
 }
 
 int
 rope_node_set_value(
 		struct RopeNode *node, const uint8_t *data, size_t byte_size) {
 	int rv = 0;
+#ifdef ROPE_ENABLE_INLINE_LEAVES
 	if (byte_size <= ROPE_INLINE_LEAF_SIZE) {
 		rope_node_set_type(node, ROPE_NODE_INLINE_LEAF);
 		node->data.inline_leaf.byte_size = byte_size;
 		memcpy(node->data.inline_leaf.data, data, byte_size);
+#else
+	if (0) {
+#endif
 	} else {
 		struct RopeRcString *rc_str = rope_rc_string_new(data, byte_size);
 		if (rc_str == NULL) {

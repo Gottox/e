@@ -9,10 +9,16 @@ t = executable(
     dependencies: [testlib_dep, librope_dep, cjson_dep],
 )
 foreach trace : sequential_traces
+    args = []
+    if trace.full_path().contains('_ascii_only_')
+        args += '-i'
+    endif
+    args += [trace.full_path()]
     test(
         trace.full_path().split('/')[-1].replace('.json', ''),
         t,
-        args: [trace.full_path()],
+        args: args,
+        timeout: 1800,
         depends: trace,
     )
 endforeach

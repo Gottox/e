@@ -73,34 +73,12 @@ cursor_utf8(void) {
 
 	struct RopeNode *node = rope_first(&r);
 	ASSERT_TRUE(NULL != node);
-	size_t size = 0;
-	const uint8_t *value = rope_node_value(node, &size);
+	size_t size = rope_byte_size(&r);
+	char *value = rope_to_str(&r, 0);
 	ASSERT_TRUE(NULL != value);
-	ASSERT_EQ((size_t)8, size);
-	ASSERT_EQ(0, memcmp(value, u8"👋🙂", size));
-
-	// struct RopeNode *node = rope_first(&r);
-	// ASSERT_TRUE(NULL != node);
-	// size_t size = 0;
-	// const uint8_t *value = rope_node_value(node, &size);
-	// ASSERT_TRUE(NULL != value);
-	// ASSERT_EQ((size_t)4, size);
-	// ASSERT_EQ(0, memcmp(value, u8"👋", size));
-
-	// bool has_next = rope_node_next(&node);
-	// ASSERT_EQ(true, has_next);
-	// ASSERT_TRUE(NULL != node);
-	// value = rope_node_value(node, &size);
-	// ASSERT_TRUE(NULL != value);
-	// ASSERT_EQ((size_t)4, size);
-	// ASSERT_EQ(0, memcmp(value, u8"🙂", size));
-
-	node = rope_node_next(node);
-	ASSERT_TRUE(NULL != node);
-	value = rope_node_value(node, &size);
-	ASSERT_TRUE(NULL != value);
-	ASSERT_EQ((size_t)4, size);
-	ASSERT_EQ(0, memcmp(value, u8"🦶", size));
+	ASSERT_EQ((size_t)12, size);
+	ASSERT_EQ(0, memcmp(value, u8"👋🙂🦶", size));
+	free(value);
 
 	rv = rope_cursor_cleanup(&c);
 	ASSERT_EQ(0, rv);
@@ -140,35 +118,6 @@ cursor_event(void) {
 	rv = rope_cursor_cleanup(&c1);
 	ASSERT_EQ(0, rv);
 	rv = rope_cursor_cleanup(&c2);
-	ASSERT_EQ(0, rv);
-	rv = rope_cleanup(&r);
-	ASSERT_EQ(0, rv);
-}
-
-static void
-cursor_move_codepoint(void) {
-	int rv = 0;
-	struct Rope r = {0};
-	rv = rope_init(&r);
-	ASSERT_EQ(0, rv);
-
-	rv = rope_append_str(&r, "A😃C");
-	ASSERT_EQ(0, rv);
-
-	struct RopeCursor c = {0};
-	rv = rope_cursor_init(&c, &r);
-	ASSERT_EQ(0, rv);
-
-	rv = rope_cursor_move_to_index(&c, 1, 0);
-	ASSERT_EQ(0, rv);
-	int32_t cp = rope_cursor_codepoint(&c);
-	ASSERT_EQ(128515, cp);
-
-	rv = rope_cursor_move(&c, -2);
-	ASSERT_EQ(0, rv);
-	ASSERT_EQ((size_t)0, c.index);
-
-	rv = rope_cursor_cleanup(&c);
 	ASSERT_EQ(0, rv);
 	rv = rope_cleanup(&r);
 	ASSERT_EQ(0, rv);
@@ -468,7 +417,6 @@ DECLARE_TESTS
 TEST(cursor_basic)
 TEST(cursor_utf8)
 TEST(cursor_event)
-TEST(cursor_move_codepoint)
 TEST(cursor_insert_cursor_move)
 TEST(cursor_delete_collapses_following)
 TEST(cursor_delete_updates_tagged_cursors)

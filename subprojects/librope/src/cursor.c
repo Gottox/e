@@ -448,20 +448,6 @@ rope_cursor_node(struct RopeCursor *cursor, rope_char_index_t *byte_index) {
 	return node;
 }
 
-int32_t
-rope_cursor_codepoint(struct RopeCursor *cursor) {
-	rope_char_index_t byte_index = 0;
-	struct RopeNode *node = rope_cursor_node(cursor, &byte_index);
-	if (node == NULL) {
-		return -1;
-	}
-
-	size_t byte_size = 0;
-	const uint8_t *value = rope_node_value(node, &byte_size);
-
-	return cx_utf8_cp(&value[byte_index], byte_size - byte_index);
-}
-
 int
 rope_cursor_cleanup(struct RopeCursor *cursor) {
 	if (cursor->rope == NULL) {

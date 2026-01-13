@@ -33,7 +33,13 @@ rope_node_value(const struct RopeNode *node, size_t *size) {
 		case ROPE_NODE_LEAF:
 			return node->data.leaf.data;
 		case ROPE_NODE_INLINE_LEAF:
+#ifdef ROPE_ENABLE_INLINE_LEAVES
 			return node->data.inline_leaf.data;
+#else
+			assert(ROPE_NODE_IS_ROOT(node));
+			assert(*size == 0);
+			return (const uint8_t *)"";
+#endif
 		default:
 			ROPE_UNREACHABLE();
 	}

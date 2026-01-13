@@ -11,10 +11,8 @@ iterator_full(void) {
 	rv = rope_init(&r);
 	ASSERT_EQ(0, rv);
 
-	rv = rope_append(&r, (uint8_t *)"Hello", 5);
-	ASSERT_EQ(0, rv);
-	rv = rope_append(&r, (uint8_t *)"World", 5);
-	ASSERT_EQ(0, rv);
+	rope_node_free(r.root, &r.pool);
+	r.root = from_str(&r.pool, "'HelloWorld'");
 
 	struct RopeRange range = {0};
 	rv = rope_range_init(&range, &r);
@@ -28,14 +26,12 @@ iterator_full(void) {
 
 	const uint8_t *data = NULL;
 	size_t size = 0;
-	char buf[32];
-	size_t off = 0;
-	while (rope_iterator_next(&it, &data, &size)) {
-		memcpy(buf + off, data, size);
-		off += size;
-	}
-	buf[off] = '\0';
-	ASSERT_STREQ(buf, "HelloWorld");
+	bool has_next = rope_iterator_next(&it, &data, &size);
+	ASSERT_STREQS((const char *)data, "HelloWorld", size);
+	ASSERT_TRUE(has_next);
+
+	has_next = rope_iterator_next(&it, &data, &size);
+	ASSERT_FALSE(has_next);
 
 	rv = rope_iterator_cleanup(&it);
 	ASSERT_EQ(0, rv);
@@ -52,12 +48,8 @@ iterator_partial(void) {
 	rv = rope_init(&r);
 	ASSERT_EQ(0, rv);
 
-	rv = rope_append(&r, (uint8_t *)"Hello", 5);
-	ASSERT_EQ(0, rv);
-	rv = rope_append(&r, (uint8_t *)"World", 5);
-	ASSERT_EQ(0, rv);
-	rv = rope_append(&r, (uint8_t *)"Test", 4);
-	ASSERT_EQ(0, rv);
+	rope_node_free(r.root, &r.pool);
+	r.root = from_str(&r.pool, "['HelloWorld','Test']");
 
 	struct RopeRange range = {0};
 	rv = rope_range_init(&range, &r);
@@ -157,13 +149,10 @@ iterator_big_non_inline(void) {
 
 	const uint8_t *data = NULL;
 	size_t size = 0;
-	char buf[128];
-	size_t off = 0;
+	char buf[128] = {0};
 	while (rope_iterator_next(&it, &data, &size)) {
-		memcpy(buf + off, data, size);
-		off += size;
+		strncat(buf, (const char *)data, size);
 	}
-	buf[off] = '\0';
 	ASSERT_STREQ(
 			buf,
 			"ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyz0987"
@@ -240,15 +229,9 @@ iterator_tagged_filter(void) {
 
 	rv = rope_cursor_insert_str(&cursor, "red", TAG_RED);
 	ASSERT_EQ(0, rv);
-	rv = rope_cursor_move_to_index(&cursor, rope_char_size(&r), 0);
-	ASSERT_EQ(0, rv);
 	rv = rope_cursor_insert_str(&cursor, "blue", TAG_BLUE);
 	ASSERT_EQ(0, rv);
-	rv = rope_cursor_move_to_index(&cursor, rope_char_size(&r), 0);
-	ASSERT_EQ(0, rv);
 	rv = rope_cursor_insert_str(&cursor, "magenta", TAG_RED | TAG_BLUE);
-	ASSERT_EQ(0, rv);
-	rv = rope_cursor_move_to_index(&cursor, rope_char_size(&r), 0);
 	ASSERT_EQ(0, rv);
 	rv = rope_cursor_insert_str(&cursor, "plain", 0);
 	ASSERT_EQ(0, rv);
@@ -264,22 +247,23 @@ iterator_tagged_filter(void) {
 
 	struct RopeIterator all_it = {0};
 	rv = rope_iterator_init(&all_it, &range, 0);
+
 	ASSERT_EQ(0, rv);
 	has_next = rope_iterator_next(&all_it, &data, &size);
 	ASSERT_TRUE(has_next);
-	ASSERT_STREQ((const char *)data, "red");
+	ASSERT_STREQS((const char *)data, "red", size);
 	ASSERT_EQ(3, size);
 	has_next = rope_iterator_next(&all_it, &data, &size);
 	ASSERT_TRUE(has_next);
-	ASSERT_STREQ((const char *)data, "blue");
+	ASSERT_STREQS((const char *)data, "blue", size);
 	ASSERT_EQ(4, size);
 	has_next = rope_iterator_next(&all_it, &data, &size);
 	ASSERT_TRUE(has_next);
-	ASSERT_STREQ((const char *)data, "magenta");
+	ASSERT_STREQS((const char *)data, "magenta", size);
 	ASSERT_EQ(7, size);
 	has_next = rope_iterator_next(&all_it, &data, &size);
 	ASSERT_TRUE(has_next);
-	ASSERT_STREQ((const char *)data, "plain");
+	ASSERT_STREQS((const char *)data, "plain", size);
 	ASSERT_EQ(5, size);
 	has_next = rope_iterator_next(&all_it, &data, &size);
 	ASSERT_FALSE(has_next);
@@ -291,18 +275,18 @@ iterator_tagged_filter(void) {
 	ASSERT_EQ(0, rv);
 	has_next = rope_iterator_next(&red_it, &data, &size);
 	ASSERT_TRUE(has_next);
-	ASSERT_STREQ((const char *)data, "red");
+	ASSERT_STREQS((const char *)data, "red", size);
 	ASSERT_EQ(3, size);
 	rv = rope_iterator_next(&red_it, &data, &size);
 	ASSERT_TRUE(has_next);
-	ASSERT_STREQ((const char *)data, "magenta");
+	ASSERT_STREQS((const char *)data, "magenta", size);
 	ASSERT_EQ(7, size);
 	rv = rope_iterator_cleanup(&red_it);
 	ASSERT_EQ(0, rv);
 
 	char *str = rope_range_to_str(&range, TAG_RED);
 	ASSERT_TRUE(str != NULL);
-	ASSERT_STREQ(str, "redmagenta");
+	ASSERT_STREQS(str, "redmagenta", size);
 	free(str);
 
 	rv = rope_range_cleanup(&range);

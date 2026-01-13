@@ -4,16 +4,11 @@
 #include <string.h>
 
 struct RopeRcString *
-rope_rc_string_new2(
-		const uint8_t *data1, size_t size1, const uint8_t *data2,
-		size_t size2) {
+rope_rc_string_allocate(size_t size, uint8_t **data_ptr) {
 	struct RopeRcString *rc_str;
 	size_t alloc_size;
 
-	if (ROPE_OVERFLOW_ADD(sizeof(*rc_str), size1, &alloc_size)) {
-		return NULL;
-	}
-	if (ROPE_OVERFLOW_ADD(alloc_size, size2, &alloc_size)) {
+	if (ROPE_OVERFLOW_ADD(sizeof(*rc_str), size, &alloc_size)) {
 		return NULL;
 	}
 
@@ -21,21 +16,21 @@ rope_rc_string_new2(
 	if (!rc_str) {
 		return NULL;
 	}
+	*data_ptr = rc_str->data;
 	cx_rc_init(&rc_str->rc);
+	rc_str->size = size;
 
-	if (data1) {
-		memcpy(rc_str->data, data1, size1);
-	}
-	if (data2) {
-		memcpy(&rc_str->data[size1], data2, size2);
-	}
-	rc_str->size = size1 + size2;
 	return rc_str;
 }
 
 struct RopeRcString *
-rope_rc_string_new(const uint8_t *data, size_t size) {
-	return rope_rc_string_new2(data, size, NULL, 0);
+rope_rc_string_new(
+		const uint8_t *data, size_t size) {
+	uint8_t *data_ptr;
+	struct RopeRcString *rc_str = rope_rc_string_allocate(size, &data_ptr);
+
+	memcpy(data_ptr, data, size);
+	return rc_str;
 }
 
 const uint8_t *

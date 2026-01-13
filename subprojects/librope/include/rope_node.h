@@ -41,10 +41,12 @@ struct RopeNode {
 	struct RopeNode *parent;
 
 	union {
+#ifdef ROPE_ENABLE_INLINE_LEAVES
 		struct {
 			size_t byte_size;
 			uint8_t data[ROPE_INLINE_LEAF_SIZE];
 		} inline_leaf;
+#endif
 		struct {
 			size_t byte_size;
 			struct RopeRcString *owned;
@@ -56,7 +58,8 @@ struct RopeNode {
 	} data;
 };
 
-typedef bool (*rope_node_condition_f)(const struct RopeNode *node, void *userdata);
+typedef bool (*rope_node_condition_f)(
+		const struct RopeNode *node, void *userdata);
 
 struct RopeNode *rope_node_new(struct RopePool *pool) ROPE_NO_UNUSED;
 
@@ -85,8 +88,11 @@ void rope_node_delete(struct RopeNode *node, struct RopePool *pool);
 void rope_node_delete_child(
 		struct RopeNode *node, struct RopePool *pool, enum RopeDirection which);
 
-struct RopeNode *
-rope_node_delete_while(
+struct RopeNode *rope_node_delete_while(
+		struct RopeNode *node, struct RopePool *pool,
+		rope_node_condition_f condition, void *userdata);
+
+struct RopeNode *rope_node_merge_while(
 		struct RopeNode *node, struct RopePool *pool,
 		rope_node_condition_f condition, void *userdata);
 

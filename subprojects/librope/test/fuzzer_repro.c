@@ -111,6 +111,32 @@ crash_2_reduced2(void) {
 	rope_cleanup(&rope);
 }
 
+static void
+crash_2_reduced3(void) {
+	int rv = 0;
+	struct Rope rope = {0};
+	struct RopeRange range = {0};
+
+	rv = rope_init(&rope);
+	ASSERT_EQ(0, rv);
+	rv = rope_range_init(&range, &rope);
+	ASSERT_EQ(0, rv);
+
+	// Inserting 96 bytes into range 2
+	rv = rope_range_insert(
+			&range,
+			(const uint8_t *)"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+							 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			96, 0x0);
+	ASSERT_EQ(0, rv);
+	// Inserting 0 bytes into range 2
+	rv = rope_range_insert(
+			&range, (const uint8_t *)"", 0, 0x929200ffff0000ff);
+	ASSERT_EQ(0, rv);
+	rope_range_cleanup(&range);
+	rope_cleanup(&rope);
+}
+
 CRASH_TEST(
 		crash_3, 0x0a, 0x25, 0x04, 0x00, 0xb1, 0x00, 0x00, 0x00, 0x00, 0x01,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x26, 0x26, 0x26, 0x26, 0x26, 0x26,
@@ -191,6 +217,7 @@ TEST(crash_1)
 TEST(crash_2)
 TEST(crash_2_reduced)
 TEST(crash_2_reduced2)
+TEST(crash_2_reduced3)
 TEST(crash_3)
 TEST(crash_3_reduced)
 TEST(crash_4)

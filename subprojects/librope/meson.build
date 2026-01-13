@@ -12,6 +12,10 @@ subdir('src')
 
 subdir('include')
 
+if get_option('inline_leaves')
+    add_project_arguments('-DROPE_ENABLE_INLINE_LEAVES', language : 'c')
+endif
+
 c_args = []
 
 librope = static_library(

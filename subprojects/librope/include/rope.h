@@ -24,8 +24,7 @@ struct RopeRcString {
 
 struct RopeRcString *rope_rc_string_new(const uint8_t *data, size_t size);
 
-struct RopeRcString *rope_rc_string_new2(
-		const uint8_t *data1, size_t size1, const uint8_t *data2, size_t size2);
+struct RopeRcString *rope_rc_string_allocate(size_t size, uint8_t **data_ptr);
 
 struct RopeRcString *rope_rc_string_retain(struct RopeRcString *str);
 
@@ -136,8 +135,6 @@ int rope_cursor_delete(struct RopeCursor *cursor, size_t char_count);
 
 struct RopeNode *
 rope_cursor_node(struct RopeCursor *cursor, rope_char_index_t *byte_index);
-
-int32_t rope_cursor_codepoint(struct RopeCursor *cursor);
 
 int rope_cursor_cleanup(struct RopeCursor *cursor);
 

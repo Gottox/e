@@ -1,25 +1,56 @@
 #define _GNU_SOURCE
 
+#include "../common.h"
 #include <assert.h>
 #include <getopt.h>
 #include <json.h>
 #include <rope.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
-#include <testlib.h>
+#include <unistd.h>
 
 static const char *opts = "i";
 static bool intermediate = false;
 
-static int
+static void
+write_file(const char *content, char *filename) {
+	FILE *f = fopen(filename, "w");
+	fwrite(content, 1, strlen(content), f);
+	fclose(f);
+}
+
+static void
+compare(const char *naive_content, const char *rope_content,
+		const char *last_good, json_object *patch) {
+	const char *script = "if ! DIFF=$(type -pf difft); then DIFF=\"$(type -pf "
+						 "diff) -u\"; fi; "
+						 "$DIFF $1 $2; "
+						 "rm $1 $2; "
+						 "exit 1;";
+	if (strcmp(naive_content, rope_content) == 0) {
+		return;
+	}
+	if (last_good) {
+		const char *patch_str = json_object_to_json_string(patch);
+		puts(last_good);
+		puts(patch_str);
+	}
+	char naive_path[256], rope_path[256];
+	snprintf(naive_path, sizeof(naive_path), "/tmp/naive-%i.txt", getpid());
+	snprintf(rope_path, sizeof(rope_path), "/tmp/rope-%i.txt", getpid());
+	write_file(naive_content, naive_path);
+	write_file(rope_content, rope_path);
+	execlp("/bin/sh", "/bin/sh", "-c", script, "", naive_path, rope_path, NULL);
+}
+
+static void
 naive_patch(char **naive_content, size_t pos, size_t del, const char *ins) {
 	size_t naive_content_len = strlen(*naive_content);
 	size_t ins_len = strlen(ins);
 	size_t new_len = naive_content_len - del + ins_len;
 	char *new_str = malloc(new_len + 1);
-	if (!new_str) {
-		return -1;
-	}
+	assert(new_str);
 	memcpy(new_str, *naive_content, pos);
 	memcpy(new_str + pos, ins, ins_len);
 	memcpy(new_str + pos + ins_len, *naive_content + pos + del,
@@ -27,13 +58,13 @@ naive_patch(char **naive_content, size_t pos, size_t del, const char *ins) {
 	new_str[new_len] = '\0';
 	free(*naive_content);
 	*naive_content = new_str;
-
-	return 0;
 }
+
 static int
 run_patch(
 		struct RopeCursor *cursor, char **naive_content, json_object *txn_obj) {
 	int rv = 0;
+	char *last_good = NULL;
 	char *rope_content = NULL;
 	json_object *pos_obj = json_object_array_get_idx(txn_obj, 0);
 	json_object *del_obj = json_object_array_get_idx(txn_obj, 1);
@@ -45,6 +76,9 @@ run_patch(
 	size_t pos = json_object_get_int(pos_obj);
 	size_t del = json_object_get_int(del_obj);
 	const char *str = json_object_get_string(str_obj);
+	if (intermediate) {
+		last_good = to_str(cursor->rope->root);
+	}
 
 	rv = rope_cursor_move_to_index(cursor, pos, 0);
 	if (rv < 0) {
@@ -58,15 +92,14 @@ run_patch(
 	if (rv < 0) {
 		goto out;
 	}
-	rv = naive_patch(naive_content, pos, del, str);
-	if (rv < 0) {
-		goto out;
-	}
 	if (intermediate) {
+		naive_patch(naive_content, pos, del, str);
+
 		rope_content = rope_to_str(cursor->rope, 0);
-		ASSERT_STREQ(*naive_content, rope_content);
+		compare(*naive_content, rope_content, last_good, txn_obj);
 	}
 out:
+	free(last_good);
 	free(rope_content);
 	// json_object_put(pos_obj);
 	// json_object_put(del_obj);
@@ -85,9 +118,8 @@ run_transaction(
 
 	size_t len = json_object_array_length(patches_obj);
 	for (size_t i = 0; i < len; i++) {
-		rv = run_patch(
-				cursor, naive_content,
-				json_object_array_get_idx(patches_obj, i));
+		json_object *patch_obj = json_object_array_get_idx(patches_obj, i);
+		rv = run_patch(cursor, naive_content, patch_obj);
 		if (rv < 0) {
 			goto out;
 		}
@@ -130,24 +162,19 @@ run_trace(json_object *trace) {
 		if (i % 10000 == 0) {
 			printf("Applying transaction %zu / %zu\n", i, len);
 		}
-		rv = run_transaction(
-				&cursor, &naive_content,
-				json_object_array_get_idx(txns_obj, i));
+		json_object *txn_obj = json_object_array_get_idx(txns_obj, i);
+		rv = run_transaction(&cursor, &naive_content, txn_obj);
 		if (rv < 0) {
 			goto out;
 		}
 	}
 	const char *end_content = json_object_get_string(end_content_obj);
 	actual_content = rope_to_str(&rope, 0);
-	ASSERT_STREQ(end_content, actual_content);
-	//rope_node_print(rope.root, "/tmp/node.dot");
+	compare(end_content, actual_content, NULL, NULL);
 
 out:
 	free(naive_content);
 	free(actual_content);
-	// json_object_put(start_content_obj);
-	// json_object_put(end_content_obj);
-	// json_object_put(txns_obj);
 	rope_cleanup(&rope);
 	return 0;
 }
