@@ -149,6 +149,7 @@ out:
 }
 int
 rope_cleanup(struct Rope *rope) {
+	rope_node_free(rope->root, &rope->pool);
 	rope_pool_cleanup(&rope->pool);
 	return 0;
 }

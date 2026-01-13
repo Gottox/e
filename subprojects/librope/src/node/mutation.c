@@ -183,6 +183,7 @@ node_delete_child(
 static struct RopeNode *
 node_delete(struct RopeNode *node, struct RopePool *pool) {
 	if (ROPE_NODE_IS_ROOT(node)) {
+		rope_node_cleanup(node);
 		memset(node, 0, sizeof(*node));
 		return node;
 	} else {

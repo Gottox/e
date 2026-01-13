@@ -16,8 +16,3 @@ option(
     value: 10,
     description: 'set the fuzzer timeout',
 )
-option(
-    'serialization',
-    type: 'feature',
-    description: 'set the fuzzer timeout',
-)

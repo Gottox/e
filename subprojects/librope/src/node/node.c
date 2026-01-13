@@ -50,6 +50,7 @@ rope_node_set_value(
 			goto out;
 		}
 		rope_node_set_rc_string(node, rc_str, 0, byte_size);
+		rope_rc_string_release(rc_str);
 	}
 
 out:

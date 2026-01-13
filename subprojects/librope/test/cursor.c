@@ -1,7 +1,7 @@
+#include "common.h"
 #include <rope.h>
 #include <string.h>
 #include <testlib.h>
-#include "common.h"
 
 static void
 cursor_basic(void) {
@@ -272,7 +272,6 @@ cursor_delete_updates_tagged_cursors(void) {
 	ASSERT_EQ(0, rv);
 
 	ASSERT_EQ((size_t)0, tagged.index);
-	return;
 	ASSERT_EQ(4, rope_char_size(&r));
 
 	struct RopeNode *node = rope_first(&r);
@@ -414,7 +413,8 @@ cursor_delete_edit_traces_error1(void) {
 	rope_cleanup(&r);
 }
 
-static void test_cursor_delete_multi_node(void) {
+static void
+test_cursor_delete_multi_node(void) {
 	struct Rope r = {0};
 	struct RopeCursor c = {0};
 	int rv = 0;
@@ -424,7 +424,8 @@ static void test_cursor_delete_multi_node(void) {
 
 	rope_node_free(r.root, &r.pool);
 
-	r.root = from_str(&r.pool, "[[['HE','L'],['L','O']],[['W','O'],['R','LD']]]");
+	r.root = from_str(
+			&r.pool, "[[['HE','L'],['L','O']],[['W','O'],['R','LD']]]");
 
 	rv = rope_cursor_init(&c, &r);
 	ASSERT_EQ(0, rv);
@@ -434,10 +435,33 @@ static void test_cursor_delete_multi_node(void) {
 
 	rv = rope_cursor_delete(&c, 8);
 
-	assert_json("['H','D']", r.root);
+	ASSERT_JSONEQ("['H','D']", r.root);
 
 	rope_cursor_cleanup(&c);
 	rope_cleanup(&r);
+}
+
+static void
+test_cursor_delete_root_noninline_leaf(void) {
+	int rv = 0;
+	struct Rope rope = {0};
+	struct RopeRange range = {0};
+
+	rv = rope_init(&rope);
+	ASSERT_EQ(0, rv);
+	rv = rope_range_init(&range, &rope);
+	ASSERT_EQ(0, rv);
+
+	rv = rope_range_insert_str(
+			&range,
+			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			0x0);
+	ASSERT_EQ(0, rv);
+	rv = rope_range_delete(&range);
+	ASSERT_EQ(0, rv);
+	rope_range_cleanup(&range);
+	rope_cleanup(&rope);
 }
 
 DECLARE_TESTS
@@ -451,4 +475,5 @@ TEST(cursor_delete_updates_tagged_cursors)
 TEST(cursor_delete_at_eof)
 TEST(cursor_delete_edit_traces_error1)
 TEST(test_cursor_delete_multi_node)
+TEST(test_cursor_delete_root_noninline_leaf)
 END_TESTS

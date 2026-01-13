@@ -59,28 +59,20 @@ cursor_update_location(struct RopeCursor *cursor) {
 	cursor->column = 0;
 	do {
 		value = rope_node_value(node, &size);
+		size = CX_MIN(size, byte_index);
+		byte_index = SIZE_MAX;
 
-		if (byte_index < size) {
-			size = byte_index;
-			byte_index = SIZE_MAX;
+		const uint8_t *p = value;
+		while ((p = memchr(p, '\n', size))) {
+			cursor->line++;
+			p++;
+			size -= (p - value);
+			value = p;
 		}
 
-		const uint8_t *new_line = memrchr(value, ROPE_NEWLINE, size);
-		if (new_line) {
-			cursor->column +=
-					cx_utf8_csize(&new_line[1], size - (new_line - value) - 1);
-			break;
-		} else {
-			cursor->column += rope_node_char_size(node);
+		if (cursor->line == 0) {
+			cursor->column += cx_utf8_clen(value, size);
 		}
-	} while ((node = rope_node_prev(node)));
-
-	if (!node) {
-		return;
-	}
-
-	do {
-		cursor->line += rope_node_new_lines(node);
 	} while ((node = rope_node_prev(node)));
 }
 

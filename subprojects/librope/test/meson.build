@@ -1,3 +1,5 @@
+jsonc_dep = dependency('json-c', default_options: ['warning_level=0', 'b_sanitize='])
+
 testlib_dep = dependency('testlib')
 
 #subdir('editing-traces')
@@ -24,6 +26,7 @@ foreach p : e_test
             testlib_dep,
             librope_dep,
             cextras_dep,
+            jsonc_dep,
         ],
     )
     test(p, t)

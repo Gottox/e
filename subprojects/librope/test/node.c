@@ -19,7 +19,7 @@ test_node_split_inline_middle(void) {
 	rv = rope_node_split(root, &pool, 2, &left, &right);
 	ASSERT_EQ(0, rv);
 
-	assert_json("['HE','LO']", root);
+	ASSERT_JSONEQ("['HE','LO']", root);
 
 	rope_node_free(root, &pool);
 	rope_pool_cleanup(&pool);
@@ -46,7 +46,7 @@ test_node_insert_right(void) {
 	ASSERT_EQ(root, rope_node_parent(right));
 	ASSERT_EQ(root, rope_node_parent(left));
 
-	assert_json("['HE','LO']", root);
+	ASSERT_JSONEQ("['HE','LO']", root);
 
 	rope_node_free(root, &pool);
 	rope_pool_cleanup(&pool);
@@ -64,7 +64,7 @@ test_node_delete(void) {
 
 	rope_node_delete(rope_node_left(root), &pool);
 
-	assert_json("'LO'", root);
+	ASSERT_JSONEQ("'LO'", root);
 
 	rope_node_free(root, &pool);
 	rope_pool_cleanup(&pool);
@@ -82,7 +82,7 @@ test_node_rotate_right(void) {
 
 	rope_node_rotate(root, ROPE_LEFT);
 
-	assert_json("[['HE','LL'],'O']", root);
+	ASSERT_JSONEQ("[['HE','LL'],'O']", root);
 
 	rope_node_free(root, &pool);
 	rope_pool_cleanup(&pool);
@@ -103,7 +103,7 @@ test_node_balance_left(void) {
 
 	rope_node_balance_up(hel_node);
 
-	assert_json("[['H','E'],[['L','L'],'O']]", root);
+	ASSERT_JSONEQ("[['H','E'],[['L','L'],'O']]", root);
 
 	rope_node_free(root, &pool);
 	rope_pool_cleanup(&pool);
@@ -124,7 +124,7 @@ test_node_balance_right(void) {
 
 	rope_node_balance_up(lo_node);
 
-	assert_json("[['H',['E','L']],['L','O']]", root);
+	ASSERT_JSONEQ("[['H',['E','L']],['L','O']]", root);
 
 	rope_node_free(root, &pool);
 	rope_pool_cleanup(&pool);
@@ -154,7 +154,7 @@ test_node_delete_while_left(void) {
 
 	rope_node_delete_while(node, &pool, node_delete_while_cb, NULL);
 
-	assert_json("['H','o']", root);
+	ASSERT_JSONEQ("['H','o']", root);
 
 	rope_node_free(root, &pool);
 	rope_pool_cleanup(&pool);
