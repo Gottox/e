@@ -91,8 +91,8 @@ rope_node_split(
 		return 0;
 	}
 
-	struct RopeNode *left = rope_pool_get(pool);
-	struct RopeNode *right = rope_pool_get(pool);
+	struct RopeNode *left = rope_node_new(pool);
+	struct RopeNode *right = rope_node_new(pool);
 	if (left == NULL || right == NULL) {
 		rv = -ROPE_ERROR_OOM;
 		goto out;
@@ -149,7 +149,7 @@ rope_node_insert(
 	int rv = 0;
 	struct RopeNode *new_node = NULL;
 
-	new_node = rope_pool_get(pool);
+	new_node = rope_node_new(pool);
 	if (new_node == NULL) {
 		goto out;
 	}
@@ -281,7 +281,7 @@ struct RopeNode *
 rope_node_merge_while(
 		struct RopeNode *node, struct RopePool *pool,
 		rope_node_condition_f condition, void *userdata) {
-	struct RopeRcString *rc_string;
+	struct RopeRcString *rc_string = NULL;
 	size_t total_size = 0;
 
 	struct RopeNode *start_node = node;
@@ -292,7 +292,7 @@ rope_node_merge_while(
 		total_size += rope_node_byte_size(node);
 	}
 	if (total_size == 0) {
-		return start_node;
+		goto out;
 	}
 
 	struct NodeMergeContext context = {
