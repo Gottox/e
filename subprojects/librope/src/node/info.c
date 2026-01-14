@@ -17,7 +17,7 @@
 size_t
 rope_node_depth(struct RopeNode *node) {
 	if (ROPE_NODE_IS_BRANCH(node)) {
-		return node->tags & ~ROPE_TYPE_MASK;
+		return node->data.branch.depth;
 	} else {
 		return 0;
 	}
@@ -74,5 +74,5 @@ ROPE_NODE_AGGREGATE(size_t, rope_node_byte_size, {
 
 enum RopeNodeType
 rope_node_type(const struct RopeNode *node) {
-	return node->tags >> ROPE_TYPE_SHIFT;
+	return node->type;
 }

@@ -49,6 +49,7 @@ compare(const char *naive_content, const char *rope_content,
 		const char *patch_str = json_object_to_json_string(patch);
 		puts(last_good);
 		puts(patch_str);
+		puts(naive_content);
 	}
 	char naive_path[256] = "/tmp/naive-XXXXXX", rope_path[256] = "/tmp/rope-XXXXXX";
 	int naive_fd = mkstemp(naive_path);

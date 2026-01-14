@@ -30,30 +30,26 @@ enum RopeDirection {
 };
 
 struct RopeNode {
-	/**
-	 * | types \ bits | 64,63 | 62-0         |
-	 * |--------------|-------|--------------|
-	 * | branch       | type  | child depth  |
-	 * | leaf         | type  | user defined |
-	 * | inline leaf  | type  | user defined |
-	 */
-	uint64_t tags;
+	enum RopeNodeType type;
 	struct RopeNode *parent;
 
 	union {
 #ifdef ROPE_ENABLE_INLINE_LEAVES
 		struct {
+			uint64_t tags;
 			size_t byte_size;
 			uint8_t data[ROPE_INLINE_LEAF_SIZE];
 		} inline_leaf;
 #endif
 		struct {
+			uint64_t tags;
 			size_t byte_size;
 			struct RopeRcString *owned;
 			const uint8_t *data;
 		} leaf;
 		struct {
 			struct RopeNode *children[2];
+			size_t depth;
 		} branch;
 	} data;
 };
@@ -91,6 +87,9 @@ void rope_node_delete_child(
 struct RopeNode *rope_node_delete_while(
 		struct RopeNode *node, struct RopePool *pool,
 		rope_node_condition_f condition, void *userdata);
+
+struct RopeNode *
+rope_node_delete_and_next(struct RopeNode *node, struct RopePool *pool);
 
 struct RopeNode *rope_node_merge_while(
 		struct RopeNode *node, struct RopePool *pool,

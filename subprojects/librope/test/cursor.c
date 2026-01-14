@@ -443,6 +443,123 @@ test_cursor_editing_traces_error1(void) {
 	rope_cleanup(&rope);
 }
 
+static void
+test_cursor_editing_traces_error2(void) {
+	int rv = 0;
+	struct Rope rope = {0};
+	struct RopeCursor c = {0};
+
+	rv = rope_init(&rope);
+	ASSERT_EQ(0, rv);
+	rv = rope_cursor_init(&c, &rope);
+	ASSERT_EQ(0, rv);
+
+	rope_node_free(rope.root, &rope.pool);
+	rope.root = from_str(
+			&rope.pool,
+			"[[[[[[\"<script>\",\"\\n\"],\"\\n\"],[[[\"\\texport let "
+			"\",\"room\"],\"\\n\"],[[\"\\texport let "
+			"\",\"connection\"],\"\\n\"]]],[[\"\\texport let "
+			"\",\"state\"],[\"\\n\",[[\"\\texport let "
+			"\",\"players\"],\"\\n\"]]]],[[[[[\"\\texport let "
+			"\",\"rounds\"],[\"\\n\",[\"\\texport let "
+			"sec\",\"ond\"]]],\"s_per_round\\n\"],[[\"\\texport let "
+			"\",\"_active_sessions\"],[[\"\\n\\t\",\"// \"],\"export let "
+			"state\"]]],[\"\\n\\nconst update_s\",[\"tate = async \",\"patch "
+			"=> \"]]]],[[[[[[[\"{\\n\\tawait "
+			"\",[\"fetch(`${room}/c\",\"onfigure`, "
+			"\"]],\"{\\n\\t\\tmethod\"],[[[\": 'POST',\\n\\t\\tmode\",\": "
+			"'same-origin',\"],[\"\\n\\t\\theaders: "
+			"{\",\"\\n\\t\\t\\t'content-typ\"]],[\"e': "
+			"'application\",\"/json',\\n\\t\\t},\\n\\t\\tb\"]]],[[[\"ody: "
+			"JSON.\",\"stringify(patch)\"],\"\\n\\t})\"],[[[\"\\n}\\n\\nconst "
+			"upd = \",\"patch => () => "
+			"\"],[\"update_state(pat\",\"ch)\"]],\"\\n\"]]],[[[[[\"\\n// "
+			"\",\"const start = \"],[\"() => {\\n// "
+			"\",\"\\tconsole\"]],[[\".log('start!')\\n\",\"// "
+			"\"],\"\\t\"]],[[\"update_state({st\",\"ate: "
+			"'playing'})\"],[\"\\n// "
+			"\",\"}\"]]],[[\"\\n\",\"\\n</"
+			"script>\\n\\n<main>\"],[[\"\\n\\t<h1>Glass Bead\",\" Game "
+			"Timer\"],\"</h1>\"]]]],[[[[\"\\n\\t<h\",\"4\"],\">Room:\"],[[\" "
+			"<em>\",\"{room\"],\"}</em>\"]],[[\"</"
+			"h\",\"4\"],\">\\n\\t<div>\"]]],[[[[[[\"{connection} \",\"/\"],\" "
+			"{state}\"],[[\"</div>\",\"\\n\"],[\"\\n\\t<div "
+			"id='\",\"config\"]]],[[\"'>\\n\\t\\t<h2>Config<\",\"/"
+			"h2>\\n\\t\\t{#\"],[\"if state == "
+			"'wai\",\"ting'\"]]],[[[[\"}\",\"\\n\"],\"\\t\\t\\t<button "
+			"on:click={\"],[[[\"() => \",\"update_state({state: "
+			"'playing'})\"],\"}>Start</button>\\n\"],[[\"\\t\\t{:else if state "
+			"== 'playing'}\\n\\t\\t\\t<button on:click={\",\"u\"],\"({state: "
+			"'paused'})}>Pause</button>\\n\"]]],[\"\\t\\t\",[[\"{:else if "
+			"state == "
+			"'\",\"paused\"],\"'}\\n\"]]]],[[[[[\"\\t\\t\\t\",\"<button "
+			"\"],\"on:click={u\"],[\"({state: "
+			"'\",[\"playing\",\"'})\"]]],[[\"}>Resume\",\"</"
+			"button>\"],[[\"\\n\\t\\t{/"
+			"if}\\n\",\"\\n\\t\\t<div>\\n\\t\\t\\t\"],\"<label>Number\"]]],[[[["
+			"[\" of players<inpu\",\"t type='\"],\"number' "
+			"\"],[\"on:input=\",\"></label>\"]],[[\"\\n\\t\\t\",\"</"
+			"div>\"],[\"\\n\\t\",[\"</div>\",\"\\n</"
+			"main>\\n\\n<style>\"]]]],[[[\"\\n\\n#config "
+			"{\\n\\tmar\",[\"gin-top: "
+			"2em;\",\"\\n}\"]],[\"\\n\",\"\\n\\t\"]],[\"/* \",[\"main "
+			"{\\n\\t\\ttext-align: center;\\n\\t\\tpadding: "
+			"1em;\\n\\t\\tmax-width: 240px;\\n\\t\\tmargin: 0 "
+			"auto;\\n\\t}\\n\\n\\th1 {\\n\\t\\tcolor: "
+			"#ff3e00;\\n\\t\\ttext-transform: uppercase;\\n\\t\\tfont-size: "
+			"4em;\\n\\t\\tfont-weight: 100;\\n\\t}\\n\\n\\t@media (min-width: "
+			"640px) {\\n\\t\\tmain {\\n\\t\\t\\tmax-width: "
+			"none;\\n\\t\\t}\\n\\t}\",[\" */\",\"\\n</style>\"]]]]]]]]]");
+
+	// [ 742, 18, "u" ]
+	rv = rope_cursor_move_to_index(&c, 742, 0);
+	ASSERT_EQ(0, rv);
+
+	rv = rope_cursor_delete(&c, 18);
+
+	rv = rope_cursor_insert_str(&c, "u", 0);
+	ASSERT_EQ(0, rv);
+
+	char *str = rope_to_str(&rope, 0);
+	ASSERT_STREQ(
+			"<script>\n\n\texport let room\n\texport let connection\n\texport "
+			"let state\n\texport let players\n\texport let rounds\n\texport "
+			"let seconds_per_round\n\texport let _active_sessions\n\t// export "
+			"let state\n\nconst update_state = async patch => {\n\tawait "
+			"fetch(`${room}/configure`, {\n\t\tmethod: 'POST',\n\t\tmode: "
+			"'same-origin',\n\t\theaders: {\n\t\t\t'content-type': "
+			"'application/json',\n\t\t},\n\t\tbody: "
+			"JSON.stringify(patch)\n\t})\n}\n\nconst upd = patch => () => "
+			"update_state(patch)\n\n// const start = () => {\n// "
+			"\tconsole.log('start!')\n// \tupdate_state({state: "
+			"'playing'})\n// }\n\n</script>\n\n<main>\n\t<h1>Glass Bead Game "
+			"Timer</h1>\n\t<h4>Room: <em>{room}</em></h4>\n\t<div>{connection} "
+			"/ {state}</div>\n\n\t<div "
+			"id='config'>\n\t\t<h2>Config</h2>\n\t\t{#if state == "
+			"'waiting'}\n\t\t\t<button on:click={u({state: "
+			"'playing'})}>Start</button>\n\t\t{:else if state == "
+			"'playing'}\n\t\t\t<button on:click={u({state: "
+			"'paused'})}>Pause</button>\n\t\t{:else if state == "
+			"'paused'}\n\t\t\t<button on:click={u({state: "
+			"'playing'})}>Resume</button>\n\t\t{/"
+			"if}\n\n\t\t<div>\n\t\t\t<label>Number of players<input "
+			"type='number' "
+			"on:input=></label>\n\t\t</div>\n\t</div>\n</"
+			"main>\n\n<style>\n\n#config {\n\tmargin-top: 2em;\n}\n\n\t/* main "
+			"{\n\t\ttext-align: center;\n\t\tpadding: 1em;\n\t\tmax-width: "
+			"240px;\n\t\tmargin: 0 auto;\n\t}\n\n\th1 {\n\t\tcolor: "
+			"#ff3e00;\n\t\ttext-transform: uppercase;\n\t\tfont-size: "
+			"4em;\n\t\tfont-weight: 100;\n\t}\n\n\t@media (min-width: 640px) "
+			"{\n\t\tmain {\n\t\t\tmax-width: none;\n\t\t}\n\t} "
+			"*/\n</style>",
+			str);
+	free(str);
+
+	rope_cursor_cleanup(&c);
+	rope_cleanup(&rope);
+}
+
 DECLARE_TESTS
 TEST(cursor_basic)
 TEST(cursor_utf8)
@@ -455,4 +572,5 @@ TEST(cursor_delete_edit_traces_error1)
 TEST(test_cursor_delete_multi_node)
 TEST(test_cursor_delete_root_noninline_leaf)
 TEST(test_cursor_editing_traces_error1)
+TEST(test_cursor_editing_traces_error2)
 END_TESTS

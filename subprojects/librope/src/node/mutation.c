@@ -6,10 +6,8 @@
 static void
 node_set_depth(struct RopeNode *node, size_t depth) {
 	assert(ROPE_NODE_IS_BRANCH(node));
-	assert(depth < ~ROPE_TYPE_MASK);
 
-	node->tags &= ROPE_TYPE_MASK;
-	node->tags |= (uint64_t)depth & ~ROPE_TYPE_MASK;
+	node->data.branch.depth = depth;
 }
 
 void
@@ -51,8 +49,7 @@ rope_node_move(struct RopeNode *target, struct RopeNode *node) {
 
 void
 rope_node_set_type(struct RopeNode *node, enum RopeNodeType type) {
-	node->tags &= ~ROPE_TYPE_MASK;
-	node->tags |= (uint64_t)type << ROPE_TYPE_SHIFT;
+	node->type = type;
 }
 
 int
@@ -228,6 +225,21 @@ rope_node_delete_while(
 	}
 
 	return node;
+}
+
+struct RopeNode *
+rope_node_delete_and_next(struct RopeNode *node, struct RopePool *pool) {
+	struct RopeNode *next = rope_node_next(node);
+	if (next != NULL) {
+		struct RopeNode *parent = rope_node_parent(next);
+		if (rope_node_left(parent) == node) {
+			// If next and node are siblings, node will be collapsed into parent
+			// on deletion of next. So we need to continue from parent
+			next = parent;
+		}
+	}
+	node_delete(node, pool);
+	return next;
 }
 
 struct NodeMergeContext {

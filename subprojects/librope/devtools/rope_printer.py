@@ -43,7 +43,7 @@ def resolve_input_to_ptr(arg):
 
 class DumpRopeTree(gdb.Command):
     """Print the entire RopeNode tree structure."""
-    
+
     def __init__(self):
         super(DumpRopeTree, self).__init__("rope-dump", gdb.COMMAND_USER)
 
@@ -63,37 +63,37 @@ class DumpRopeTree(gdb.Command):
 
     def walk(self, node_ptr, indent, label):
         idx_prefix = "  " * indent + label
-        
+
         if not node_ptr or int(node_ptr) == 0:
             print(f"{idx_prefix}NULL")
             return
 
         try:
             node = node_ptr.dereference()
-            raw_tags = int(node['tags'])
-            node_type = (raw_tags >> 62) & 0x3
-            tag_val = raw_tags & ROPE_NODE_TYPE_MASK
-            
+            node_type = int(node['type'])
+
             # Shared metadata
             header = f"(parent: {node['parent']}) [{NODE_TYPES.get(node_type, 'UNKNOWN')}]"
-            
+
             if node_type == TYPE_BRANCH:
-                print(f"{idx_prefix}{header} (depth: {tag_val})")
                 branch = node['data']['branch']
+                depth = int(branch['depth'])
+                print(f"{idx_prefix}{header} (depth: {depth})")
                 self.walk(branch['children'][0], indent + 1, "L: ")
                 self.walk(branch['children'][1], indent + 1, "R: ")
-            
+
             else:
                 # Leaf handling (Inline vs Standard)
                 is_inline = (node_type == TYPE_INLINE_LEAF)
                 leaf_key = 'inline_leaf' if is_inline else 'leaf'
                 leaf_data = node['data'][leaf_key]
-                
+
                 size = int(leaf_data['byte_size'])
                 # Inline data address is the address of the member; Leaf data is a pointer
                 data_addr = leaf_data['data'].address if is_inline else leaf_data['data']
-                
+
                 content = safe_get_string(data_addr, size)
+                tag_val = int(leaf_data['tags'])
                 print(f"{idx_prefix}{header} ({size} bytes, tag {tag_val}) \"{content}\"")
 
         except gdb.error as e:

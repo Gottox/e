@@ -298,8 +298,16 @@ rope_cursor_delete(struct RopeCursor *cursor, size_t char_count) {
 	}
 	assert(node != NULL);
 
-	node = rope_node_delete_while(
-			node, &rope->pool, cursor_while_delete_cb, &remaining);
+	while(node) {
+		size_t char_size = rope_node_char_size(node);
+		if (char_size > remaining) {
+			break;
+		}
+		remaining -= char_size;
+		node = rope_node_delete_and_next(node, &rope->pool);
+	}
+	//node = rope_node_delete_while(
+	//		node, &rope->pool, cursor_while_delete_cb, &remaining);
 
 	if (node && remaining > 0) {
 		size_t size = 0;

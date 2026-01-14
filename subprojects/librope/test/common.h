@@ -37,7 +37,8 @@ node_from_json(struct json_object *obj, struct RopePool *pool) {
 		struct RopeNode *right = node_from_json(right_json, pool);
 		size_t depth =
 				CX_MAX(rope_node_depth(left), rope_node_depth(right)) + 1;
-		node->tags = (uint64_t)ROPE_NODE_BRANCH << 62 | (uint64_t)depth;
+		node->data.branch.depth = depth;
+		node->type = ROPE_NODE_BRANCH;
 
 		left->parent = node;
 		right->parent = node;

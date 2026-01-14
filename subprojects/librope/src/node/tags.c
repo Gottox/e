@@ -14,9 +14,26 @@
 			} \
 	}
 
+static uint64_t *
+node_tags(struct RopeNode *node) {
+	switch (rope_node_type(node)) {
+	case ROPE_NODE_BRANCH:
+		return NULL;
+	case ROPE_NODE_LEAF:
+		return &node->data.leaf.tags;
+	case ROPE_NODE_INLINE_LEAF:
+		return &node->data.inline_leaf.tags;
+	default:
+		ROPE_UNREACHABLE();
+	}
+}
 uint64_t
 rope_node_tags(struct RopeNode *node) {
-	return node->tags & ~ROPE_TYPE_MASK;
+	if (ROPE_NODE_IS_LEAF(node)) {
+		return *node_tags(node);
+	} else {
+		return 0;
+	}
 }
 
 bool
@@ -28,14 +45,16 @@ rope_node_match_tags(struct RopeNode *node, uint64_t tags) {
 }
 
 ROPE_NODE_TRAVERSAL(rope_node_set_tags, uint64_t, tags, {
-	node->tags &= ROPE_TYPE_MASK;
-	node->tags |= tags;
+	assert(ROPE_NODE_IS_LEAF(node));
+	*node_tags(node) |= tags;
 })
 
 ROPE_NODE_TRAVERSAL(rope_node_remove_tags, uint64_t, tags, {
-	node->tags &= ~tags | ROPE_TYPE_MASK;
+	assert(ROPE_NODE_IS_LEAF(node));
+	*node_tags(node) &= ~tags;
 })
 
 ROPE_NODE_TRAVERSAL(rope_node_add_tags, uint64_t, tags, {
-	node->tags |= tags;
+	assert(ROPE_NODE_IS_LEAF(node));
+	*node_tags(node) |= tags;
 })
