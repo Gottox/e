@@ -60,23 +60,23 @@ out:
 
 static void
 print_string(const uint8_t *data, size_t length) {
-	fputs("(const uint8_t *)\"", stdout);
+	fputs("(const uint8_t *)\"", stderr);
 	for (size_t i = 0; i < length; i++) {
 		if (!isprint(data[i])) {
-			printf("\\x%02x", data[i]);
+			fprintf(stderr, "\\x%02x", data[i]);
 		} else if (data[i] == '"') {
-			fputs("\\\"", stdout);
+			fputs("\\\"", stderr);
 		} else {
-			putchar(data[i]);
+			fputc(data[i], stderr);
 		}
 	}
-	putchar('"');
+	fputc('"', stderr);
 }
 
 static void
 print_rv_check(int rv, bool print) {
 	if (print) {
-		printf("ASSERT_EQ(%u, rv);\n", rv);
+		fprintf(stderr, "ASSERT_EQ(%u, rv);\n", rv);
 	}
 }
 
@@ -104,7 +104,7 @@ rope_deserialize(
 	while ((rv = deser_read_command(&command, &data, &length)) > 0) {
 		struct RopeRange *range = &ranges[command.range_index];
 
-		// printf("Processing command on range %u: ", command.range_index);
+		// fprintf(stderr, "Processing command on range %u: ", command.range_index);
 		switch (command.type) {
 		case ROPE_DESER_INSERT:
 			tmp = command.args.insert.length;
@@ -128,12 +128,12 @@ rope_deserialize(
 			}
 
 			if (print) {
-				printf("// Inserting %u bytes into range %u\n",
+				fprintf(stderr, "// Inserting %u bytes into range %u\n",
 					   command.args.insert.length, command.range_index);
-				printf("rv = rope_range_insert(&ranges[%u], ",
+				fprintf(stderr, "rv = rope_range_insert(&ranges[%u], ",
 					   command.range_index);
 				print_string(payload, command.args.insert.length);
-				printf(", %u, 0x%" PRIx64 ");\n", command.args.insert.length,
+				fprintf(stderr, ", %u, 0x%" PRIx64 ");\n", command.args.insert.length,
 					   command.args.insert.tags);
 			}
 
@@ -145,14 +145,14 @@ rope_deserialize(
 
 			free(payload);
 		case ROPE_DESER_DELETE:
-			// printf("rv = rope_range_delete(&range[%i]\n");
+			// fprintf(stderr, "rv = rope_range_delete(&range[%i]\n");
 			// rv = rope_range_delete(range);
 			break;
 		case ROPE_DESER_RANGE_START:
 			if (print) {
-				printf("// Moving range %u start to index %i\n",
+				fprintf(stderr, "// Moving range %u start to index %i\n",
 					   command.range_index, tmp);
-				printf("rv = rope_range_start_move_to_index(&ranges[%u], "
+				fprintf(stderr, "rv = rope_range_start_move_to_index(&ranges[%u], "
 					   "%u);\n",
 					   command.range_index, command.args.span_range.position);
 			}
@@ -167,9 +167,9 @@ rope_deserialize(
 		case ROPE_DESER_RANGE_END:
 			tmp = command.args.span_range.position;
 			if (print) {
-				printf("// Moving range %u end to index %i\n",
+				fprintf(stderr, "// Moving range %u end to index %i\n",
 					   command.range_index, tmp);
-				printf("rv = rope_range_end_move_to_index(&ranges[%u], %u, "
+				fprintf(stderr, "rv = rope_range_end_move_to_index(&ranges[%u], %u, "
 					   "0x%" PRIx64 ");\n",
 					   command.range_index, command.args.span_range.position,
 					   command.args.span_range.tags);

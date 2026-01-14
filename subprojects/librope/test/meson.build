@@ -29,5 +29,5 @@ foreach p : e_test
             jsonc_dep,
         ],
     )
-    test(p, t)
+    test(p, t, args: ['-t'], protocol: 'tap')
 endforeach
