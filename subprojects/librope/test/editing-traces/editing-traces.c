@@ -8,26 +8,40 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 static const char *opts = "i";
 static bool intermediate = false;
 
 static void
-write_file(const char *content, char *filename) {
-	FILE *f = fopen(filename, "w");
+write_file(const char *content, int fd) {
+	FILE *f = fdopen(fd, "w");
 	fwrite(content, 1, strlen(content), f);
 	fclose(f);
+}
+
+static int
+spawn(char *prog, char *args[]) {
+	if (fork() == 0) {
+		execvp(prog, args);
+		perror("execvp failed");
+		_exit(1);
+	} else {
+		int status;
+		wait(&status);
+		if (WIFEXITED(status)) {
+			return WEXITSTATUS(status);
+		} else {
+			return -1;
+		}
+	}
+	return 0; // Placeholder return value
 }
 
 static void
 compare(const char *naive_content, const char *rope_content,
 		const char *last_good, json_object *patch) {
-	const char *script = "if ! DIFF=$(type -pf difft); then DIFF=\"$(type -pf "
-						 "diff) -u\"; fi; "
-						 "$DIFF $1 $2; "
-						 "rm $1 $2; "
-						 "exit 1;";
 	if (strcmp(naive_content, rope_content) == 0) {
 		return;
 	}
@@ -36,12 +50,21 @@ compare(const char *naive_content, const char *rope_content,
 		puts(last_good);
 		puts(patch_str);
 	}
-	char naive_path[256], rope_path[256];
-	snprintf(naive_path, sizeof(naive_path), "/tmp/naive-%i.txt", getpid());
-	snprintf(rope_path, sizeof(rope_path), "/tmp/rope-%i.txt", getpid());
-	write_file(naive_content, naive_path);
-	write_file(rope_content, rope_path);
-	execlp("/bin/sh", "/bin/sh", "-c", script, "", naive_path, rope_path, NULL);
+	char naive_path[256] = "/tmp/naive-XXXXXX", rope_path[256] = "/tmp/rope-XXXXXX";
+	int naive_fd = mkstemp(naive_path);
+	int rope_fd = mkstemp(rope_path);
+	write_file(naive_content, naive_fd);
+	write_file(rope_content, rope_fd);
+	char *script = "if ! DIFF=$(type -pf difft); then DIFF=\"$(type -pf "
+						 "diff) -u\"; fi; "
+						 "$DIFF $1 $2; "
+						 "rm $1 $2; "
+						 "exit 1;";
+	char *args[] = {
+			"/bin/sh", "-c", script, "", naive_path, rope_path, NULL,
+	};
+	spawn("/bin/sh", args);
+	abort();
 }
 
 static void

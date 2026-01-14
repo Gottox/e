@@ -34,15 +34,13 @@ test_node_insert_right(void) {
 	ASSERT_EQ(0, rv);
 
 	struct RopeNode *root = from_str(&pool, "'HE'");
-	struct RopeNode *new_node = from_str(&pool, "'LO'");
 
-	rv = rope_node_insert(root, new_node, &pool, ROPE_RIGHT);
+	rv = rope_node_insert_right(root, (const uint8_t*)"LO", 2, 0xFF, &pool);
 
 	ASSERT_EQ(ROPE_NODE_BRANCH, rope_node_type(root));
 	struct RopeNode *left = rope_node_left(root);
 	struct RopeNode *right = rope_node_right(root);
 
-	ASSERT_EQ(new_node, right);
 	ASSERT_EQ(root, rope_node_parent(right));
 	ASSERT_EQ(root, rope_node_parent(left));
 

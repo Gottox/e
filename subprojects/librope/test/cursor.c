@@ -413,6 +413,36 @@ test_cursor_delete_root_noninline_leaf(void) {
 	rope_cleanup(&rope);
 }
 
+static void
+test_cursor_editing_traces_error1(void) {
+	int rv = 0;
+	struct Rope rope = {0};
+	struct RopeCursor c = {0};
+
+	rv = rope_init(&rope);
+	ASSERT_EQ(0, rv);
+	rv = rope_cursor_init(&c, &rope);
+	ASSERT_EQ(0, rv);
+
+	rope_node_free(rope.root, &rope.pool);
+	rope.root = from_str(&rope.pool, STRFY([
+		[ [ "\n\n\n", "When I see peop" ], "le again, they a" ], "lways"
+	]));
+
+	rv = rope_cursor_move_to_index(&c, 0, 0);
+	ASSERT_EQ(0, rv);
+
+	rv = rope_cursor_insert_str(&c, "C", 0);
+	ASSERT_EQ(0, rv);
+
+	char *str = rope_to_str(&rope, 0);
+	ASSERT_STREQ("C\n\n\nWhen I see people again, they always", str);
+	free(str);
+
+	rope_cursor_cleanup(&c);
+	rope_cleanup(&rope);
+}
+
 DECLARE_TESTS
 TEST(cursor_basic)
 TEST(cursor_utf8)
@@ -424,4 +454,5 @@ TEST(cursor_delete_at_eof)
 TEST(cursor_delete_edit_traces_error1)
 TEST(test_cursor_delete_multi_node)
 TEST(test_cursor_delete_root_noninline_leaf)
+TEST(test_cursor_editing_traces_error1)
 END_TESTS

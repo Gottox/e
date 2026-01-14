@@ -12,8 +12,8 @@ node_set_depth(struct RopeNode *node, size_t depth) {
 	node->tags |= (uint64_t)depth & ~ROPE_TYPE_MASK;
 }
 
-static void
-node_update_depth(struct RopeNode *node) {
+void
+rope_node_update_depth(struct RopeNode *node) {
 	if (!ROPE_NODE_IS_BRANCH(node)) {
 		return;
 	}
@@ -27,8 +27,8 @@ node_update_depth(struct RopeNode *node) {
 	node_set_depth(node, depth);
 }
 
-static void
-node_update_children(struct RopeNode *node) {
+void
+rope_node_update_children(struct RopeNode *node) {
 	if (!ROPE_NODE_IS_BRANCH(node)) {
 		return;
 	}
@@ -39,8 +39,8 @@ node_update_children(struct RopeNode *node) {
 	left->parent = right->parent = node;
 }
 
-static void
-node_move(struct RopeNode *target, struct RopeNode *node) {
+void
+rope_node_move(struct RopeNode *target, struct RopeNode *node) {
 	struct RopeNode *target_parent = rope_node_parent(target);
 	struct RopeNode *node_parent = rope_node_parent(node);
 	memcpy(target, node, sizeof(struct RopeNode));
@@ -128,7 +128,7 @@ rope_node_split(
 	children[0] = left;
 	children[1] = right;
 
-	node_update_children(node);
+	rope_node_update_children(node);
 	node_set_depth(node, 1);
 	rope_node_balance_up(node);
 
@@ -142,48 +142,6 @@ out:
 	return rv;
 }
 
-int
-rope_node_insert(
-		struct RopeNode *target, struct RopeNode *node, struct RopePool *pool,
-		enum RopeDirection which) {
-	int rv = 0;
-	struct RopeNode *new_node = NULL;
-
-	new_node = rope_node_new(pool);
-	if (new_node == NULL) {
-		goto out;
-	}
-
-	node_move(new_node, target);
-
-	rope_node_set_type(target, ROPE_NODE_BRANCH);
-	struct RopeNode **children = target->data.branch.children;
-	children[which] = node;
-	children[!which] = new_node;
-	node_update_children(target);
-	rope_node_balance_up(new_node);
-
-	new_node = NULL;
-out:
-	rope_node_free(new_node, pool);
-	return rv;
-}
-
-static void
-node_delete_child(
-		struct RopeNode *node, struct RopePool *pool,
-		enum RopeDirection which) {
-	assert(ROPE_NODE_IS_BRANCH(node));
-
-	struct RopeNode *child = rope_node_child(node, which);
-	struct RopeNode *sibling = rope_node_child(node, !which);
-	node_move(node, sibling);
-	node_update_children(node);
-	node_update_depth(node);
-	rope_node_free(sibling, pool);
-	rope_node_free(child, pool);
-}
-
 static struct RopeNode *
 node_delete(struct RopeNode *node, struct RopePool *pool) {
 	if (ROPE_NODE_IS_ROOT(node)) {
@@ -194,7 +152,7 @@ node_delete(struct RopeNode *node, struct RopePool *pool) {
 		struct RopeNode *parent = rope_node_parent(node);
 		enum RopeDirection which = rope_node_which(node);
 
-		node_delete_child(parent, pool, which);
+		rope_node_delete_child(parent, pool, which);
 		return parent;
 	}
 }
@@ -202,6 +160,21 @@ node_delete(struct RopeNode *node, struct RopePool *pool) {
 void
 rope_node_delete(struct RopeNode *node, struct RopePool *pool) {
 	rope_node_balance_up(node_delete(node, pool));
+}
+
+static void
+node_delete_child(
+		struct RopeNode *node, struct RopePool *pool,
+		enum RopeDirection which) {
+	assert(ROPE_NODE_IS_BRANCH(node));
+
+	struct RopeNode *child = rope_node_child(node, which);
+	struct RopeNode *sibling = rope_node_child(node, !which);
+	rope_node_move(node, sibling);
+	rope_node_update_children(node);
+	rope_node_update_depth(node);
+	rope_node_free(sibling, pool);
+	rope_node_free(child, pool);
 }
 
 void
@@ -332,10 +305,10 @@ rope_node_rotate(struct RopeNode *node, enum RopeDirection which) {
 	pivot_children[which] = node_children[which];
 	node_children[which] = pivot;
 
-	node_update_children(pivot);
-	node_update_children(node);
-	node_update_depth(pivot);
-	node_update_depth(node);
+	rope_node_update_children(pivot);
+	rope_node_update_children(node);
+	rope_node_update_depth(pivot);
+	rope_node_update_depth(node);
 }
 
 void
@@ -353,7 +326,7 @@ rope_node_balance_up(struct RopeNode *node) {
 		} else if (right_depth > left_depth + 1) {
 			rope_node_rotate(node, ROPE_LEFT);
 		} else {
-			node_update_depth(node);
+			rope_node_update_depth(node);
 		}
 
 		// Recalculate depth

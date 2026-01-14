@@ -220,66 +220,6 @@ rope_cursor_move(struct RopeCursor *cursor, off_t offset) {
 	return cursor_update(cursor);
 }
 
-static int
-cursor_insert_node(
-		struct RopeCursor *cursor, struct RopeNode *insert_at,
-		const uint8_t *data, size_t byte_size, uint64_t tags,
-		enum RopeDirection which) {
-	int rv = 0;
-	struct Rope *rope = cursor->rope;
-	struct RopeNode *node = rope_pool_get(&rope->pool);
-	if (node == NULL) {
-		rv = -1;
-		goto out;
-	}
-
-	rv = rope_node_set_value(node, data, byte_size);
-	if (rv < 0) {
-		goto out;
-	}
-	rope_node_set_tags(node, tags);
-
-	struct RopeNode *neighbour = rope_node_neighbour(insert_at, which);
-	if (neighbour && rope_node_depth(neighbour) < rope_node_depth(insert_at)) {
-		insert_at = neighbour;
-		which = !which;
-	}
-
-	rv = rope_node_insert(insert_at, node, &rope->pool, which);
-	if (rv < 0) {
-		goto out;
-	}
-
-	node = NULL;
-out:
-	rope_node_free(node, &rope->pool);
-	return rv;
-}
-
-static int
-cursor_insert_right(
-		struct RopeCursor *cursor, struct RopeNode *insert_at,
-		const uint8_t *data, size_t byte_size, uint64_t tags) {
-	int rv = -1;
-	bool inserted = false;
-
-	if (rope_node_byte_size(insert_at) == 0) {
-		rope_node_set_tags(insert_at, tags);
-		rv = rope_node_set_value(insert_at, data, byte_size);
-	} else if (rope_node_tags(insert_at) == tags) {
-		rv = rope_node_append_value(insert_at, data, byte_size);
-	}
-	inserted = rv == 0;
-
-	rv = 0;
-	if (!inserted) {
-		rv = cursor_insert_node(
-				cursor, insert_at, data, byte_size, tags, ROPE_RIGHT);
-	}
-
-	return rv;
-}
-
 int
 rope_cursor_insert(
 		struct RopeCursor *cursor, const uint8_t *data, size_t byte_size,
@@ -301,16 +241,11 @@ rope_cursor_insert(
 			rope->root, cursor_index, /*tags=*/0, &insert_at_byte);
 
 	rv = rope_node_split(insert_at, &rope->pool, insert_at_byte, &left, &right);
+
 	if (left) {
-		rv = cursor_insert_right(cursor, left, data, byte_size, tags);
+		rv = rope_node_insert_right(left, data, byte_size, tags, &rope->pool);
 	} else {
-		struct RopeNode *neighbour = rope_node_prev(right);
-		if (neighbour) {
-			rv = cursor_insert_right(cursor, neighbour, data, byte_size, tags);
-		} else {
-			rv = cursor_insert_node(
-					cursor, right, data, byte_size, tags, ROPE_LEFT);
-		}
+		rv = rope_node_insert_left(right, data, byte_size, tags, &rope->pool);
 	}
 	if (rv < 0) {
 		goto out;

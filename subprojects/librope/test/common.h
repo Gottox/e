@@ -13,6 +13,8 @@
 		free(actual_str); \
 	} while (0)
 
+#define STRFY(...) #__VA_ARGS__
+
 struct RopeNode *
 node_from_json(struct json_object *obj, struct RopePool *pool) {
 	if (obj == NULL || pool == NULL) {

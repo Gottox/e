@@ -149,19 +149,33 @@ const uint8_t *rope_node_value(const struct RopeNode *node, size_t *size);
  * node/mutation.c
  */
 
+void rope_node_update_depth(struct RopeNode *node);
+
+void rope_node_update_children(struct RopeNode *node);
+
+void rope_node_move(struct RopeNode *target, struct RopeNode *node);
+
 void rope_node_set_type(struct RopeNode *node, enum RopeNodeType type);
 
 int rope_node_split(
 		struct RopeNode *node, struct RopePool *pool, rope_index_t byte_index,
 		struct RopeNode **left_ptr, struct RopeNode **right_ptr);
 
-int rope_node_insert(
-		struct RopeNode *target, struct RopeNode *node, struct RopePool *pool,
-		enum RopeDirection which);
-
 void rope_node_rotate(struct RopeNode *node, enum RopeDirection which);
 
 void rope_node_balance_up(struct RopeNode *node);
+
+/**********************************
+ * node/insert.c
+ */
+
+int rope_node_insert_left(
+		struct RopeNode *node, const uint8_t *data, size_t byte_size,
+		uint64_t tags, struct RopePool *pool);
+
+int rope_node_insert_right(
+		struct RopeNode *node, const uint8_t *data, size_t byte_size,
+		uint64_t tags, struct RopePool *pool);
 
 /**********************************
  * inline node functions
