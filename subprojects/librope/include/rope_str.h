@@ -7,18 +7,22 @@
 
 #define ROPE_STR_INLINE_SIZE (sizeof(void *[2]))
 
+struct RopeStrState {
+	size_t byte_count;
+	size_t cp_count;
+	size_t char_count;
+	size_t utf16_count;
+	size_t column_count;
+	uint_least16_t state;
+	uint_least8_t last_char_size;
+};
 struct RopeStrHeap {
 	size_t ref_count;
 	uint8_t data[];
 };
 
 struct RopeStr {
-	size_t byte_size;
-	size_t char_size;
-	size_t utf16_size;
-	uint_least16_t state;
-	uint_least8_t last_char_size;
-
+	struct RopeStrState state;
 	union {
 		struct {
 			uint8_t data[ROPE_STR_INLINE_SIZE];
@@ -31,26 +35,28 @@ struct RopeStr {
 };
 
 int rope_str_init(
-		struct RopeStr *str, const uint8_t *data, size_t byte_size,
-		uint_least16_t state);
+		struct RopeStr *str, const uint8_t *data, size_t byte_size);
 
 int rope_str(struct RopeStr *str, size_t byte_size, uint8_t **data_ptr);
 
-void rope_str_update(struct RopeStr *str, uint_least16_t state);
+void rope_str_update(struct RopeStr *str);
 
 int rope_str_inline_append(
 		struct RopeStr *str, const uint8_t *data, size_t byte_size);
 
 void
-rope_str_split(struct RopeStr *str, struct RopeStr *new_str, size_t char_index);
+rope_str_char_split(struct RopeStr *str, struct RopeStr *new_str, size_t char_index);
 
 const uint8_t *rope_str_data(struct RopeStr *str, size_t *byte_size);
 
-size_t rope_str_char_size(struct RopeStr *str);
+size_t rope_str_cp_count(struct RopeStr *str);
+size_t rope_str_char_count(struct RopeStr *str);
 
-size_t rope_str_utf16_size(struct RopeStr *str);
+size_t rope_str_utf16_count(struct RopeStr *str);
 
-size_t rope_str_byte_size(struct RopeStr *str);
+size_t rope_str_col_count(struct RopeStr *str);
+
+size_t rope_str_byte_count(struct RopeStr *str);
 
 bool rope_str_should_merge(struct RopeStr *str1, struct RopeStr *str2);
 
