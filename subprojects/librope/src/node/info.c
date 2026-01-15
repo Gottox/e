@@ -26,23 +26,7 @@ rope_node_depth(struct RopeNode *node) {
 const uint8_t *
 rope_node_value(const struct RopeNode *node, size_t *size) {
 	assert(ROPE_NODE_IS_LEAF(node));
-	if (size != NULL) {
-		*size = node->data.leaf.byte_size;
-	}
-	switch(rope_node_type(node)) {
-		case ROPE_NODE_LEAF:
-			return node->data.leaf.data;
-		case ROPE_NODE_INLINE_LEAF:
-#ifdef ROPE_ENABLE_INLINE_LEAVES
-			return node->data.inline_leaf.data;
-#else
-			assert(ROPE_NODE_IS_ROOT(node));
-			assert(*size == 0);
-			return (const uint8_t *)"";
-#endif
-		default:
-			ROPE_UNREACHABLE();
-	}
+	return rope_str_data(&node->data.leaf.value, size);
 }
 
 ROPE_NODE_AGGREGATE(size_t, rope_node_new_lines, {
@@ -63,13 +47,11 @@ ROPE_NODE_AGGREGATE(size_t, rope_node_new_lines, {
 })
 
 ROPE_NODE_AGGREGATE(size_t, rope_node_char_size, {
-	size_t byte_size;
-	const uint8_t *data = rope_node_value(node, &byte_size);
-	return cx_utf8_clen(data, byte_size);
+	return rope_str_char_count(&node->data.leaf.value);
 })
 
 ROPE_NODE_AGGREGATE(size_t, rope_node_byte_size, {
-	return node->data.leaf.byte_size;
+	return rope_str_byte_count(&node->data.leaf.value);
 })
 
 enum RopeNodeType

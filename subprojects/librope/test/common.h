@@ -48,7 +48,7 @@ node_from_json(struct json_object *obj, struct RopePool *pool) {
 		int len = json_object_get_string_len(obj);
 		const char *str = json_object_get_string(obj);
 
-		int rv = rope_node_set_value(node, (const uint8_t *)str, (size_t)len);
+		int rv = rope_str_init(&node->data.leaf.value, (const uint8_t *)str, (size_t)len);
 		assert(rv == 0);
 	}
 

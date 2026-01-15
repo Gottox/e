@@ -94,29 +94,12 @@ rope_node_split(
 		rv = -ROPE_ERROR_OOM;
 		goto out;
 	}
-	const size_t left_size = byte_index;
-	const size_t right_size = byte_size - byte_index;
 	rope_node_set_type(left, rope_node_type(node));
 	rope_node_set_type(right, rope_node_type(node));
 
-	const uint8_t *data = rope_node_value(node, NULL);
-#ifdef ROPE_ENABLE_INLINE_LEAVES
-	if (rope_node_type(node) == ROPE_NODE_INLINE_LEAF) {
-		left->data.inline_leaf.byte_size = left_size;
-		right->data.inline_leaf.byte_size = right_size;
-		memcpy(left->data.inline_leaf.data, data, ROPE_INLINE_LEAF_SIZE);
-		memcpy(right->data.inline_leaf.data, &data[byte_index], right_size);
-#else
-	if (0) {
-#endif
-	} else {
-		struct RopeRcString *rc_string = node->data.leaf.owned;
-		size_t offset = data - rc_string->data;
 
-		rope_node_set_rc_string(left, rc_string, offset, left_size);
-		rope_node_set_rc_string(
-				right, rc_string, offset + left_size, right_size);
-	}
+	rope_node_move(left, node);
+	rope_str_byte_split(&left->data.leaf.value, &right->data.leaf.value, byte_index);
 
 	rope_node_cleanup(node);
 
@@ -246,59 +229,6 @@ struct NodeMergeContext {
 	uint8_t *new_data;
 	size_t total_size;
 };
-
-static bool
-node_merge_cb(const struct RopeNode *node, void *userdata) {
-	struct NodeMergeContext *context = userdata;
-	if (context->total_size == 0) {
-		return false;
-	}
-
-	size_t size = rope_node_byte_size(node);
-	const uint8_t *data = rope_node_value(node, &size);
-	memcpy(context->new_data, data, size);
-	context->new_data += size;
-	context->total_size -= size;
-	return true;
-}
-
-struct RopeNode *
-rope_node_merge_while(
-		struct RopeNode *node, struct RopePool *pool,
-		rope_node_condition_f condition, void *userdata) {
-	struct RopeRcString *rc_string = NULL;
-	size_t total_size = 0;
-
-	struct RopeNode *start_node = node;
-	for (; node != NULL; node = rope_node_next(node)) {
-		if (!condition(node, userdata)) {
-			break;
-		}
-		total_size += rope_node_byte_size(node);
-	}
-	if (total_size == 0) {
-		goto out;
-	}
-
-	struct NodeMergeContext context = {
-			.new_data = NULL,
-			.total_size = total_size,
-	};
-	rc_string = rope_rc_string_allocate(total_size, &context.new_data);
-	if (rc_string == NULL) {
-		goto out;
-	}
-
-	node_merge_cb(start_node, &context);
-	node = node_delete_to_left(start_node, pool, node_merge_cb, &context);
-
-	rope_node_set_rc_string(node, rc_string, 0, total_size);
-
-	rope_node_balance_up(node);
-out:
-	rope_rc_string_release(rc_string);
-	return node;
-}
 
 void
 rope_node_rotate(struct RopeNode *node, enum RopeDirection which) {

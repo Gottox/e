@@ -21,8 +21,6 @@ node_tags(struct RopeNode *node) {
 		return NULL;
 	case ROPE_NODE_LEAF:
 		return &node->data.leaf.tags;
-	case ROPE_NODE_INLINE_LEAF:
-		return &node->data.inline_leaf.tags;
 	default:
 		ROPE_UNREACHABLE();
 	}

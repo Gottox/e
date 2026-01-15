@@ -40,7 +40,7 @@ rope_node_insert_new_node(
 		goto out;
 	}
 
-	rv = rope_node_set_value(new_node, data, byte_size);
+	rv = rope_str_init(&new_node->data.leaf.value, data, byte_size);
 	if (rv < 0) {
 		goto out;
 	}
@@ -76,9 +76,9 @@ rope_node_insert_right(
 
 	if (rope_node_byte_size(node) == 0) {
 		rope_node_set_tags(node, tags);
-		rv = rope_node_set_value(node, data, byte_size);
+		rv = rope_str_init(&node->data.leaf.value, data, byte_size);
 	} else if (rope_node_tags(node) == tags) {
-		rv = rope_node_append_value(node, data, byte_size);
+		rv = rope_str_inline_append(&node->data.leaf.value, data, byte_size);
 	}
 	inserted = rv == 0;
 

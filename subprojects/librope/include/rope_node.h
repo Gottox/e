@@ -7,6 +7,7 @@
 #include <sys/types.h>
 
 #include "rope_common.h"
+#include "rope_str.h"
 
 #define ROPE_INLINE_LEAF_SIZE (sizeof(void *[2]))
 #define ROPE_TYPE_SHIFT (sizeof(uint64_t) * 8 - 2)
@@ -19,7 +20,6 @@ struct RopePool;
  */
 
 enum RopeNodeType {
-	ROPE_NODE_INLINE_LEAF,
 	ROPE_NODE_LEAF,
 	ROPE_NODE_BRANCH,
 };
@@ -34,18 +34,9 @@ struct RopeNode {
 	struct RopeNode *parent;
 
 	union {
-#ifdef ROPE_ENABLE_INLINE_LEAVES
 		struct {
 			uint64_t tags;
-			size_t byte_size;
-			uint8_t data[ROPE_INLINE_LEAF_SIZE];
-		} inline_leaf;
-#endif
-		struct {
-			uint64_t tags;
-			size_t byte_size;
-			struct RopeRcString *owned;
-			const uint8_t *data;
+			struct RopeStr value;
 		} leaf;
 		struct {
 			struct RopeNode *children[2];
@@ -67,18 +58,6 @@ size_t rope_node_char_size(const struct RopeNode *node) ROPE_NO_UNUSED;
 
 size_t rope_node_byte_size(const struct RopeNode *node) ROPE_NO_UNUSED;
 
-int rope_node_set_value(
-		struct RopeNode *node, const uint8_t *data,
-		size_t byte_size) ROPE_NO_UNUSED;
-
-int rope_node_append_value(
-		struct RopeNode *node, const uint8_t *data,
-		size_t byte_size) ROPE_NO_UNUSED;
-
-void rope_node_set_rc_string(
-		struct RopeNode *node, struct RopeRcString *str, size_t byte_index,
-		size_t size);
-
 void rope_node_delete(struct RopeNode *node, struct RopePool *pool);
 
 void rope_node_delete_child(
@@ -90,10 +69,6 @@ struct RopeNode *rope_node_delete_while(
 
 struct RopeNode *
 rope_node_delete_and_next(struct RopeNode *node, struct RopePool *pool);
-
-struct RopeNode *rope_node_merge_while(
-		struct RopeNode *node, struct RopePool *pool,
-		rope_node_condition_f condition, void *userdata);
 
 struct RopeNode *rope_node_find(
 		struct RopeNode *node, rope_index_t line, rope_index_t column,

@@ -9,7 +9,6 @@ librope_sources = files(
     'node/tags.c',
     'pool.c',
     'range.c',
-    'rc_string.c',
     'rope.c',
     'str.c',
 )

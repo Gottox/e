@@ -14,26 +14,6 @@
 struct Rope;
 
 /**********************************
- * rc_string.c
- */
-
-struct RopeRcString {
-	struct CxRc rc;
-	size_t size;
-	uint8_t data[];
-};
-
-struct RopeRcString *rope_rc_string_new(const uint8_t *data, size_t size);
-
-struct RopeRcString *rope_rc_string_allocate(size_t size, uint8_t **data_ptr);
-
-struct RopeRcString *rope_rc_string_retain(struct RopeRcString *str);
-
-const uint8_t *rope_rc_string(struct RopeRcString *rc_str, size_t *size);
-
-void rope_rc_string_release(struct RopeRcString *str);
-
-/**********************************
  * string_nav.c
  */
 

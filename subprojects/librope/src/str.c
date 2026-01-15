@@ -198,10 +198,10 @@ rope_str_inline_append(
 
 static void
 str_split(
-		struct RopeStr *str, struct RopeStr *new_str, size_t char_index,
-		size_t utf16_index, size_t column_index, size_t cp_index) {
+		struct RopeStr *str, struct RopeStr *new_str, size_t byte_index,
+		size_t char_index, size_t utf16_index, size_t column_index,
+		size_t cp_index) {
 	size_t char_count = rope_str_char_count(str);
-	assert(char_index <= char_count);
 
 	if (char_index == 0) {
 		memset(new_str, 0, sizeof(*new_str));
@@ -217,8 +217,9 @@ str_split(
 	size_t byte_count = 0;
 	const uint8_t *data = rope_str_data(str, &byte_count);
 
-	size_t byte_index = str_process(
-			&str->state, data, byte_count, str->state.state, char_index,
+	size_t left_byte_count = CX_MIN(byte_count, byte_index);
+	byte_index = str_process(
+			&str->state, data, left_byte_count, str->state.state, char_index,
 			utf16_index, column_index, cp_index);
 
 	const uint8_t *split = &data[byte_index];
@@ -246,25 +247,32 @@ str_split(
 }
 
 void
+rope_str_byte_split(
+		struct RopeStr *str, struct RopeStr *new_str, size_t byte_index) {
+	str_split(str, new_str, byte_index, SIZE_MAX, SIZE_MAX, SIZE_MAX, SIZE_MAX);
+}
+
+void
 rope_str_char_split(
 		struct RopeStr *str, struct RopeStr *new_str, size_t char_index) {
-	str_split(str, new_str, char_index, SIZE_MAX, SIZE_MAX, SIZE_MAX);
+	str_split(str, new_str, SIZE_MAX, char_index, SIZE_MAX, SIZE_MAX, SIZE_MAX);
 }
 
 void
 rope_str_utf16_split(
 		struct RopeStr *str, struct RopeStr *new_str, size_t utf16_index) {
-	str_split(str, new_str, SIZE_MAX, utf16_index, SIZE_MAX, SIZE_MAX);
+	str_split(
+			str, new_str, SIZE_MAX, SIZE_MAX, utf16_index, SIZE_MAX, SIZE_MAX);
 }
 
 void
 rope_str_cp_split(
 		struct RopeStr *str, struct RopeStr *new_str, size_t cp_index) {
-	str_split(str, new_str, SIZE_MAX, SIZE_MAX, SIZE_MAX, cp_index);
+	str_split(str, new_str, SIZE_MAX, SIZE_MAX, SIZE_MAX, SIZE_MAX, cp_index);
 }
 
 const uint8_t *
-rope_str_data(struct RopeStr *str, size_t *byte_count) {
+rope_str_data(const struct RopeStr *str, size_t *byte_count) {
 	if (byte_count != NULL) {
 		*byte_count = rope_str_byte_count(str);
 	}
@@ -304,7 +312,7 @@ rope_str_at_cp(struct RopeStr *str, size_t cp_index, size_t *byte_size) {
 }
 
 size_t
-rope_str_char_count(struct RopeStr *str) {
+rope_str_char_count(const struct RopeStr *str) {
 	size_t char_count = str->state.char_count;
 	if (char_count > rope_str_byte_count(str)) {
 		return SIZE_MAX;
@@ -313,22 +321,22 @@ rope_str_char_count(struct RopeStr *str) {
 }
 
 size_t
-rope_str_utf16_count(struct RopeStr *str) {
+rope_str_utf16_count(const struct RopeStr *str) {
 	return str->state.utf16_count;
 }
 
 size_t
-rope_str_col_count(struct RopeStr *str) {
+rope_str_col_count(const struct RopeStr *str) {
 	return str->state.column_count;
 }
 
 size_t
-rope_str_cp_count(struct RopeStr *str) {
+rope_str_cp_count(const struct RopeStr *str) {
 	return str->state.cp_count;
 }
 
 size_t
-rope_str_byte_count(struct RopeStr *str) {
+rope_str_byte_count(const struct RopeStr *str) {
 	return str->state.byte_count;
 }
 
@@ -371,4 +379,5 @@ rope_str_cleanup(struct RopeStr *str) {
 	if (!ROPE_STR_IS_INLINE(str)) {
 		heap_str_release(str->u.h.str);
 	}
+	memset(str, 0, sizeof(struct RopeStr));
 }

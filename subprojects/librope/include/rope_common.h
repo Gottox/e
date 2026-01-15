@@ -1,8 +1,8 @@
 #ifndef ROPE_COMMON_H
 #define ROPE_COMMON_H
 
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 #define ROPE_POOL_CHUNK_SIZE 1024
 
@@ -16,9 +16,7 @@
 
 #define ROPE_NO_UNUSED __attribute__((warn_unused_result))
 
-#define ROPE_NODE_IS_LEAF(node) \
-	(rope_node_type(node) == ROPE_NODE_LEAF || \
-	 rope_node_type(node) == ROPE_NODE_INLINE_LEAF)
+#define ROPE_NODE_IS_LEAF(node) (rope_node_type(node) == ROPE_NODE_LEAF)
 
 #define ROPE_NODE_IS_BRANCH(node) (rope_node_type(node) == ROPE_NODE_BRANCH)
 
