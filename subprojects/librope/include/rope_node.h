@@ -63,12 +63,10 @@ void rope_node_delete(struct RopeNode *node, struct RopePool *pool);
 void rope_node_delete_child(
 		struct RopeNode *node, struct RopePool *pool, enum RopeDirection which);
 
-struct RopeNode *rope_node_delete_while(
-		struct RopeNode *node, struct RopePool *pool,
-		rope_node_condition_f condition, void *userdata);
-
 struct RopeNode *
 rope_node_delete_and_next(struct RopeNode *node, struct RopePool *pool);
+
+int rope_node_merge(struct RopeNode *node, size_t count, struct RopePool *pool);
 
 struct RopeNode *rope_node_find(
 		struct RopeNode *node, rope_index_t line, rope_index_t column,

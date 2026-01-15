@@ -11,15 +11,6 @@
 #define ROPE_STR_IS_INLINE(str) \
 	(rope_str_byte_count(str) <= ROPE_STR_INLINE_SIZE)
 
-#define ROPE_STR_STATE_APPLY(tgt, op, src) \
-	do { \
-		tgt.byte_count op src.byte_count; \
-		tgt.char_count op src.char_count; \
-		tgt.utf16_count op src.utf16_count; \
-		tgt.column_count op src.column_count; \
-		tgt.cp_count op src.cp_count; \
-	} while (0)
-
 static void
 heap_str_release(struct RopeStrHeap *heap_str) {
 	if (heap_str->ref_count-- == 0) {
@@ -31,11 +22,12 @@ static int
 str_process(
 		struct RopeStrState *str, const uint8_t *data, size_t byte_size,
 		uint_least16_t state, size_t char_index, size_t utf16_index,
-		size_t column_index, size_t cp_index) {
+		size_t column_index, size_t cp_index, size_t newline_index) {
 	size_t char_count = 0;
 	size_t utf16_count = 0;
 	size_t column_count = 0;
 	size_t cp_count = 0;
+	size_t newline_count = 0;
 	uint_least32_t cp = GRAPHEME_INVALID_CODEPOINT;
 	uint_least32_t last_cp = GRAPHEME_INVALID_CODEPOINT;
 	size_t byte_index = 0;
@@ -67,6 +59,9 @@ str_process(
 			last_char_offset = byte_index;
 			utf16_count += cp >= 0x10000 ? 2 : 1;
 			column_count += cx_cp_width(cp);
+			if (cp == '\n') {
+				newline_count += 1;
+			}
 		}
 		cp_count += 1;
 
@@ -83,7 +78,8 @@ str_process(
 		// SIZE_MAX. This allows to optimize out these checks when str_process
 		// used to calculate the byte_indexes.
 		if (char_count >= SIZE_MAX || utf16_count >= SIZE_MAX ||
-			column_count >= SIZE_MAX) {
+			column_count >= SIZE_MAX || cp_count >= SIZE_MAX ||
+			newline_count >= SIZE_MAX) {
 			ROPE_UNREACHABLE();
 		} else if (char_count >= char_index) {
 			break;
@@ -93,20 +89,24 @@ str_process(
 			break;
 		} else if (cp_count >= cp_index) {
 			break;
+		} else if (newline_count >= newline_index) {
+			break;
 		}
 	}
 
 	if (str) {
+		struct RopeStrDimensions *dim = &str->dimensions;
 		str->state = state;
 		if (invalid_index != SIZE_MAX) {
-			str->char_count = SIZE_MAX - invalid_index;
+			dim->char_count = SIZE_MAX - invalid_index;
 		} else {
-			str->char_count = char_count;
+			dim->char_count = char_count;
 		}
-		str->cp_count = cp_count;
-		str->utf16_count = utf16_count;
-		str->byte_count = CX_MIN(byte_index, byte_size);
-		str->last_char_size = str->byte_count - last_char_offset;
+		dim->cp_count = cp_count;
+		dim->utf16_count = utf16_count;
+		dim->byte_count = CX_MIN(byte_index, byte_size);
+		dim->newline_count = newline_count;
+		str->last_char_size = dim->byte_count - last_char_offset;
 	}
 
 	return byte_index;
@@ -127,7 +127,7 @@ str_init(
 	memcpy(buffer, data, byte_size);
 	str_process(
 			&str->state, buffer, byte_size, state, SIZE_MAX, SIZE_MAX, SIZE_MAX,
-			SIZE_MAX);
+			SIZE_MAX, SIZE_MAX);
 out:
 	return rv;
 }
@@ -140,6 +140,7 @@ rope_str_init(struct RopeStr *str, const uint8_t *data, size_t byte_size) {
 int
 rope_str(struct RopeStr *str, size_t byte_size, uint8_t **buffer) {
 	int rv = 0;
+	str->state.dimensions.byte_count = byte_size;
 	if (byte_size <= ROPE_STR_INLINE_SIZE) {
 		*buffer = str->u.i.data;
 	} else {
@@ -165,7 +166,7 @@ rope_str_update(struct RopeStr *str) {
 	const uint8_t *data = rope_str_data(str, &byte_size);
 	str_process(
 			&str->state, data, byte_size, 0, SIZE_MAX, SIZE_MAX, SIZE_MAX,
-			SIZE_MAX);
+			SIZE_MAX, SIZE_MAX);
 }
 
 int
@@ -185,9 +186,10 @@ rope_str_inline_append(
 	struct RopeStrState append_state = {0};
 	str_process(
 			&append_state, insert, byte_size, str->state.state, SIZE_MAX,
-			SIZE_MAX, SIZE_MAX, SIZE_MAX);
+			SIZE_MAX, SIZE_MAX, SIZE_MAX, SIZE_MAX);
 
-	ROPE_STR_STATE_APPLY(str->state, +=, append_state);
+	ROPE_STR_DIMENSIONS_APPLY(
+			str->state.dimensions, +=, append_state.dimensions);
 	str->state.last_char_size = append_state.last_char_size;
 	str->state.state = append_state.state;
 
@@ -200,7 +202,7 @@ static void
 str_split(
 		struct RopeStr *str, struct RopeStr *new_str, size_t byte_index,
 		size_t char_index, size_t utf16_index, size_t column_index,
-		size_t cp_index) {
+		size_t cp_index, size_t newline_index) {
 	size_t char_count = rope_str_char_count(str);
 
 	if (char_index == 0) {
@@ -220,10 +222,11 @@ str_split(
 	size_t left_byte_count = CX_MIN(byte_count, byte_index);
 	byte_index = str_process(
 			&str->state, data, left_byte_count, str->state.state, char_index,
-			utf16_index, column_index, cp_index);
+			utf16_index, column_index, cp_index, newline_index);
 
 	const uint8_t *split = &data[byte_index];
-	ROPE_STR_STATE_APPLY(new_str->state, -=, str->state);
+	ROPE_STR_DIMENSIONS_APPLY(
+			new_str->state.dimensions, -=, str->state.dimensions);
 	size_t new_byte_count = rope_str_byte_count(new_str);
 
 	if (new_byte_count <= ROPE_STR_INLINE_SIZE) {
@@ -249,26 +252,33 @@ str_split(
 void
 rope_str_byte_split(
 		struct RopeStr *str, struct RopeStr *new_str, size_t byte_index) {
-	str_split(str, new_str, byte_index, SIZE_MAX, SIZE_MAX, SIZE_MAX, SIZE_MAX);
+	str_split(
+			str, new_str, byte_index, SIZE_MAX, SIZE_MAX, SIZE_MAX, SIZE_MAX,
+			SIZE_MAX);
 }
 
 void
 rope_str_char_split(
 		struct RopeStr *str, struct RopeStr *new_str, size_t char_index) {
-	str_split(str, new_str, SIZE_MAX, char_index, SIZE_MAX, SIZE_MAX, SIZE_MAX);
+	str_split(
+			str, new_str, SIZE_MAX, char_index, SIZE_MAX, SIZE_MAX, SIZE_MAX,
+			SIZE_MAX);
 }
 
 void
 rope_str_utf16_split(
 		struct RopeStr *str, struct RopeStr *new_str, size_t utf16_index) {
 	str_split(
-			str, new_str, SIZE_MAX, SIZE_MAX, utf16_index, SIZE_MAX, SIZE_MAX);
+			str, new_str, SIZE_MAX, SIZE_MAX, utf16_index, SIZE_MAX, SIZE_MAX,
+			SIZE_MAX);
 }
 
 void
 rope_str_cp_split(
 		struct RopeStr *str, struct RopeStr *new_str, size_t cp_index) {
-	str_split(str, new_str, SIZE_MAX, SIZE_MAX, SIZE_MAX, SIZE_MAX, cp_index);
+	str_split(
+			str, new_str, SIZE_MAX, SIZE_MAX, SIZE_MAX, SIZE_MAX, cp_index,
+			SIZE_MAX);
 }
 
 const uint8_t *
@@ -286,8 +296,8 @@ rope_str_data(const struct RopeStr *str, size_t *byte_count) {
 const uint8_t *
 rope_str_at_char(struct RopeStr *str, size_t char_index, size_t *byte_count) {
 	size_t byte_index = str_process(
-			NULL, rope_str_data(str, NULL), str->state.byte_count, 0,
-			char_index, SIZE_MAX, SIZE_MAX, SIZE_MAX);
+			NULL, rope_str_data(str, NULL), str->state.dimensions.byte_count, 0,
+			char_index, SIZE_MAX, SIZE_MAX, SIZE_MAX, SIZE_MAX);
 	*byte_count = rope_str_byte_count(str) - byte_index;
 	return &rope_str_data(str, NULL)[byte_index];
 }
@@ -295,8 +305,8 @@ rope_str_at_char(struct RopeStr *str, size_t char_index, size_t *byte_count) {
 const uint8_t *
 rope_str_at_utf16(struct RopeStr *str, size_t utf16_index, size_t *byte_count) {
 	size_t byte_index = str_process(
-			NULL, rope_str_data(str, NULL), str->state.byte_count, 0, SIZE_MAX,
-			utf16_index, SIZE_MAX, SIZE_MAX);
+			NULL, rope_str_data(str, NULL), str->state.dimensions.byte_count, 0,
+			SIZE_MAX, utf16_index, SIZE_MAX, SIZE_MAX, SIZE_MAX);
 	*byte_count = rope_str_byte_count(str) - byte_index;
 	return &rope_str_data(str, NULL)[byte_index];
 }
@@ -306,14 +316,14 @@ rope_str_at_cp(struct RopeStr *str, size_t cp_index, size_t *byte_size) {
 	size_t byte_count = rope_str_byte_count(str);
 	size_t byte_index = str_process(
 			NULL, rope_str_data(str, NULL), byte_count, 0, SIZE_MAX, SIZE_MAX,
-			SIZE_MAX, cp_index);
+			SIZE_MAX, cp_index, SIZE_MAX);
 	*byte_size = rope_str_byte_count(str) - byte_index;
 	return &rope_str_data(str, NULL)[byte_index];
 }
 
 size_t
 rope_str_char_count(const struct RopeStr *str) {
-	size_t char_count = str->state.char_count;
+	size_t char_count = str->state.dimensions.char_count;
 	if (char_count > rope_str_byte_count(str)) {
 		return SIZE_MAX;
 	}
@@ -322,22 +332,22 @@ rope_str_char_count(const struct RopeStr *str) {
 
 size_t
 rope_str_utf16_count(const struct RopeStr *str) {
-	return str->state.utf16_count;
+	return str->state.dimensions.utf16_count;
 }
 
 size_t
 rope_str_col_count(const struct RopeStr *str) {
-	return str->state.column_count;
+	return str->state.dimensions.column_count;
 }
 
 size_t
 rope_str_cp_count(const struct RopeStr *str) {
-	return str->state.cp_count;
+	return str->state.dimensions.cp_count;
 }
 
 size_t
 rope_str_byte_count(const struct RopeStr *str) {
-	return str->state.byte_count;
+	return str->state.dimensions.byte_count;
 }
 
 bool

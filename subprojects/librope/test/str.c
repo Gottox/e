@@ -202,14 +202,14 @@ test_str_inline_append(void) {
 	rope_str_cleanup(&str);
 }
 
-	DECLARE_TESTS
-	TEST(test_str_init)
-	TEST(test_str_split)
-	TEST(test_str_heap)
-	TEST(test_str_should_merge_utf8_sequence)
-	TEST(test_str_should_merge_grapheme)
-	TEST(test_str_heap_split_to_inline_both)
-	TEST(test_str_heap_split_to_inline_right)
-	TEST(test_str_heap_split_to_inline_left)
-	TEST(test_str_inline_append)
-	END_TESTS
+DECLARE_TESTS
+TEST(test_str_init)
+TEST(test_str_split)
+TEST(test_str_heap)
+TEST(test_str_should_merge_utf8_sequence)
+TEST(test_str_should_merge_grapheme)
+TEST(test_str_heap_split_to_inline_both)
+TEST(test_str_heap_split_to_inline_right)
+TEST(test_str_heap_split_to_inline_left)
+TEST(test_str_inline_append)
+END_TESTS

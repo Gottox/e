@@ -97,9 +97,9 @@ rope_node_split(
 	rope_node_set_type(left, rope_node_type(node));
 	rope_node_set_type(right, rope_node_type(node));
 
-
 	rope_node_move(left, node);
-	rope_str_byte_split(&left->data.leaf.value, &right->data.leaf.value, byte_index);
+	rope_str_byte_split(
+			&left->data.leaf.value, &right->data.leaf.value, byte_index);
 
 	rope_node_cleanup(node);
 
@@ -165,51 +165,6 @@ rope_node_delete_child(
 	rope_node_balance_up(node);
 }
 
-static struct RopeNode *
-node_delete_to_left(
-		struct RopeNode *node, struct RopePool *pool,
-		rope_node_condition_f condition, void *userdata) {
-	struct RopeNode *next, *parent;
-	while (node) {
-		next = rope_node_next(node);
-		if (next == NULL) {
-			break;
-		}
-
-		parent = rope_node_parent(node);
-		if (!condition(next, userdata)) {
-			break;
-		}
-
-		if (rope_node_right(parent) == next) {
-			// If next and node are siblings, node will be collapsed into parent
-			// on deletion of next. So we need to continue from parent
-			node = parent;
-		}
-		node_delete(next, pool);
-	}
-
-	return node;
-}
-struct RopeNode *
-rope_node_delete_while(
-		struct RopeNode *node, struct RopePool *pool,
-		rope_node_condition_f condition, void *userdata) {
-	if (!condition(node, userdata)) {
-		return node;
-	}
-
-	node = node_delete_to_left(node, pool, condition, userdata);
-
-	node = node_delete(node, pool);
-	if (!ROPE_NODE_IS_ROOT(node)) {
-		rope_node_balance_up(node);
-		node = rope_node_next(node);
-	}
-
-	return node;
-}
-
 struct RopeNode *
 rope_node_delete_and_next(struct RopeNode *node, struct RopePool *pool) {
 	struct RopeNode *next = rope_node_next(node);
@@ -222,7 +177,48 @@ rope_node_delete_and_next(struct RopeNode *node, struct RopePool *pool) {
 		}
 	}
 	node_delete(node, pool);
+	// TODO: balance up.
 	return next;
+}
+
+int
+rope_node_merge(struct RopeNode *node, size_t count, struct RopePool *pool) {
+	int rv = 0;
+	if (count < 1) {
+		return 0;
+	}
+	struct RopeNode *start_node = node;
+
+	size_t total_size = rope_node_byte_size(node);
+	for (; count; count--) {
+		node = rope_node_next(node);
+		total_size += rope_node_byte_size(node);
+	}
+
+	uint8_t *target;
+	struct RopeStr new_value;
+	rv = rope_str(&new_value, total_size, &target);
+	if (rv != 0) {
+		goto out;
+	}
+
+	for (node = start_node;;) {
+		size_t byte_size;
+		const uint8_t *data = rope_str_data(&node->data.leaf.value, &byte_size);
+		memcpy(target, data, byte_size);
+		total_size -= byte_size;
+		target += byte_size;
+		if (total_size == 0) {
+			break;
+		} else {
+			node = rope_node_delete_and_next(node, pool);
+		}
+	}
+	rope_str_update(&new_value);
+	rope_str_cleanup(&node->data.leaf.value);
+	memcpy(&node->data.leaf.value, &new_value, sizeof(struct RopeStr));
+out:
+	return rv;
 }
 
 struct NodeMergeContext {

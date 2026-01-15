@@ -85,7 +85,7 @@ rope_deserialize(
 		struct Rope *rope, const uint8_t *data, size_t length, bool print) {
 	int rv = 0;
 	uint8_t *payload;
-	uint8_t tmp;
+	uint8_t tmp = 0;
 	struct RopeDeserCommand command = {0};
 	struct RopeRange ranges[ROPE_DESER_RANGE_COUNT] = {0};
 

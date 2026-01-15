@@ -1,7 +1,6 @@
 #include "common.h"
 #include "rope_node.h"
 #include <assert.h>
-#include <ctype.h>
 #include <rope.h>
 #include <testlib.h>
 
@@ -35,7 +34,7 @@ test_node_insert_right(void) {
 
 	struct RopeNode *root = from_str(&pool, "'HE'");
 
-	rv = rope_node_insert_right(root, (const uint8_t*)"LO", 2, 0xFF, &pool);
+	rv = rope_node_insert_right(root, (const uint8_t *)"LO", 2, 0xFF, &pool);
 
 	ASSERT_EQ(ROPE_NODE_BRANCH, rope_node_type(root));
 	struct RopeNode *left = rope_node_left(root);
@@ -128,45 +127,8 @@ test_node_balance_right(void) {
 	rope_pool_cleanup(&pool);
 }
 
-static bool
-node_delete_while_cb(const struct RopeNode *node, void *userdata) {
-	(void)userdata;
-	size_t size;
-	const uint8_t *data = rope_node_value(node, &size);
-	return isupper(data[0]);
-}
-
-static void
-test_node_delete_while_left(void) {
-	int rv = 0;
-	struct RopePool pool = {0};
-
-	rv = rope_pool_init(&pool);
-	ASSERT_EQ(0, rv);
-
-	struct RopeNode *root = from_str(&pool, "[[['H','E'],['L','L']],'o']");
-
-	struct RopeNode *node = rope_node_first(root);
-	node = rope_node_next(node);
-
-
-	rope_node_delete_while(node, &pool, node_delete_while_cb, NULL);
-
-	ASSERT_JSONEQ("['H','o']", root);
-
-	rope_node_free(root, &pool);
-	rope_pool_cleanup(&pool);
-}
-
-static bool
-node_delete_while_unbalanced_cb(const struct RopeNode *node, void *userdata) {
-	(void)userdata;
-	size_t size;
-	const uint8_t *data = rope_node_value(node, &size);
-	return data[0] != '4';
-}
 void
-test_node_delete_while_unbalanced(void) {
+test_node_merge(void) {
 	int rv = 0;
 	struct RopePool pool = {0};
 
@@ -177,10 +139,10 @@ test_node_delete_while_unbalanced(void) {
 
 	struct RopeNode *node = rope_node_first(root);
 
+	rv = rope_node_merge(node, 2, &pool);
+	ASSERT_EQ(0, rv);
 
-	rope_node_delete_while(node, &pool, node_delete_while_unbalanced_cb, NULL);
-
-	ASSERT_JSONEQ("'4'", root);
+	ASSERT_JSONEQ("['123','4']", root);
 
 	rope_node_free(root, &pool);
 	rope_pool_cleanup(&pool);
@@ -193,6 +155,5 @@ TEST(test_node_delete)
 TEST(test_node_rotate_right)
 TEST(test_node_balance_left)
 TEST(test_node_balance_right)
-TEST(test_node_delete_while_left)
-TEST(test_node_delete_while_unbalanced)
+TEST(test_node_merge)
 END_TESTS

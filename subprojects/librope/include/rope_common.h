@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #define ROPE_POOL_CHUNK_SIZE 1024
 

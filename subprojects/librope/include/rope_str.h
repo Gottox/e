@@ -2,20 +2,34 @@
 #define ROPE_STR_H
 
 #include "rope_common.h"
-#include <stdint.h>
-#include <sys/types.h>
 
 #define ROPE_STR_INLINE_SIZE (sizeof(void *[2]))
 
-struct RopeStrState {
+#define ROPE_STR_DIMENSIONS_APPLY(tgt, op, src) \
+	do { \
+		(tgt).byte_count op(src).byte_count; \
+		(tgt).char_count op(src).char_count; \
+		(tgt).column_count op(src).column_count; \
+		(tgt).cp_count op(src).cp_count; \
+		(tgt).newline_count op(src).newline_count; \
+		(tgt).utf16_count op(src).utf16_count; \
+	} while (0)
+
+struct RopeStrDimensions {
 	size_t byte_count;
-	size_t cp_count;
 	size_t char_count;
-	size_t utf16_count;
 	size_t column_count;
-	uint_least16_t state;
-	uint_least8_t last_char_size;
+	size_t cp_count;
+	size_t newline_count;
+	size_t utf16_count;
 };
+
+struct RopeStrState {
+	struct RopeStrDimensions dimensions;
+	uint_least16_t last_char_size;
+	uint_least16_t state;
+};
+
 struct RopeStrHeap {
 	size_t ref_count;
 	uint8_t data[];
