@@ -3,6 +3,7 @@
 
 #include "rope_error.h"
 #include "rope_node.h"
+#include "rope_str.h"
 #include <cextras/memory.h>
 #include <cextras/unicode.h>
 #include <stdbool.h>

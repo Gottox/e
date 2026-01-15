@@ -263,18 +263,6 @@ rope_cursor_insert_str(
 	return rope_cursor_insert(cursor, (const uint8_t *)str, strlen(str), tags);
 }
 
-#if 1
-static bool
-cursor_while_delete_cb(const struct RopeNode *node, void *userdata) {
-	size_t *remaining = userdata;
-	size_t char_size = rope_node_char_size(node);
-	if (*remaining >= char_size) {
-		*remaining -= char_size;
-		return true;
-	} else {
-		return false;
-	}
-}
 
 int
 rope_cursor_delete(struct RopeCursor *cursor, size_t char_count) {
@@ -323,60 +311,6 @@ rope_cursor_delete(struct RopeCursor *cursor, size_t char_count) {
 
 	return 0;
 }
-#else
-int
-rope_cursor_delete(struct RopeCursor *cursor, size_t char_count) {
-	rope_char_index_t index = cursor->index;
-	rope_index_t byte_index = 0;
-	struct Rope *rope = cursor->rope;
-	struct RopeNode *node =
-			rope_node_find_char(rope->root, index, /*tags=*/0, &byte_index);
-	size_t remaining = char_count;
-	size_t deleted = 0;
-	rope_char_index_t start_index = index;
-
-	if (remaining == 0) {
-		return 0;
-	}
-
-	if (rope_node_byte_size(node) == byte_index) {
-		node = rope_node_next(node);
-		start_index = index = 0;
-		assert(node != NULL);
-	}
-
-	if (index != 0) {
-		rope_node_split(node, &rope->pool, byte_index, NULL, &node);
-	}
-	while (node && remaining > 0 && rope_node_char_size(node) <= remaining) {
-		size_t node_size = rope_node_char_size(node);
-		remaining -= node_size;
-		deleted += node_size;
-		rope_node_delete(node, &rope->pool);
-		if (remaining == 0) {
-			node = NULL;
-		} else {
-			rope_byte_index_t refreshed = 0;
-			node = rope_node_find_char(
-					rope->root, start_index, /*tags=*/0, &refreshed);
-		}
-	}
-	if (node && remaining > 0) {
-		size_t size = 0;
-		const uint8_t *value = rope_node_value(node, &size);
-		rope_index_t byte_index = cx_utf8_bidx(value, size, remaining);
-		rope_node_split(node, &rope->pool, byte_index, &node, NULL);
-		rope_node_delete(node, &rope->pool);
-		deleted += remaining;
-		remaining = 0;
-	}
-	assert(remaining == 0);
-	cursor_bubble_up(cursor);
-	cursor_damaged(cursor, cursor->index, -(off_t)deleted);
-
-	return 0;
-}
-#endif
 
 struct RopeNode *
 rope_cursor_node(struct RopeCursor *cursor, rope_char_index_t *byte_index) {

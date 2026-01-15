@@ -11,4 +11,5 @@ librope_sources = files(
     'range.c',
     'rc_string.c',
     'rope.c',
+    'str.c',
 )

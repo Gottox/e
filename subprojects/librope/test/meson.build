@@ -8,12 +8,13 @@ e_test_extra_src = files(
     '../fuzzer/deser.c',
 )
 e_test = [
-    'librope.c',
     'cursor.c',
-    'range.c',
-    'node.c',
-    'iterator.c',
     'fuzzer_repro.c',
+    'iterator.c',
+    'librope.c',
+    'node.c',
+    'range.c',
+    'str.c',
 ]
 
 foreach p : e_test

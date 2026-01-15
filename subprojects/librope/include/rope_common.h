@@ -2,6 +2,7 @@
 #define ROPE_COMMON_H
 
 #include <stddef.h>
+#include <stdbool.h>
 
 #define ROPE_POOL_CHUNK_SIZE 1024
 
