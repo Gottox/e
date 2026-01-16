@@ -94,7 +94,7 @@ class DumpRopeTree(gdb.Command):
 
                 content = safe_get_string(data_addr, size)
                 tag_val = int(leaf_data['tags'])
-                print(f"{idx_preix}{header} ({size} bytes, tag {tag_val}) \"{content}\"")
+                print(f"{idx_prefix}{header} ({size} bytes, tag {tag_val}) \"{content}\"")
 
         except gdb.error as e:
             exc_type, exc_obj, exc_tb = sys.exc_info()
