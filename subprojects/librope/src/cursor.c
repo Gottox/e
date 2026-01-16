@@ -71,7 +71,7 @@ cursor_update_location(struct RopeCursor *cursor) {
 		}
 
 		if (cursor->line == 0) {
-			cursor->column += cx_utf8_clen(value, size);
+			cursor->column += rope_str_measure_char_count(value, size);
 		}
 	} while ((node = rope_node_prev(node)));
 }
@@ -157,7 +157,7 @@ rope_cursor_move_to(
 	size_t size = 0;
 	const uint8_t *value = rope_node_value(node, &size);
 	// TODO: make sure column doesn't wrap lines.
-	cursor->index = cx_utf8_clen(value, byte_index);
+	cursor->index = rope_str_measure_char_count(value, byte_index);
 	while ((node = rope_node_prev(node))) {
 		cursor->index += rope_node_char_size(node);
 	}
@@ -232,7 +232,7 @@ rope_cursor_insert(
 	if (byte_size == 0) {
 		return 0;
 	}
-	size_t char_count = cx_utf8_clen(data, byte_size);
+	size_t char_count = rope_str_measure_char_count(data, byte_size);
 
 	rope_index_t cursor_index = cursor->index;
 
@@ -263,7 +263,6 @@ rope_cursor_insert_str(
 	return rope_cursor_insert(cursor, (const uint8_t *)str, strlen(str), tags);
 }
 
-
 int
 rope_cursor_delete(struct RopeCursor *cursor, size_t char_count) {
 	rope_char_index_t index = cursor->index;
@@ -286,7 +285,7 @@ rope_cursor_delete(struct RopeCursor *cursor, size_t char_count) {
 	}
 	assert(node != NULL);
 
-	while(node) {
+	while (node) {
 		size_t char_size = rope_node_char_size(node);
 		if (char_size > remaining) {
 			break;
@@ -294,13 +293,13 @@ rope_cursor_delete(struct RopeCursor *cursor, size_t char_count) {
 		remaining -= char_size;
 		node = rope_node_delete_and_next(node, &rope->pool);
 	}
-	//node = rope_node_delete_while(
+	// node = rope_node_delete_while(
 	//		node, &rope->pool, cursor_while_delete_cb, &remaining);
 
 	if (node && remaining > 0) {
 		size_t size = 0;
 		const uint8_t *value = rope_node_value(node, &size);
-		byte_index = cx_utf8_bidx(value, size, remaining);
+		byte_index = rope_str_char_to_byte_index(value, size, remaining);
 		rope_node_split(node, &rope->pool, byte_index, &node, NULL);
 		rope_node_delete(node, &rope->pool);
 		remaining = 0;

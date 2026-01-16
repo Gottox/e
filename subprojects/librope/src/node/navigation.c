@@ -125,7 +125,7 @@ find_line(
 		remaining++; // Skip the newline character.
 		remaining_size = byte_size - (remaining - value);
 	}
-	*char_index = cx_utf8_bidx(value, byte_size, remaining - value);
+	*char_index = rope_str_char_to_byte_index(value, byte_size, remaining - value);
 	return node;
 }
 
@@ -152,6 +152,6 @@ rope_node_find(
 	size_t size = 0;
 	const uint8_t *value = rope_node_value(node, &size);
 
-	*byte_index = cx_utf8_bidx(value, size, column);
+	*byte_index = rope_str_char_to_byte_index(value, size, column);
 	return node;
 }

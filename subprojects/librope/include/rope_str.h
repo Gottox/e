@@ -87,4 +87,7 @@ void rope_str_cleanup(struct RopeStr *str);
 size_t rope_str_char_to_byte_index(
 		const uint8_t *data, size_t byte_size, size_t char_index);
 
+size_t rope_str_measure_char_count(
+		const uint8_t *data, size_t byte_size);
+
 #endif /* ROPE_STR_H */
