@@ -265,6 +265,7 @@ rope_cursor_insert_str(
 
 int
 rope_cursor_delete(struct RopeCursor *cursor, size_t char_count) {
+	int rv = 0;
 	rope_char_index_t index = cursor->index;
 	rope_index_t byte_index = 0;
 	struct Rope *rope = cursor->rope;
@@ -280,7 +281,10 @@ rope_cursor_delete(struct RopeCursor *cursor, size_t char_count) {
 		node = rope_node_next(node);
 		byte_index = 0;
 	} else if (byte_index != 0) {
-		rope_node_split(node, &rope->pool, byte_index, NULL, &node);
+		rv = rope_node_split(node, &rope->pool, byte_index, NULL, &node);
+		if (rv < 0) {
+			goto out;
+		}
 		byte_index = 0;
 	}
 	assert(node != NULL);
@@ -293,14 +297,15 @@ rope_cursor_delete(struct RopeCursor *cursor, size_t char_count) {
 		remaining -= char_size;
 		node = rope_node_delete_and_next(node, &rope->pool);
 	}
-	// node = rope_node_delete_while(
-	//		node, &rope->pool, cursor_while_delete_cb, &remaining);
 
 	if (node && remaining > 0) {
 		size_t size = 0;
 		const uint8_t *value = rope_node_value(node, &size);
 		byte_index = rope_str_char_to_byte_index(value, size, remaining);
-		rope_node_split(node, &rope->pool, byte_index, &node, NULL);
+		rv = rope_node_split(node, &rope->pool, byte_index, &node, NULL);
+		if (rv < 0) {
+			goto out;
+		}
 		rope_node_delete(node, &rope->pool);
 		remaining = 0;
 	}
@@ -308,7 +313,8 @@ rope_cursor_delete(struct RopeCursor *cursor, size_t char_count) {
 	cursor_bubble_up(cursor);
 	cursor_damaged(cursor, cursor->index, -(off_t)char_count);
 
-	return 0;
+out:
+	return rv;
 }
 
 struct RopeNode *
