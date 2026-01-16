@@ -1,9 +1,9 @@
 project('librope', 'c', default_options: ['c_std=c11', 'warning_level=3'])
 
-cextras_dep = dependency('cextras')
+cextras_dep = dependency('cextras', default_options: ['warning_level=0'])
 libgrapheme_dep = dependency(
     'libgrapheme',
-    default_options: ['test=false', 'benchmark=false', 'b_sanitize=none'],
+    default_options: ['test=false', 'benchmark=false', 'werror=false'],
 )
 
 librope_dependencies = [cextras_dep, libgrapheme_dep]
