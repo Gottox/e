@@ -43,30 +43,6 @@ str_process(
 	assert(byte_size < SIZE_MAX);
 
 	for (byte_index = 0; byte_index < byte_size; last_cp = cp) {
-		last_char_byte_index = byte_index;
-
-		size_t cp_size = grapheme_decode_utf8(
-				(const char *)&data[byte_index], byte_size - byte_index, &cp);
-
-		if (cp == GRAPHEME_INVALID_CODEPOINT) {
-			dim.utf16_count += 1;
-			dim.column_count += 1;
-		} else {
-			dim.utf16_count += cp >= 0x10000 ? 2 : 1;
-			dim.column_count += cx_cp_width(cp);
-			dim.newline_count += cp == '\n' ? 1 : 0;
-		}
-		byte_index += cp_size;
-		dim.cp_count += 1;
-
-		const bool is_partial_utf8 = byte_index > byte_size;
-		if (is_partial_utf8) {
-			dim.char_count += 1;
-		} else if (grapheme_is_character_break(last_cp, cp, &state)) {
-			state = 0;
-			dim.char_count += 1;
-		}
-
 		// Hint the compiler that *_size are never reaching SIZE_MAX. This
 		// allows to optimize out these checks when str_process used to
 		// calculate the byte_indexes.
@@ -84,6 +60,35 @@ str_process(
 			break;
 		} else if (dim.newline_count >= newline_index) {
 			break;
+		}
+
+		last_char_byte_index = byte_index;
+
+		size_t cp_size = grapheme_decode_utf8(
+				(const char *)&data[byte_index], byte_size - byte_index, &cp);
+
+		if (cp == GRAPHEME_INVALID_CODEPOINT) {
+			dim.utf16_count += 1;
+			dim.column_count += 1;
+		} else {
+			const size_t column_width = cx_cp_width(cp);
+			const size_t utf16_count = cp >= 0x10000 ? 2 : 1;
+			if (column_width + dim.column_count > column_index) {
+				break;
+			}
+			dim.utf16_count += utf16_count;
+			dim.column_count += column_width;
+			dim.newline_count += cp == '\n' ? 1 : 0;
+		}
+		byte_index += cp_size;
+		dim.cp_count += 1;
+
+		const bool is_partial_utf8 = byte_index > byte_size;
+		if (is_partial_utf8) {
+			dim.char_count += 1;
+		} else if (grapheme_is_character_break(last_cp, cp, &state)) {
+			state = 0;
+			dim.char_count += 1;
 		}
 	}
 	dim.byte_count = CX_MIN(byte_size, byte_index);
@@ -378,4 +383,12 @@ rope_str_cleanup(struct RopeStr *str) {
 		str_heap_release(str->u.h.str);
 	}
 	memset(str, 0, sizeof(struct RopeStr));
+}
+
+size_t
+rope_str_char_to_byte_index(
+		const uint8_t *data, size_t byte_size, size_t char_index) {
+	return str_process(
+			NULL, data, byte_size, 0, char_index, SIZE_MAX, SIZE_MAX, SIZE_MAX,
+			SIZE_MAX);
 }

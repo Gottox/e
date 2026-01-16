@@ -78,8 +78,8 @@ rope_node_find_char(
 	if (node) {
 		size_t size = 0;
 		const uint8_t *value = rope_node_value(node, &size);
-		ssize_t trailing_bytes = cx_utf8_bidx(value, size, char_index);
-		assert(trailing_bytes >= 0);
+		size_t trailing_bytes =
+				rope_str_char_to_byte_index(value, size, char_index);
 		*byte_index = trailing_bytes;
 	}
 	return node;

@@ -244,6 +244,11 @@ test_str_inline_append(void) {
 	rope_str_cleanup(&str);
 }
 
+static void
+test_char_to_byte_index(void) {
+	ASSERT_EQ(rope_str_char_to_byte_index((const uint8_t *)"😃", 4, 0), 0);
+}
+
 DECLARE_TESTS
 TEST(test_str_init)
 TEST(test_str_split)
@@ -257,4 +262,5 @@ TEST(test_str_heap_split_to_inline_both)
 TEST(test_str_heap_split_to_inline_right)
 TEST(test_str_heap_split_to_inline_left)
 TEST(test_str_inline_append)
+TEST(test_char_to_byte_index)
 END_TESTS

@@ -84,4 +84,7 @@ bool rope_str_should_merge(struct RopeStr *str1, struct RopeStr *str2);
 
 void rope_str_cleanup(struct RopeStr *str);
 
+size_t rope_str_char_to_byte_index(
+		const uint8_t *data, size_t byte_size, size_t char_index);
+
 #endif /* ROPE_STR_H */
