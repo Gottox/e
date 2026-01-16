@@ -85,16 +85,16 @@ class DumpRopeTree(gdb.Command):
                 str = node['data']['leaf']['value']
                 str_state = str['state']
                 # Leaf handling (Inline vs Standard)
-                is_inline = (str_state['byte_count'] <= 16)
+                size = int(str_state['dimensions']['byte_count'])
+                is_inline = (size <= 16)
                 leaf_data = node['data']['leaf']
 
-                size = int(str_state['byte_count'])
                 # Inline data address is the address of the member; Leaf data is a pointer
                 data_addr = str['u']['i']['data'].address if is_inline else str['u']['h']['data']
 
                 content = safe_get_string(data_addr, size)
                 tag_val = int(leaf_data['tags'])
-                print(f"{idx_prefix}{header} ({size} bytes, tag {tag_val}) \"{content}\"")
+                print(f"{idx_preix}{header} ({size} bytes, tag {tag_val}) \"{content}\"")
 
         except gdb.error as e:
             exc_type, exc_obj, exc_tb = sys.exc_info()
