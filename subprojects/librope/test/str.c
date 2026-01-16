@@ -4,6 +4,10 @@
 
 #define FEMALE_ASTRONAUT "\360\237\221\251\342\200\215\360\237\232\200"
 #define SMILING_FACE "\360\237\230\203"
+#define LONG_GRAPHEME \
+	"\xf0\x9f\x91\xa9\xf0\x9f\x8f\xbb\xe2\x80\x8d\xf0\x9f\xa4\x9d\xe2\x80\x8d" \
+	"\xf0\x9f\x91\xa9\xf0\x9f\x8f\xbe\x0a"
+
 static void
 test_str_init(void) {
 	int rv = 0;
@@ -150,14 +154,14 @@ test_str_should_merge_utf8_sequence(void) {
 
 	size_t byte_size = rope_str_byte_count(&str1);
 	ASSERT_EQ(2, byte_size);
-	ASSERT_EQ(SIZE_MAX, rope_str_char_count(&str1));
+	ASSERT_EQ(1, rope_str_char_count(&str1));
 
 	rv = rope_str_init(&str2, &buffer[2], 2);
 	ASSERT_EQ(rv, 0);
 
 	byte_size = rope_str_byte_count(&str2);
 	ASSERT_EQ(2, byte_size);
-	ASSERT_EQ(SIZE_MAX, rope_str_char_count(&str2));
+	ASSERT_EQ(2, rope_str_char_count(&str2));
 
 	bool should_merge = rope_str_should_merge(&str1, &str2);
 	ASSERT_TRUE(should_merge);
@@ -187,6 +191,44 @@ test_str_should_merge_grapheme(void) {
 }
 
 static void
+test_str_should_merge_at_fn(int split) {
+	int rv = 0;
+
+	const uint8_t buffer[] = LONG_GRAPHEME;
+
+	struct RopeStr str1 = {0}, str2 = {0};
+
+	rv = rope_str_init(&str1, buffer, split);
+	ASSERT_EQ(rv, 0);
+
+	rv = rope_str_init(&str2, &buffer[split], sizeof(buffer) - 1 - split);
+	ASSERT_EQ(rv, 0);
+
+	bool should_merge = rope_str_should_merge(&str1, &str2);
+	ASSERT_TRUE(should_merge);
+
+	rope_str_cleanup(&str1);
+	rope_str_cleanup(&str2);
+}
+
+static void
+test_str_should_merge_at_8(void) {
+	test_str_should_merge_at_fn(8);
+}
+
+static void
+test_str_should_merge_at_12(void) {
+	test_str_should_merge_at_fn(12);
+}
+
+static void
+test_str_should_merge_sliding(void) {
+	for (size_t split = 1; split < sizeof(LONG_GRAPHEME) - 2; split++) {
+		test_str_should_merge_at_fn(split);
+	}
+}
+
+static void
 test_str_inline_append(void) {
 	int rv = 0;
 	struct RopeStr str = {0};
@@ -208,6 +250,9 @@ TEST(test_str_split)
 TEST(test_str_heap)
 TEST(test_str_should_merge_utf8_sequence)
 TEST(test_str_should_merge_grapheme)
+TEST(test_str_should_merge_sliding)
+TEST(test_str_should_merge_at_8)
+TEST(test_str_should_merge_at_12)
 TEST(test_str_heap_split_to_inline_both)
 TEST(test_str_heap_split_to_inline_right)
 TEST(test_str_heap_split_to_inline_left)

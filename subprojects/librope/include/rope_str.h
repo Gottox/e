@@ -7,12 +7,12 @@
 
 #define ROPE_STR_DIMENSIONS_APPLY(tgt, op, src) \
 	do { \
-		(tgt).byte_count op(src).byte_count; \
-		(tgt).char_count op(src).char_count; \
-		(tgt).column_count op(src).column_count; \
-		(tgt).cp_count op(src).cp_count; \
-		(tgt).newline_count op(src).newline_count; \
-		(tgt).utf16_count op(src).utf16_count; \
+		(tgt)->byte_count op(src)->byte_count; \
+		(tgt)->char_count op(src)->char_count; \
+		(tgt)->column_count op(src)->column_count; \
+		(tgt)->cp_count op(src)->cp_count; \
+		(tgt)->newline_count op(src)->newline_count; \
+		(tgt)->utf16_count op(src)->utf16_count; \
 	} while (0)
 
 struct RopeStrDimensions {

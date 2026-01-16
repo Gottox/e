@@ -23,27 +23,7 @@ cursor_basic(void) {
 	rv = rope_cursor_insert_str(&c, "n awesome", 0);
 	ASSERT_EQ(0, rv);
 
-	struct RopeNode *node = rope_first(&r);
-	ASSERT_TRUE(NULL != node);
-	size_t size = 0;
-	const uint8_t *value = rope_node_value(node, &size);
-	ASSERT_TRUE(NULL != value);
-	ASSERT_EQ((size_t)9, size);
-	ASSERT_STREQS("This is a", (const char *)value, size);
-
-	node = rope_node_next(node);
-	ASSERT_TRUE(NULL != node);
-	value = rope_node_value(node, &size);
-	ASSERT_TRUE(NULL != value);
-	ASSERT_EQ((size_t)9, size);
-	ASSERT_EQ(0, memcmp(value, "n awesome", size));
-
-	node = rope_node_next(node);
-	ASSERT_NOT_NULL(node);
-	value = rope_node_value(node, &size);
-	ASSERT_NOT_NULL(value);
-	ASSERT_EQ((size_t)7, size);
-	ASSERT_EQ(0, memcmp(value, " string", size));
+	ASSERT_JSONEQ("[['This is a','n awesome'],' string']", r.root);
 
 	rv = rope_cursor_cleanup(&c);
 	ASSERT_EQ(0, rv);

@@ -1,7 +1,8 @@
 #include "common.h"
-#include "rope_node.h"
 #include <assert.h>
 #include <rope.h>
+#include <rope_node.h>
+#include <rope_str.h>
 #include <testlib.h>
 
 static void
@@ -147,6 +148,33 @@ test_node_merge(void) {
 	rope_node_free(root, &pool);
 	rope_pool_cleanup(&pool);
 }
+static void
+test_node_insert_incomplete_utf8(void) {
+	int rv = 0;
+	struct RopePool pool = {0};
+
+	// must be larger than ROPE_STR_INLINE_SIZE
+	uint8_t women_emoji[] =
+			"\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6"
+			"\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6"
+			"\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6";
+
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	struct RopeNode *root = rope_node_new(&pool);
+
+	rv = rope_node_insert_right(
+			root, women_emoji, ROPE_STR_INLINE_SIZE + 2, 0, &pool);
+	rv = rope_node_insert_right(
+			root, &women_emoji[2], ROPE_STR_INLINE_SIZE + 2, 0, &pool);
+	ASSERT_EQ(ROPE_NODE_LEAF, rope_node_type(root));
+	size_t size;
+	const uint8_t *data = rope_node_value(root, &size);
+	ASSERT_EQ(size, ROPE_STR_INLINE_SIZE * 2 + 4);
+	ASSERT_STREQS((const char *)women_emoji, (const char *)data, size);
+	rope_node_free(root, &pool);
+	rope_pool_cleanup(&pool);
+}
 
 DECLARE_TESTS
 TEST(test_node_split_inline_middle)
@@ -156,4 +184,5 @@ TEST(test_node_rotate_right)
 TEST(test_node_balance_left)
 TEST(test_node_balance_right)
 TEST(test_node_merge)
+TEST(test_node_insert_incomplete_utf8)
 END_TESTS

@@ -2,10 +2,44 @@
 #include <rope.h>
 #include <string.h>
 
+static bool
+node_should_merge(struct RopeNode *a, struct RopeNode *b) {
+	struct RopeStr *a_str = &a->data.leaf.value;
+	struct RopeStr *b_str = &b->data.leaf.value;
+
+	if (rope_node_tags(a) != rope_node_tags(b)) {
+		return false;
+	}
+	return rope_str_should_merge(a_str, b_str);
+}
+
+static int
+node_stitch(struct RopeNode *node, struct RopePool *pool) {
+	struct RopeNode *prev = rope_node_prev(node);
+	struct RopeNode *next = rope_node_next(node);
+	size_t merge = 0;
+	if (prev) {
+		bool should_merge = node_should_merge(prev, node);
+		if (should_merge) {
+			merge += 1;
+			node = prev;
+		}
+	}
+	if (next) {
+		bool should_merge = node_should_merge(node, next);
+		if (should_merge) {
+			merge += 1;
+		}
+	}
+	return rope_node_merge(node, merge, pool);
+}
+
 static int
 node_insert(
 		struct RopeNode *target, struct RopeNode *node, struct RopePool *pool,
 		enum RopeDirection which) {
+	assert(ROPE_NODE_IS_LEAF(target));
+
 	int rv = 0;
 	struct RopeNode *new_node = NULL;
 
@@ -22,8 +56,12 @@ node_insert(
 	children[!which] = new_node;
 	rope_node_update_children(target);
 	rope_node_balance_up(new_node);
-
 	new_node = NULL;
+
+	rv = node_stitch(node, pool);
+	if (rv < 0) {
+		goto out;
+	}
 out:
 	rope_node_free(new_node, pool);
 	return rv;

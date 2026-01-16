@@ -23,16 +23,11 @@ str_process(
 		struct RopeStrState *str, const uint8_t *data, size_t byte_size,
 		uint_least16_t state, size_t char_index, size_t utf16_index,
 		size_t column_index, size_t cp_index, size_t newline_index) {
-	size_t char_count = 0;
-	size_t utf16_count = 0;
-	size_t column_count = 0;
-	size_t cp_count = 0;
-	size_t newline_count = 0;
+	struct RopeStrDimensions dim = {0};
 	uint_least32_t cp = GRAPHEME_INVALID_CODEPOINT;
 	uint_least32_t last_cp = GRAPHEME_INVALID_CODEPOINT;
 	size_t byte_index = 0;
-	size_t last_byte_index = 0;
-	size_t invalid_index = SIZE_MAX;
+	size_t last_char_byte_index = 0;
 
 	// SIZE_MAX is a magic value. We're asserting a lower value of byte_size, so
 	// that we can safely hint the compiler ROPE_UNREACHABLE() later on. CPUs
@@ -40,73 +35,60 @@ str_process(
 	// for my state of mind to assert this.
 	assert(byte_size < SIZE_MAX);
 
-	size_t last_char_offset = 0;
 	for (byte_index = 0; byte_index < byte_size; last_cp = cp) {
-		last_byte_index = byte_index;
+		last_char_byte_index = byte_index;
 
 		size_t cp_size = grapheme_decode_utf8(
 				(const char *)&data[byte_index], byte_size - byte_index, &cp);
-		byte_index += cp_size;
 
 		if (cp == GRAPHEME_INVALID_CODEPOINT) {
-			// mark the first invalid character
-			if (invalid_index == SIZE_MAX) {
-				invalid_index = last_byte_index;
-			}
-			utf16_count += 1;
-			column_count += 1;
+			dim.utf16_count += 1;
+			dim.column_count += 1;
 		} else {
-			last_char_offset = byte_index;
-			utf16_count += cp >= 0x10000 ? 2 : 1;
-			column_count += cx_cp_width(cp);
-			if (cp == '\n') {
-				newline_count += 1;
-			}
+			dim.utf16_count += cp >= 0x10000 ? 2 : 1;
+			dim.column_count += cx_cp_width(cp);
+			dim.newline_count += cp == '\n' ? 1 : 0;
 		}
-		cp_count += 1;
+		byte_index += cp_size;
+		dim.cp_count += 1;
 
-		if (grapheme_is_character_break(last_cp, cp, &state)) {
+		const bool is_partial_utf8 = byte_index > byte_size;
+		if (is_partial_utf8) {
+			dim.char_count += 1;
+		} else if (grapheme_is_character_break(last_cp, cp, &state)) {
 			state = 0;
-			// Only increment character size as long as we haven't hit an
-			// invalid character
-			if (char_count <= byte_size) {
-				char_count += 1;
-			}
+			dim.char_count += 1;
 		}
 
-		// Hint the compiler that char_size and utf16_size are never reaching
-		// SIZE_MAX. This allows to optimize out these checks when str_process
-		// used to calculate the byte_indexes.
-		if (char_count >= SIZE_MAX || utf16_count >= SIZE_MAX ||
-			column_count >= SIZE_MAX || cp_count >= SIZE_MAX ||
-			newline_count >= SIZE_MAX) {
+		// Hint the compiler that *_size are never reaching SIZE_MAX. This
+		// allows to optimize out these checks when str_process used to
+		// calculate the byte_indexes.
+#define X(f) ((dim.f##_count) >= SIZE_MAX)
+		if (X(char) || X(column) || X(cp) || X(newline) || X(utf16)) {
 			ROPE_UNREACHABLE();
-		} else if (char_count >= char_index) {
+#undef X
+		} else if (dim.char_count >= char_index) {
 			break;
-		} else if (utf16_count >= utf16_index) {
+		} else if (dim.utf16_count >= utf16_index) {
 			break;
-		} else if (column_count >= column_index) {
+		} else if (dim.column_count >= column_index) {
 			break;
-		} else if (cp_count >= cp_index) {
+		} else if (dim.cp_count >= cp_index) {
 			break;
-		} else if (newline_count >= newline_index) {
+		} else if (dim.newline_count >= newline_index) {
 			break;
 		}
 	}
+	dim.byte_count = CX_MIN(byte_size, byte_index);
+
+	// Sanity check: last_char_size should never exceed more than 4 bytes.
+	assert(dim.byte_count - last_char_byte_index <= 4);
 
 	if (str) {
-		struct RopeStrDimensions *dim = &str->dimensions;
+		struct RopeStrDimensions *str_dim = &str->dimensions;
 		str->state = state;
-		if (invalid_index != SIZE_MAX) {
-			dim->char_count = SIZE_MAX - invalid_index;
-		} else {
-			dim->char_count = char_count;
-		}
-		dim->cp_count = cp_count;
-		dim->utf16_count = utf16_count;
-		dim->byte_count = CX_MIN(byte_index, byte_size);
-		dim->newline_count = newline_count;
-		str->last_char_size = dim->byte_count - last_char_offset;
+		ROPE_STR_DIMENSIONS_APPLY(str_dim, =, &dim);
+		str->last_char_size = str_dim->byte_count - last_char_byte_index;
 	}
 
 	return byte_index;
@@ -189,7 +171,7 @@ rope_str_inline_append(
 			SIZE_MAX, SIZE_MAX, SIZE_MAX, SIZE_MAX);
 
 	ROPE_STR_DIMENSIONS_APPLY(
-			str->state.dimensions, +=, append_state.dimensions);
+					&str->state.dimensions, +=, &append_state.dimensions);
 	str->state.last_char_size = append_state.last_char_size;
 	str->state.state = append_state.state;
 
@@ -226,7 +208,7 @@ str_split(
 
 	const uint8_t *split = &data[byte_index];
 	ROPE_STR_DIMENSIONS_APPLY(
-			new_str->state.dimensions, -=, str->state.dimensions);
+					&new_str->state.dimensions, -=, &str->state.dimensions);
 	size_t new_byte_count = rope_str_byte_count(new_str);
 
 	if (new_byte_count <= ROPE_STR_INLINE_SIZE) {
@@ -323,11 +305,7 @@ rope_str_at_cp(struct RopeStr *str, size_t cp_index, size_t *byte_size) {
 
 size_t
 rope_str_char_count(const struct RopeStr *str) {
-	size_t char_count = str->state.dimensions.char_count;
-	if (char_count > rope_str_byte_count(str)) {
-		return SIZE_MAX;
-	}
-	return char_count;
+	return str->state.dimensions.char_count;
 }
 
 size_t
@@ -352,7 +330,7 @@ rope_str_byte_count(const struct RopeStr *str) {
 
 bool
 rope_str_should_merge(struct RopeStr *str1, struct RopeStr *str2) {
-	char buffer[7] = {0};
+	char buffer[8] = {0};
 	uint_least32_t cp1 = 0, cp2 = 0;
 	size_t byte_size1 = 0, byte_size2 = 0;
 	uint_least16_t state = str1->state.state;
@@ -363,9 +341,6 @@ rope_str_should_merge(struct RopeStr *str1, struct RopeStr *str2) {
 	size_t last_char_index = byte_size1 - last_char_size;
 
 	// Check for breaks in utf-8 sequences
-	if (last_char_size >= 4) {
-		return false;
-	}
 	memcpy(buffer, &data1[last_char_index], last_char_size);
 	memcpy(&buffer[last_char_size], data2, 4);
 	size_t cp_size = grapheme_decode_utf8(buffer, 4, &cp1);
