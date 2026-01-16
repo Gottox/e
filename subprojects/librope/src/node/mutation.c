@@ -216,7 +216,7 @@ rope_node_merge(struct RopeNode *node, size_t count, struct RopePool *pool) {
 	}
 	rope_str_update(&new_value);
 	rope_str_cleanup(&node->data.leaf.value);
-	memcpy(&node->data.leaf.value, &new_value, sizeof(struct RopeStr));
+	rope_str_move(&node->data.leaf.value, &new_value);
 out:
 	return rv;
 }

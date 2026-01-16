@@ -54,6 +54,8 @@ int rope_str(struct RopeStr *str, size_t byte_size, uint8_t **data_ptr);
 
 void rope_str_update(struct RopeStr *str);
 
+void rope_str_move(struct RopeStr *dest, struct RopeStr *src);
+
 int rope_str_inline_append(
 		struct RopeStr *str, const uint8_t *data, size_t byte_size);
 

@@ -12,9 +12,16 @@
 	(rope_str_byte_count(str) <= ROPE_STR_INLINE_SIZE)
 
 static void
-heap_str_release(struct RopeStrHeap *heap_str) {
+str_heap_release(struct RopeStrHeap *heap_str) {
 	if (heap_str->ref_count-- == 0) {
 		free(heap_str);
+	}
+}
+
+static void
+str_retain(const struct RopeStr *str) {
+	if (!ROPE_STR_IS_INLINE(str)) {
+		str->u.h.str->ref_count++;
 	}
 }
 
@@ -151,6 +158,12 @@ rope_str_update(struct RopeStr *str) {
 			SIZE_MAX, SIZE_MAX);
 }
 
+void
+rope_str_move(struct RopeStr *dest, struct RopeStr *src) {
+	memcpy(dest, src, sizeof(struct RopeStr));
+	memset(src, 0, sizeof(struct RopeStr));
+}
+
 int
 rope_str_inline_append(
 		struct RopeStr *str, const uint8_t *data, size_t byte_size) {
@@ -209,14 +222,14 @@ str_split(
 	const uint8_t *split = &data[byte_index];
 	ROPE_STR_DIMENSIONS_APPLY(
 					&new_str->state.dimensions, -=, &str->state.dimensions);
-	size_t new_byte_count = rope_str_byte_count(new_str);
 
-	if (new_byte_count <= ROPE_STR_INLINE_SIZE) {
+	if (ROPE_STR_IS_INLINE(new_str)) {
+		size_t new_byte_count = rope_str_byte_count(new_str);
 		memcpy(new_str->u.i.data, split, new_byte_count);
 	} else {
 		new_str->u.h.str = str->u.h.str;
-		new_str->u.h.str->ref_count++;
 		new_str->u.h.data = split;
+		str_retain(new_str);
 	}
 
 	// check if we need to inline the original string
@@ -227,7 +240,7 @@ str_split(
 		// We can use fixed-size copy here since we know that the original
 		// string was longer than ROPE_STR_INLINE_SIZE
 		memcpy(str->u.i.data, data, ROPE_STR_INLINE_SIZE);
-		heap_str_release(heap_str);
+		str_heap_release(heap_str);
 	}
 }
 
@@ -362,7 +375,7 @@ rope_str_should_merge(struct RopeStr *str1, struct RopeStr *str2) {
 void
 rope_str_cleanup(struct RopeStr *str) {
 	if (!ROPE_STR_IS_INLINE(str)) {
-		heap_str_release(str->u.h.str);
+		str_heap_release(str->u.h.str);
 	}
 	memset(str, 0, sizeof(struct RopeStr));
 }

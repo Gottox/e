@@ -15,6 +15,9 @@ node_should_merge(struct RopeNode *a, struct RopeNode *b) {
 
 static int
 node_stitch(struct RopeNode *node, struct RopePool *pool) {
+	// TODO: allow stitching of branch nodes.
+	assert(ROPE_NODE_IS_LEAF(node));
+
 	struct RopeNode *prev = rope_node_prev(node);
 	struct RopeNode *next = rope_node_next(node);
 	size_t merge = 0;
@@ -38,6 +41,7 @@ static int
 node_insert(
 		struct RopeNode *target, struct RopeNode *node, struct RopePool *pool,
 		enum RopeDirection which) {
+	// TODO: allow insertion into branch nodes.
 	assert(ROPE_NODE_IS_LEAF(target));
 
 	int rv = 0;
