@@ -74,11 +74,11 @@ crash_2_reduced(void) {
 	ASSERT_EQ(0, rv);
 	// Inserting 0 bytes into range 0
 	rv = rope_range_insert(
-			&ranges[0], (const uint8_t *)"", 0, 0x2eff250000ff0000);
+			&ranges[0], (const uint8_t *)"", 0, 0xeff250000ff0000);
 	ASSERT_EQ(0, rv);
 	// Inserting 0 bytes into range 2
 	rv = rope_range_insert(
-			&ranges[1], (const uint8_t *)"", 0, 0x929200ffff0000ff);
+			&ranges[1], (const uint8_t *)"", 0, 0x29200ffff0000ff);
 
 	rope_range_cleanup(&ranges[1]);
 	rope_range_cleanup(&ranges[0]);
@@ -100,11 +100,11 @@ crash_2_reduced2(void) {
 
 	// Inserting 1 bytes into range 0
 	rv = rope_range_insert(
-			&ranges[0], (const uint8_t *)"a", 1, 0xffffffffffffff00);
+			&ranges[0], (const uint8_t *)"a", 1, 0xfffffffffffff00);
 	ASSERT_EQ(0, rv);
 	// Inserting 0 bytes into range 0
 	rv = rope_range_insert(
-			&ranges[0], (const uint8_t *)"", 0, 0x929200ffff0000);
+			&ranges[0], (const uint8_t *)"", 0, 0x29200ffff0000);
 
 	rope_range_cleanup(&ranges[1]);
 	rope_range_cleanup(&ranges[0]);
@@ -198,14 +198,14 @@ crash_4_reduced(void) {
 
 	// Inserting 2 bytes into range 2
 	rv = rope_range_insert(
-			&ranges[1], (const uint8_t *)"aa", 2, 0xff720101003d0030);
+			&ranges[1], (const uint8_t *)"aa", 2, 0xf720101003d0030);
 	ASSERT_EQ(0, rv);
 	// Inserting 5 bytes into range 0
 	rv = rope_range_insert(&ranges[0], (const uint8_t *)"aaaaa", 5, 0x0);
 	ASSERT_EQ(0, rv);
 	// Inserting 0 bytes into range 2
 	rv = rope_range_insert(
-			&ranges[1], (const uint8_t *)"", 0, 0x8300000000000101);
+			&ranges[1], (const uint8_t *)"", 0, 0x300000000000101);
 
 	rope_range_cleanup(&ranges[1]);
 	rope_range_cleanup(&ranges[0]);

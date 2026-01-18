@@ -10,8 +10,6 @@
 #include "rope_str.h"
 
 #define ROPE_INLINE_LEAF_SIZE (sizeof(void *[2]))
-#define ROPE_TYPE_SHIFT (sizeof(uint64_t) * 8 - 2)
-#define ROPE_TYPE_MASK (~(uint64_t)0 << ROPE_TYPE_SHIFT)
 
 struct RopePool;
 
@@ -19,29 +17,26 @@ struct RopePool;
  * node/node.c
  */
 
+#define ROPE_NODE_TYPE_MASK (~(UINT64_MAX >> 1))
 enum RopeNodeType {
 	ROPE_NODE_LEAF,
 	ROPE_NODE_BRANCH,
 };
 
-enum RopeDirection {
-	ROPE_LEFT,
-	ROPE_RIGHT,
+typedef enum RopeNodeType rope_node_type_t;
+
+struct RopeBranch {
+	struct RopeNode *children[2];
+	struct RopeDim dim;
 };
 
 struct RopeNode {
-	enum RopeNodeType type;
+	uint64_t tags;
 	struct RopeNode *parent;
 
 	union {
-		struct {
-			uint64_t tags;
-			struct RopeStr value;
-		} leaf;
-		struct {
-			struct RopeNode *children[2];
-			size_t depth;
-		} branch;
+		struct RopeStr leaf;
+		struct RopeBranch branch;
 	} data;
 };
 
@@ -57,6 +52,10 @@ size_t rope_node_new_lines(const struct RopeNode *node) ROPE_NO_UNUSED;
 size_t rope_node_char_size(const struct RopeNode *node) ROPE_NO_UNUSED;
 
 size_t rope_node_byte_size(const struct RopeNode *node) ROPE_NO_UNUSED;
+
+size_t rope_node_cp_size(const struct RopeNode *node) ROPE_NO_UNUSED;
+
+size_t rope_node_utf16_size(const struct RopeNode *node) ROPE_NO_UNUSED;
 
 void rope_node_delete(struct RopeNode *node, struct RopePool *pool);
 
@@ -79,8 +78,6 @@ struct RopeNode *rope_node_find_char(
 enum RopeNodeType rope_node_type(const struct RopeNode *node) ROPE_NO_UNUSED;
 
 enum RopeDirection rope_node_which(const struct RopeNode *node) ROPE_NO_UNUSED;
-
-struct RopeNode *rope_node_sibling(const struct RopeNode *node) ROPE_NO_UNUSED;
 
 struct RopeNode *
 rope_node_leaf(struct RopeNode *node, enum RopeDirection which) ROPE_NO_UNUSED;
@@ -123,6 +120,10 @@ const uint8_t *rope_node_value(const struct RopeNode *node, size_t *size);
 
 void rope_node_update_depth(struct RopeNode *node);
 
+void rope_node_update_dim(struct RopeNode *node);
+
+void rope_node_propagate_dim(struct RopeNode *node);
+
 void rope_node_update_children(struct RopeNode *node);
 
 void rope_node_move(struct RopeNode *target, struct RopeNode *node);
@@ -148,6 +149,14 @@ int rope_node_insert_left(
 int rope_node_insert_right(
 		struct RopeNode *node, const uint8_t *data, size_t byte_size,
 		uint64_t tags, struct RopePool *pool);
+
+int rope_node_insert_heap_left(
+		struct RopeNode *node, uint8_t *data, size_t byte_size, uint64_t tags,
+		struct RopePool *pool);
+
+int rope_node_insert_heap_right(
+		struct RopeNode *node, uint8_t *data, size_t byte_size, uint64_t tags,
+		struct RopePool *pool);
 
 /**********************************
  * inline node functions

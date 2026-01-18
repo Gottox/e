@@ -18,7 +18,7 @@ rope_node_cleanup(struct RopeNode *node) {
 	}
 
 	if (rope_node_type(node) == ROPE_NODE_LEAF) {
-		rope_str_cleanup(&node->data.leaf.value);
+		rope_str_cleanup(&node->data.leaf);
 	}
 }
 
@@ -29,7 +29,7 @@ rope_node_free(struct RopeNode *node, struct RopePool *pool) {
 	}
 	switch (rope_node_type(node)) {
 	case ROPE_NODE_LEAF:
-		rope_str_cleanup(&node->data.leaf.value);
+		rope_str_cleanup(&node->data.leaf);
 		break;
 	case ROPE_NODE_BRANCH:
 		rope_node_free(rope_node_left(node), pool);

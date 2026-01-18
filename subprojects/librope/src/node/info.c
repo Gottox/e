@@ -2,22 +2,10 @@
 #include <rope.h>
 #include <string.h>
 
-#define ROPE_NODE_AGGREGATE(type, func, ...) \
-	type func(const struct RopeNode *node) { \
-		if (ROPE_NODE_IS_BRANCH(node)) { \
-			struct RopeNode *left = rope_node_left(node); \
-			struct RopeNode *right = rope_node_right(node); \
-			return func(left) + func(right); \
-		} else if (ROPE_NODE_IS_LEAF(node)) \
-			__VA_ARGS__ else { \
-				ROPE_UNREACHABLE(); \
-			} \
-	}
-
 size_t
 rope_node_depth(struct RopeNode *node) {
 	if (ROPE_NODE_IS_BRANCH(node)) {
-		return node->data.branch.depth;
+		return node->tags & ~ROPE_NODE_TYPE_MASK;
 	} else {
 		return 0;
 	}
@@ -26,16 +14,17 @@ rope_node_depth(struct RopeNode *node) {
 const uint8_t *
 rope_node_value(const struct RopeNode *node, size_t *size) {
 	assert(ROPE_NODE_IS_LEAF(node));
-	return rope_str_data(&node->data.leaf.value, size);
+	return rope_str_data(&node->data.leaf, size);
 }
 
-ROPE_NODE_AGGREGATE(size_t, rope_node_new_lines, {
+static size_t
+leaf_newline_count(const struct RopeNode *node) {
 	size_t byte_size;
 	const uint8_t *data = rope_node_value(node, &byte_size);
 	size_t new_lines = 0;
 	const uint8_t *p = data;
 	while (1) {
-		p = memchr(p, '\n', byte_size - (p - data));
+		p = memchr(p, '\n', byte_size - (size_t)(p - data));
 		if (p) {
 			new_lines++;
 			p++;
@@ -44,17 +33,59 @@ ROPE_NODE_AGGREGATE(size_t, rope_node_new_lines, {
 		}
 	}
 	return new_lines;
-})
+}
 
-ROPE_NODE_AGGREGATE(size_t, rope_node_char_size, {
-	return rope_str_char_count(&node->data.leaf.value);
-})
+size_t
+rope_node_new_lines(const struct RopeNode *node) {
+	if (ROPE_NODE_IS_BRANCH(node)) {
+		return node->data.branch.dim.newline_count;
+	} else if (ROPE_NODE_IS_LEAF(node)) {
+		return leaf_newline_count(node);
+	}
+	ROPE_UNREACHABLE();
+}
 
-ROPE_NODE_AGGREGATE(size_t, rope_node_byte_size, {
-	return rope_str_byte_count(&node->data.leaf.value);
-})
+size_t
+rope_node_char_size(const struct RopeNode *node) {
+	if (ROPE_NODE_IS_BRANCH(node)) {
+		return node->data.branch.dim.char_count;
+	} else if (ROPE_NODE_IS_LEAF(node)) {
+		return rope_str_chars(&node->data.leaf);
+	}
+	ROPE_UNREACHABLE();
+}
 
-enum RopeNodeType
+size_t
+rope_node_byte_size(const struct RopeNode *node) {
+	if (ROPE_NODE_IS_BRANCH(node)) {
+		return node->data.branch.dim.byte_count;
+	} else if (ROPE_NODE_IS_LEAF(node)) {
+		return rope_str_bytes(&node->data.leaf);
+	}
+	ROPE_UNREACHABLE();
+}
+
+size_t
+rope_node_cp_size(const struct RopeNode *node) {
+	if (ROPE_NODE_IS_BRANCH(node)) {
+		return node->data.branch.dim.cp_count;
+	} else if (ROPE_NODE_IS_LEAF(node)) {
+		return rope_str_codepoints(&node->data.leaf);
+	}
+	ROPE_UNREACHABLE();
+}
+
+size_t
+rope_node_utf16_size(const struct RopeNode *node) {
+	if (ROPE_NODE_IS_BRANCH(node)) {
+		return node->data.branch.dim.utf16_count;
+	} else if (ROPE_NODE_IS_LEAF(node)) {
+		return rope_str_utf16_cps(&node->data.leaf);
+	}
+	ROPE_UNREACHABLE();
+}
+
+rope_node_type_t
 rope_node_type(const struct RopeNode *node) {
-	return node->type;
+	return (node->tags >> 63) & 0x1;
 }

@@ -6,6 +6,7 @@
 
 #define ROPE_DESER_TYPE_SIZE 1
 #define ROPE_DESER_RANGE_COUNT 3
+#define TAG_MASK (UINT64_MAX >> 1)
 
 static int
 deser_read_command(
@@ -134,12 +135,12 @@ rope_deserialize(
 					   command.range_index);
 				print_string(payload, command.args.insert.length);
 				fprintf(stderr, ", %u, 0x%" PRIx64 ");\n", command.args.insert.length,
-					   command.args.insert.tags);
+					   command.args.insert.tags & TAG_MASK);
 			}
 
 			rv = rope_range_insert(
 					range, payload, command.args.insert.length,
-					command.args.insert.tags);
+					command.args.insert.tags & TAG_MASK);
 
 			print_rv_check(rv, print);
 
@@ -160,7 +161,7 @@ rope_deserialize(
 			tmp = command.args.span_range.position;
 			rv = rope_range_start_move_to_index(
 					range, command.args.span_range.position,
-					command.args.span_range.tags);
+					command.args.span_range.tags & TAG_MASK);
 
 			print_rv_check(rv, print);
 			break;
@@ -172,11 +173,11 @@ rope_deserialize(
 				fprintf(stderr, "rv = rope_range_end_move_to_index(&ranges[%u], %u, "
 					   "0x%" PRIx64 ");\n",
 					   command.range_index, command.args.span_range.position,
-					   command.args.span_range.tags);
+					   command.args.span_range.tags & TAG_MASK);
 			}
 			rv = rope_range_end_move_to_index(
 					range, command.args.span_range.position,
-					command.args.span_range.tags);
+					command.args.span_range.tags & TAG_MASK);
 			print_rv_check(rv, print);
 			break;
 		default:

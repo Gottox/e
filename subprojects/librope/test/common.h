@@ -23,6 +23,7 @@ node_from_json(struct json_object *obj, struct RopePool *pool) {
 
 	struct RopeNode *node = rope_pool_get(pool);
 	assert(node);
+	node->parent = NULL;
 
 	enum json_type type = json_object_get_type(obj);
 
@@ -37,18 +38,20 @@ node_from_json(struct json_object *obj, struct RopePool *pool) {
 		struct RopeNode *right = node_from_json(right_json, pool);
 		size_t depth =
 				CX_MAX(rope_node_depth(left), rope_node_depth(right)) + 1;
-		node->data.branch.depth = depth;
-		node->type = ROPE_NODE_BRANCH;
+		node->tags = (uint64_t)ROPE_NODE_BRANCH << 63;
+		node->tags |= depth;
 
 		left->parent = node;
 		right->parent = node;
 		node->data.branch.children[ROPE_LEFT] = left;
 		node->data.branch.children[ROPE_RIGHT] = right;
+		rope_node_update_dim(node);
 	} else if (type == json_type_string) {
 		int len = json_object_get_string_len(obj);
 		const char *str = json_object_get_string(obj);
 
-		int rv = rope_str_init(&node->data.leaf.value, (const uint8_t *)str, (size_t)len);
+		node->tags = (uint64_t)ROPE_NODE_LEAF << 63;
+		int rv = rope_str_init(&node->data.leaf, (const uint8_t *)str, (size_t)len);
 		assert(rv == 0);
 	}
 
@@ -61,7 +64,7 @@ node_to_json(struct RopeNode *node) {
 		return NULL;
 	}
 
-	enum RopeNodeType type = rope_node_type(node);
+	rope_node_type_t type = rope_node_type(node);
 
 	if (type == ROPE_NODE_BRANCH) {
 		// Create a JSON array for branches: [left, right]

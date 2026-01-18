@@ -151,7 +151,6 @@ test_node_merge(void) {
 static void
 test_node_insert_incomplete_utf8(void) {
 	int rv = 0;
-	struct RopePool pool = {0};
 
 	// must be larger than ROPE_STR_INLINE_SIZE
 	uint8_t women_emoji[] =
@@ -159,6 +158,7 @@ test_node_insert_incomplete_utf8(void) {
 			"\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6"
 			"\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6";
 
+	struct RopePool pool = {0};
 	rv = rope_pool_init(&pool);
 	ASSERT_EQ(0, rv);
 	struct RopeNode *root = rope_node_new(&pool);
@@ -176,6 +176,48 @@ test_node_insert_incomplete_utf8(void) {
 	rope_pool_cleanup(&pool);
 }
 
+static void
+test_node_insert_right_malloc(void) {
+	int rv = 0;
+	struct RopePool pool = {0};
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+
+	uint8_t *buffer = malloc(ROPE_STR_INLINE_SIZE * 2);
+	memset(buffer, 'A', ROPE_STR_INLINE_SIZE * 2);
+	ASSERT_NOT_NULL(buffer);
+
+	struct RopeNode *root = rope_node_new(&pool);
+	rv = rope_node_insert_heap_right(
+			root, buffer, ROPE_STR_INLINE_SIZE * 2, 0, &pool);
+	ASSERT_EQ(rv, 0);
+
+	size_t byte_size = 0;
+	const uint8_t *data = rope_node_value(root, &byte_size);
+	ASSERT_EQ(byte_size, ROPE_STR_INLINE_SIZE * 2);
+	ASSERT_EQ((uintptr_t)buffer, (uintptr_t)data);
+	rope_node_free(root, &pool);
+	rope_pool_cleanup(&pool);
+}
+
+static void
+test_node_insert_big(void) {
+	int rv = 0;
+	struct RopePool pool = {0};
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+
+	uint8_t buffer[65536] = {0};
+	memset(buffer, 'A', sizeof(buffer));
+
+	struct RopeNode *root = rope_node_new(&pool);
+	rv = rope_node_insert_right(root, buffer, sizeof(buffer), 0, &pool);
+	ASSERT_EQ(rv, 0);
+
+	rope_node_free(root, &pool);
+	rope_pool_cleanup(&pool);
+}
+
 DECLARE_TESTS
 TEST(test_node_split_inline_middle)
 TEST(test_node_insert_right)
@@ -185,4 +227,6 @@ TEST(test_node_balance_left)
 TEST(test_node_balance_right)
 TEST(test_node_merge)
 TEST(test_node_insert_incomplete_utf8)
+TEST(test_node_insert_right_malloc)
+TEST(test_node_insert_big)
 END_TESTS

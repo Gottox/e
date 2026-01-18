@@ -24,7 +24,15 @@ handle_change(struct Rope *rope, struct RopeCursor *cursor, void *userdata) {
 	(void)rope;
 	(void)cursor;
 	struct RopeRange *range = userdata;
-	if (cursor == &range->cursor_start) {
+	if (cursor == &range->cursor_end &&
+		rope_cursor_is_order(cursor, &range->cursor_start)) {
+
+		// Moves the end pointer after the start pointer if they aren't in
+		// order. As the cursors are updated back to front.
+		rope_cursor_move_to_index(
+				&range->cursor_end, range->cursor_start.index, 0);
+		range->callback(rope, range, true, range->callback_userdata);
+	} else if (cursor == &range->cursor_start) {
 		range->callback(rope, range, false, range->callback_userdata);
 	} else if (!is_collapsed(range)) {
 		range->callback(rope, range, true, range->callback_userdata);

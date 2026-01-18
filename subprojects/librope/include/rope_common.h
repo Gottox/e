@@ -27,6 +27,25 @@ typedef size_t rope_char_index_t;
 typedef size_t rope_byte_index_t;
 typedef size_t rope_index_t;
 
-#define ROPE_NEWLINE '\n'
+enum RopeDirection {
+	ROPE_LEFT,
+	ROPE_RIGHT,
+};
+
+struct RopeDim {
+	size_t byte_count;
+	size_t char_count;
+	size_t cp_count;
+	size_t newline_count;
+	size_t utf16_count;
+};
+
+enum RopeAddrMode {
+	ROPE_BYTE,
+	ROPE_CHAR,
+	ROPE_CP,
+	ROPE_LINE,
+	ROPE_UTF16,
+};
 
 #endif

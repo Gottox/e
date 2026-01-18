@@ -40,6 +40,26 @@ def resolve_input_to_ptr(arg):
         except (ValueError, gdb.error):
             return None
 
+# Dimension bitfield layout:
+# | bits    |                  |
+# |---------|------------------|
+# | 00 - 11 | bytes            |
+# | 12 - 23 | chars            |
+# | 24 - 35 | codepoints       |
+# | 36 - 47 | newlines         |
+# | 48 - 59 | utf16 codepoints |
+# | 60 - 64 | last char size   |
+def dim_to_dict(dim):
+	dim = int(dim)
+	return {
+		'bytes': (dim & 0xFFF),
+		'chars': (dim >> 12) & 0xFFF,
+		'codepoints': (dim >> 24) & 0xFFF,
+		'newlines': (dim >> 36) & 0xFFF,
+		'utf16_cps': (dim >> 48) & 0xFFF,
+		'last_char_size': (dim >> 60) & 0x1F,
+	}
+
 class DumpRopeTree(gdb.Command):
     """Print the entire RopeNode tree structure."""
 
@@ -85,7 +105,8 @@ class DumpRopeTree(gdb.Command):
                 str = node['data']['leaf']['value']
                 str_state = str['state']
                 # Leaf handling (Inline vs Standard)
-                size = int(str_state['dimensions']['byte_count'])
+                dim = dim_to_dict(str_state['dim'])
+                size = int(dim['bytes'])
                 is_inline = (size <= 16)
                 leaf_data = node['data']['leaf']
 
@@ -101,3 +122,25 @@ class DumpRopeTree(gdb.Command):
             print(f"{idx_prefix}<{exc_tb.tb_lineno}: Error dereferencing {node_ptr}: {e}>")
 
 DumpRopeTree()
+
+class PrintDim(gdb.Command):
+    """Print the entire RopeNode tree structure."""
+
+    def __init__(self):
+        super(PrintDim, self).__init__("rope-dim", gdb.COMMAND_USER)
+
+    def invoke(self, arg, from_tty):
+        args = gdb.string_to_argv(arg)
+        if not args:
+            print("Usage: rope-dim <dimension_value>")
+            return
+        try:
+            dim_val = int(gdb.parse_and_eval(args[0]))
+            dim_dict = dim_to_dict(dim_val)
+            for k, v in dim_dict.items():
+              k = f"{k}:"
+              print(f"  {k:<12}{v}")
+        except gdb.error as e:
+            print(f"Error: Could not parse dimension value '{args[0]}': {e}")
+
+PrintDim()

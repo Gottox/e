@@ -1,6 +1,8 @@
 #include "rope_node.h"
 #include <assert.h>
 
+#define ROPE_NODE_TAGS_MASK (UINT64_MAX >> 1)
+
 #define ROPE_NODE_TRAVERSAL(func, arg_type, arg_name, ...) \
 	void func(struct RopeNode *node, arg_type arg_name) { \
 		if (ROPE_NODE_IS_BRANCH(node)) { \
@@ -20,7 +22,7 @@ node_tags(struct RopeNode *node) {
 	case ROPE_NODE_BRANCH:
 		return NULL;
 	case ROPE_NODE_LEAF:
-		return &node->data.leaf.tags;
+		return &node->tags;
 	default:
 		ROPE_UNREACHABLE();
 	}
@@ -28,7 +30,7 @@ node_tags(struct RopeNode *node) {
 uint64_t
 rope_node_tags(struct RopeNode *node) {
 	if (ROPE_NODE_IS_LEAF(node)) {
-		return *node_tags(node);
+		return *node_tags(node) & ROPE_NODE_TAGS_MASK;
 	} else {
 		return 0;
 	}
@@ -37,22 +39,25 @@ rope_node_tags(struct RopeNode *node) {
 bool
 rope_node_match_tags(struct RopeNode *node, uint64_t tags) {
 	assert(ROPE_NODE_IS_LEAF(node));
-
+	assert((tags & ~ROPE_NODE_TAGS_MASK) == 0);
 	uint64_t node_tags = rope_node_tags(node);
 	return (node_tags & tags) == tags;
 }
 
 ROPE_NODE_TRAVERSAL(rope_node_set_tags, uint64_t, tags, {
+	assert((tags & ~ROPE_NODE_TAGS_MASK) == 0);
 	assert(ROPE_NODE_IS_LEAF(node));
 	*node_tags(node) |= tags;
 })
 
 ROPE_NODE_TRAVERSAL(rope_node_remove_tags, uint64_t, tags, {
+	assert((tags & ~ROPE_NODE_TAGS_MASK) == 0);
 	assert(ROPE_NODE_IS_LEAF(node));
 	*node_tags(node) &= ~tags;
 })
 
 ROPE_NODE_TRAVERSAL(rope_node_add_tags, uint64_t, tags, {
+	assert((tags & ~ROPE_NODE_TAGS_MASK) == 0);
 	assert(ROPE_NODE_IS_LEAF(node));
 	*node_tags(node) |= tags;
 })
