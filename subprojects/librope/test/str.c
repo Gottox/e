@@ -31,7 +31,7 @@ test_str_split(void) {
 	ASSERT_EQ(rv, 0);
 
 	struct RopeStr new_str = {0};
-	rope_str_char_split(&str, &new_str, 5);
+	rope_str_split(&str, &new_str, ROPE_CHAR, 5);
 
 	size_t byte_size = 0;
 	const uint8_t *data = rope_str_data(&str, &byte_size);
@@ -42,6 +42,14 @@ test_str_split(void) {
 	ASSERT_EQ(byte_size, 5);
 	ASSERT_STREQS((const char *)data, "World", 5);
 	rope_str_cleanup(&new_str);
+	rope_str_cleanup(&str);
+}
+
+static void
+test_str_last_char_index(void) {
+	struct RopeStr str = {0};
+	rope_str_init(&str, (const uint8_t *)"Hello", 5);
+	ASSERT_EQ(rope_str_last_char_index(&str), 4);
 	rope_str_cleanup(&str);
 }
 
@@ -71,7 +79,7 @@ test_str_heap_split_to_inline_both(void) {
 	ASSERT_EQ(rv, 0);
 
 	struct RopeStr new_str = {0};
-	rope_str_char_split(&str, &new_str, ROPE_STR_INLINE_SIZE);
+	rope_str_split(&str, &new_str, ROPE_CHAR, ROPE_STR_INLINE_SIZE);
 
 	size_t byte_size = 0;
 
@@ -99,7 +107,7 @@ test_str_heap_split_to_inline_right(void) {
 	ASSERT_EQ(rv, 0);
 
 	struct RopeStr new_str = {0};
-	rope_str_char_split(&str, &new_str, ROPE_STR_INLINE_SIZE + 1);
+	rope_str_split(&str, &new_str, ROPE_CHAR, ROPE_STR_INLINE_SIZE + 1);
 
 	size_t byte_size = 0;
 
@@ -127,7 +135,7 @@ test_str_heap_split_to_inline_left(void) {
 	ASSERT_EQ(rv, 0);
 
 	struct RopeStr new_str = {0};
-	rope_str_char_split(&str, &new_str, ROPE_STR_INLINE_SIZE - 1);
+	rope_str_split(&str, &new_str, ROPE_CHAR, ROPE_STR_INLINE_SIZE - 1);
 
 	size_t byte_size = 0;
 
@@ -146,90 +154,6 @@ test_str_heap_split_to_inline_left(void) {
 }
 
 static void
-test_str_should_merge_utf8_sequence(void) {
-	int rv = 0;
-	struct RopeStr str1 = {0}, str2 = {0};
-	const uint8_t buffer[] = SMILING_FACE;
-	rv = rope_str_init(&str1, buffer, 2);
-	ASSERT_EQ(rv, 0);
-
-	size_t byte_size = rope_str_bytes(&str1);
-	ASSERT_EQ(2, byte_size);
-	ASSERT_EQ(1, rope_str_chars(&str1));
-
-	rv = rope_str_init(&str2, &buffer[2], 2);
-	ASSERT_EQ(rv, 0);
-
-	byte_size = rope_str_bytes(&str2);
-	ASSERT_EQ(2, byte_size);
-	ASSERT_EQ(2, rope_str_chars(&str2));
-
-	bool should_merge = rope_str_should_merge(&str1, &str2);
-	ASSERT_TRUE(should_merge);
-
-	rope_str_cleanup(&str1);
-	rope_str_cleanup(&str2);
-}
-
-static void
-test_str_should_merge_grapheme(void) {
-	const int split = 4;
-	int rv = 0;
-	struct RopeStr str1 = {0}, str2 = {0};
-
-	const uint8_t buffer[] = FEMALE_ASTRONAUT;
-	rv = rope_str_init(&str1, buffer, split);
-	ASSERT_EQ(rv, 0);
-
-	rv = rope_str_init(&str2, &buffer[split], sizeof(buffer) - 1 - split);
-	ASSERT_EQ(rv, 0);
-
-	bool should_merge = rope_str_should_merge(&str1, &str2);
-	ASSERT_TRUE(should_merge);
-
-	rope_str_cleanup(&str1);
-	rope_str_cleanup(&str2);
-}
-
-static void
-test_str_should_merge_at_fn(int split) {
-	int rv = 0;
-
-	const uint8_t buffer[] = LONG_GRAPHEME;
-
-	struct RopeStr str1 = {0}, str2 = {0};
-
-	rv = rope_str_init(&str1, buffer, split);
-	ASSERT_EQ(rv, 0);
-
-	rv = rope_str_init(&str2, &buffer[split], sizeof(buffer) - 1 - split);
-	ASSERT_EQ(rv, 0);
-
-	bool should_merge = rope_str_should_merge(&str1, &str2);
-	ASSERT_TRUE(should_merge);
-
-	rope_str_cleanup(&str1);
-	rope_str_cleanup(&str2);
-}
-
-static void
-test_str_should_merge_at_8(void) {
-	test_str_should_merge_at_fn(8);
-}
-
-static void
-test_str_should_merge_at_12(void) {
-	test_str_should_merge_at_fn(12);
-}
-
-static void
-test_str_should_merge_sliding(void) {
-	for (size_t split = 1; split < sizeof(LONG_GRAPHEME) - 2; split++) {
-		test_str_should_merge_at_fn(split);
-	}
-}
-
-static void
 test_str_inline_append(void) {
 	int rv = 0;
 	struct RopeStr str = {0};
@@ -243,11 +167,6 @@ test_str_inline_append(void) {
 	ASSERT_EQ(byte_size, 10);
 	ASSERT_STREQS((const char *)data, "HelloWorld", 10);
 	rope_str_cleanup(&str);
-}
-
-static void
-test_char_to_byte_index(void) {
-	ASSERT_EQ(rope_str_char_to_byte_index((const uint8_t *)"😃", 4, 0), 0);
 }
 
 static void
@@ -280,7 +199,7 @@ rope_str_strdup_split_into_inline(void) {
 	ASSERT_EQ(rv, 0);
 
 	struct RopeStr new_str = {0};
-	rope_str_char_split(&str, &new_str, ROPE_STR_INLINE_SIZE);
+	rope_str_split(&str, &new_str, ROPE_CHAR, ROPE_STR_INLINE_SIZE);
 	size_t byte_size = 0;
 	const uint8_t *data = rope_str_data(&str, &byte_size);
 	ASSERT_EQ(byte_size, ROPE_STR_INLINE_SIZE);
@@ -302,7 +221,7 @@ rope_str_strdup_split_into_heap(void) {
 	ASSERT_EQ(rv, 0);
 
 	struct RopeStr new_str = {0};
-	rope_str_char_split(&str, &new_str, ROPE_STR_INLINE_SIZE * 2);
+	rope_str_split(&str, &new_str, ROPE_CHAR, ROPE_STR_INLINE_SIZE * 2);
 	size_t byte_size = 0;
 	const uint8_t *data = rope_str_data(&str, &byte_size);
 	ASSERT_EQ(byte_size, ROPE_STR_INLINE_SIZE * 2);
@@ -322,7 +241,7 @@ test_str_at_char_ascii(void) {
 	ASSERT_EQ(rv, 0);
 
 	size_t byte_count = 0;
-	const uint8_t *ptr = rope_str_at_char(&str, 2, &byte_count);
+	const uint8_t *ptr = rope_str_offset(&str, ROPE_CHAR, 2, &byte_count);
 	ASSERT_EQ(byte_count, 3);
 	ASSERT_STREQS((const char *)ptr, "llo", 3);
 
@@ -339,7 +258,7 @@ test_str_at_char_emoji(void) {
 	ASSERT_EQ(rv, 0);
 
 	size_t byte_count = 0;
-	const uint8_t *ptr = rope_str_at_char(&str, 1, &byte_count);
+	const uint8_t *ptr = rope_str_offset(&str, ROPE_CHAR, 1, &byte_count);
 	ASSERT_EQ(byte_count, 12);
 	ASSERT_STREQS((const char *)ptr, FEMALE_ASTRONAUT "Y", 12);
 
@@ -355,7 +274,7 @@ test_str_at_char_boundary(void) {
 
 	size_t byte_count = 0;
 
-	const uint8_t *ptr = rope_str_at_char(&str, 3, &byte_count);
+	const uint8_t *ptr = rope_str_offset(&str, ROPE_CHAR, 3, &byte_count);
 	ASSERT_EQ(byte_count, 0);
 	(void)ptr;
 
@@ -370,7 +289,7 @@ test_str_at_utf16_ascii(void) {
 	ASSERT_EQ(rv, 0);
 
 	size_t byte_count = 0;
-	const uint8_t *ptr = rope_str_at_utf16(&str, 2, &byte_count);
+	const uint8_t *ptr = rope_str_offset(&str, ROPE_UTF16, 2, &byte_count);
 	ASSERT_EQ(byte_count, 3);
 	ASSERT_STREQS((const char *)ptr, "llo", 3);
 
@@ -388,7 +307,7 @@ test_str_at_utf16_with_surrogates(void) {
 
 	size_t byte_count = 0;
 
-	const uint8_t *ptr = rope_str_at_utf16(&str, 3, &byte_count);
+	const uint8_t *ptr = rope_str_offset(&str, ROPE_UTF16, 3, &byte_count);
 	ASSERT_EQ(byte_count, 1);
 	ASSERT_STREQS((const char *)ptr, "B", 1);
 
@@ -403,7 +322,7 @@ test_str_at_cp_ascii(void) {
 	ASSERT_EQ(rv, 0);
 
 	size_t byte_size = 0;
-	const uint8_t *ptr = rope_str_at_cp(&str, 2, &byte_size);
+	const uint8_t *ptr = rope_str_offset(&str, ROPE_CP, 2, &byte_size);
 	ASSERT_EQ(byte_size, 3);
 	ASSERT_STREQS((const char *)ptr, "llo", 3);
 
@@ -421,7 +340,7 @@ test_str_at_cp_multibyte(void) {
 
 	size_t byte_size = 0;
 
-	const uint8_t *ptr = rope_str_at_cp(&str, 3, &byte_size);
+	const uint8_t *ptr = rope_str_offset(&str, ROPE_CP, 3, &byte_size);
 	ASSERT_EQ(byte_size, 2);
 	ASSERT_STREQS((const char *)ptr, "\xc3\xa9", 2);
 
@@ -440,7 +359,7 @@ test_str_at_cp_emoji(void) {
 
 	size_t byte_size = 0;
 
-	const uint8_t *ptr = rope_str_at_cp(&str, 1, &byte_size);
+	const uint8_t *ptr = rope_str_offset(&str, ROPE_CP, 1, &byte_size);
 	ASSERT_EQ(byte_size, 7);
 	(void)ptr;
 
@@ -455,7 +374,7 @@ test_str_utf16_split_ascii(void) {
 	ASSERT_EQ(rv, 0);
 
 	struct RopeStr new_str = {0};
-	rope_str_utf16_split(&str, &new_str, 5);
+	rope_str_split(&str, &new_str, ROPE_UTF16, 5);
 
 	size_t byte_size = 0;
 	const uint8_t *data = rope_str_data(&str, &byte_size);
@@ -481,7 +400,7 @@ test_str_utf16_split_after_surrogate(void) {
 
 	struct RopeStr new_str = {0};
 
-	rope_str_utf16_split(&str, &new_str, 3);
+	rope_str_split(&str, &new_str, ROPE_UTF16, 3);
 
 	size_t byte_size = 0;
 	const uint8_t *data = rope_str_data(&str, &byte_size);
@@ -504,7 +423,7 @@ test_str_cp_split_ascii(void) {
 	ASSERT_EQ(rv, 0);
 
 	struct RopeStr new_str = {0};
-	rope_str_cp_split(&str, &new_str, 5);
+	rope_str_split(&str, &new_str, ROPE_CP, 5);
 
 	size_t byte_size = 0;
 	const uint8_t *data = rope_str_data(&str, &byte_size);
@@ -530,7 +449,7 @@ test_str_cp_split_multibyte(void) {
 
 	struct RopeStr new_str = {0};
 
-	rope_str_cp_split(&str, &new_str, 3);
+	rope_str_split(&str, &new_str, ROPE_CP, 3);
 
 	size_t byte_size = 0;
 	const uint8_t *data = rope_str_data(&str, &byte_size);
@@ -567,21 +486,9 @@ test_str_move_heap(void) {
 	ASSERT_EQ(dest_byte_size, sizeof(buffer));
 	ASSERT_EQ((uintptr_t)src_data, (uintptr_t)dest_data);
 
-	ASSERT_EQ(rope_str_bytes(&src), 0);
+	ASSERT_EQ(rope_str_dim(&src, ROPE_BYTE), 0);
 
 	rope_str_cleanup(&dest);
-}
-
-static void
-test_str_freeable_oob(void) {
-	struct RopeStr str = {0};
-	uint8_t *buffer = malloc(ROPE_STR_MAX_SIZE + 100);
-	ASSERT_NOT_NULL(buffer);
-
-	int rv = rope_str_freeable(&str, buffer, ROPE_STR_MAX_SIZE + 100);
-	ASSERT_EQ(rv, -ROPE_ERROR_OOB);
-
-	free(buffer);
 }
 
 static void
@@ -637,8 +544,8 @@ test_str_truncate_multibyte(void) {
 	ASSERT_EQ(byte_size, 3);
 	ASSERT_STREQS((const char *)data, "caf", 3);
 
-	ASSERT_EQ(rope_str_chars(&str), 3);
-	ASSERT_EQ(rope_str_codepoints(&str), 3);
+	ASSERT_EQ(rope_str_dim(&str, ROPE_CHAR), 3);
+	ASSERT_EQ(rope_str_dim(&str, ROPE_CP), 3);
 
 	rope_str_cleanup(&str);
 }
@@ -662,20 +569,49 @@ test_str_inline_append_overflow(void) {
 	rope_str_cleanup(&str);
 }
 
+static void
+test_str_skip_inline(void) {
+	int rv = 0;
+	struct RopeStr str = {0};
+	uint8_t buffer[ROPE_STR_INLINE_SIZE * 2];
+	memset(buffer, 'A', sizeof(buffer));
+	rv = rope_str_init(&str, buffer, sizeof(buffer));
+	ASSERT_EQ(rv, 0);
+
+	rope_str_skip(&str, ROPE_STR_INLINE_SIZE);
+	uintptr_t data = (uintptr_t)rope_str_data(&str, NULL);
+
+	ASSERT_EQ((uintptr_t)str.data.inplace, data);
+
+	rope_str_cleanup(&str);
+}
+
+static void
+test_str_slow_str(void) {
+	uint8_t buffer[8192];
+	memset(buffer, 'A', sizeof(buffer));
+	int rv = 0;
+	struct RopeStr str = {0};
+	rv = rope_str_init(&str, buffer, sizeof(buffer));
+	ASSERT_EQ(rv, 0);
+
+	ASSERT_EQ(sizeof(buffer), rope_str_dim(&str, ROPE_BYTE));
+	ASSERT_EQ(sizeof(buffer), rope_str_dim(&str, ROPE_CHAR));
+	ASSERT_EQ(sizeof(buffer), rope_str_dim(&str, ROPE_UTF16));
+	ASSERT_EQ(sizeof(buffer)-1, rope_str_last_char_index(&str));
+
+	rope_str_cleanup(&str);
+}
+
 DECLARE_TESTS
 TEST(test_str_init)
 TEST(test_str_split)
+TEST(test_str_last_char_index)
 TEST(test_str_heap)
-TEST(test_str_should_merge_utf8_sequence)
-TEST(test_str_should_merge_grapheme)
-TEST(test_str_should_merge_sliding)
-TEST(test_str_should_merge_at_8)
-TEST(test_str_should_merge_at_12)
 TEST(test_str_heap_split_to_inline_both)
 TEST(test_str_heap_split_to_inline_right)
 TEST(test_str_heap_split_to_inline_left)
 TEST(test_str_inline_append)
-TEST(test_char_to_byte_index)
 TEST(rope_str_strdup)
 TEST(rope_str_strdup_split_into_inline)
 TEST(rope_str_strdup_split_into_heap)
@@ -692,9 +628,10 @@ TEST(test_str_utf16_split_after_surrogate)
 TEST(test_str_cp_split_ascii)
 TEST(test_str_cp_split_multibyte)
 TEST(test_str_move_heap)
-TEST(test_str_freeable_oob)
 TEST(test_str_freeable_inline)
 TEST(test_str_truncate_size_max)
 TEST(test_str_truncate_multibyte)
 TEST(test_str_inline_append_overflow)
+TEST(test_str_skip_inline)
+TEST(test_str_slow_str)
 END_TESTS

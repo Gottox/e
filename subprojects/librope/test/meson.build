@@ -2,7 +2,7 @@ jsonc_dep = dependency('json-c', default_options: ['warning_level=0', 'b_sanitiz
 
 testlib_dep = dependency('testlib')
 
-#subdir('editing-traces')
+subdir('editing-traces')
 
 e_test_extra_src = files(
     '../fuzzer/deser.c',

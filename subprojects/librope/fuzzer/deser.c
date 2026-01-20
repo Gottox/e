@@ -3,6 +3,7 @@
 #include <inttypes.h>
 #include <rope.h>
 #include <string.h>
+#include <stdio.h>
 
 #define ROPE_DESER_TYPE_SIZE 1
 #define ROPE_DESER_RANGE_COUNT 3

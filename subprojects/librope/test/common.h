@@ -38,8 +38,8 @@ node_from_json(struct json_object *obj, struct RopePool *pool) {
 		struct RopeNode *right = node_from_json(right_json, pool);
 		size_t depth =
 				CX_MAX(rope_node_depth(left), rope_node_depth(right)) + 1;
-		node->tags = (uint64_t)ROPE_NODE_BRANCH << 63;
-		node->tags |= depth;
+		node->bits = (uint64_t)ROPE_NODE_BRANCH << 63;
+		node->bits |= depth;
 
 		left->parent = node;
 		right->parent = node;
@@ -50,7 +50,7 @@ node_from_json(struct json_object *obj, struct RopePool *pool) {
 		int len = json_object_get_string_len(obj);
 		const char *str = json_object_get_string(obj);
 
-		node->tags = (uint64_t)ROPE_NODE_LEAF << 63;
+		node->bits = (uint64_t)ROPE_NODE_LEAF << 63;
 		int rv = rope_str_init(&node->data.leaf, (const uint8_t *)str, (size_t)len);
 		assert(rv == 0);
 	}

@@ -2,7 +2,8 @@ import sys
 import gdb
 
 # Constants
-ROPE_NODE_TYPE_MASK = 0x3FFFFFFFFFFFFFFF
+ROPE_NODE_TYPE_MASK = 1 << 63
+ROPE_NODE_TYPE_DEPTH_MASK = ~ROPE_NODE_TYPE_MASK
 TYPE_INLINE_LEAF = 0
 TYPE_BRANCH = 1
 
@@ -18,6 +19,8 @@ def safe_get_string(addr, length):
     """Safely reads memory and returns a formatted string."""
     if not addr or int(addr) == 0:
         return "<NULL>"
+    if length <= 0:
+        return "<EMPTY>"
     try:
         inferior = gdb.selected_inferior()
         mem = inferior.read_memory(addr, length)
@@ -44,20 +47,20 @@ def resolve_input_to_ptr(arg):
 # | bits    |                  |
 # |---------|------------------|
 # | 00 - 11 | bytes            |
-# | 12 - 23 | chars            |
-# | 24 - 35 | codepoints       |
-# | 36 - 47 | newlines         |
-# | 48 - 59 | utf16 codepoints |
-# | 60 - 64 | last char size   |
+# | 12 - 22 | chars            |
+# | 23 - 33 | codepoints       |
+# | 34 - 44 | newlines         |
+# | 45 - 55 | utf16 codepoints |
+# | 56 - 64 | last char size   |
 def dim_to_dict(dim):
 	dim = int(dim)
 	return {
-		'bytes': (dim & 0xFFF),
-		'chars': (dim >> 12) & 0xFFF,
-		'codepoints': (dim >> 24) & 0xFFF,
-		'newlines': (dim >> 36) & 0xFFF,
-		'utf16_cps': (dim >> 48) & 0xFFF,
-		'last_char_size': (dim >> 60) & 0x1F,
+		'bytes': (dim & 0x7FF),
+		'chars': (dim >> 11) & 0x7FF,
+		'codepoints': (dim >> 22) & 0x7FF,
+		'newlines': (dim >> 33) & 0x7FF,
+		'utf16_cps': (dim >> 44) & 0x7FF,
+		'last_char_size': (dim >> 60),
 	}
 
 class DumpRopeTree(gdb.Command):
@@ -89,32 +92,31 @@ class DumpRopeTree(gdb.Command):
 
         try:
             node = node_ptr.dereference()
-            node_type = int(node['type'])
+            node_type = int(node['bits'] & ROPE_NODE_TYPE_MASK) >> 63
 
             # Shared metadata
             header = f"(parent: {node['parent']}) [{NODE_TYPES.get(node_type, 'UNKNOWN')}]"
 
             if node_type == TYPE_BRANCH:
                 branch = node['data']['branch']
-                depth = int(branch['depth'])
+                depth = int(node['bits']) & ROPE_NODE_TYPE_DEPTH_MASK
                 print(f"{idx_prefix}{header} (depth: {depth})")
                 self.walk(branch['children'][0], indent + 1, "L: ")
                 self.walk(branch['children'][1], indent + 1, "R: ")
 
             else:
-                str = node['data']['leaf']['value']
-                str_state = str['state']
+                str = node['data']['leaf']
                 # Leaf handling (Inline vs Standard)
-                dim = dim_to_dict(str_state['dim'])
+                dim = dim_to_dict(str['dim'])
                 size = int(dim['bytes'])
                 is_inline = (size <= 16)
                 leaf_data = node['data']['leaf']
 
                 # Inline data address is the address of the member; Leaf data is a pointer
-                data_addr = str['u']['i']['data'].address if is_inline else str['u']['h']['data']
+                data_addr = str['data']['inplace'].address if is_inline else str['data']['heap']['data']
 
                 content = safe_get_string(data_addr, size)
-                tag_val = int(leaf_data['tags'])
+                tag_val = int(node['bits'])
                 print(f"{idx_prefix}{header} ({size} bytes, tag {tag_val}) \"{content}\"")
 
         except gdb.error as e:

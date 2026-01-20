@@ -31,7 +31,13 @@ struct RopeBranch {
 };
 
 struct RopeNode {
-	uint64_t tags;
+	/*
+	 * High bit: type (leaf/branch);
+	 * Low 63 bits:
+	 * - For branch nodes: depth in the tree
+	 * - For leaf nodes: tags
+	 */
+	uint64_t bits;
 	struct RopeNode *parent;
 
 	union {
@@ -45,37 +51,13 @@ typedef bool (*rope_node_condition_f)(
 
 struct RopeNode *rope_node_new(struct RopePool *pool) ROPE_NO_UNUSED;
 
-bool rope_node_match_tags(struct RopeNode *node, uint64_t tags) ROPE_NO_UNUSED;
+void rope_node_cleanup(struct RopeNode *node);
 
-size_t rope_node_new_lines(const struct RopeNode *node) ROPE_NO_UNUSED;
+void rope_node_free(struct RopeNode *node, struct RopePool *pool);
 
-size_t rope_node_char_size(const struct RopeNode *node) ROPE_NO_UNUSED;
-
-size_t rope_node_byte_size(const struct RopeNode *node) ROPE_NO_UNUSED;
-
-size_t rope_node_cp_size(const struct RopeNode *node) ROPE_NO_UNUSED;
-
-size_t rope_node_utf16_size(const struct RopeNode *node) ROPE_NO_UNUSED;
-
-void rope_node_delete(struct RopeNode *node, struct RopePool *pool);
-
-void rope_node_delete_child(
-		struct RopeNode *node, struct RopePool *pool, enum RopeDirection which);
-
-struct RopeNode *
-rope_node_delete_and_next(struct RopeNode *node, struct RopePool *pool);
-
-int rope_node_merge(struct RopeNode *node, size_t count, struct RopePool *pool);
-
-struct RopeNode *rope_node_find(
-		struct RopeNode *node, rope_index_t line, rope_index_t column,
-		uint64_t tags, rope_byte_index_t *byte_index) ROPE_NO_UNUSED;
-
-struct RopeNode *rope_node_find_char(
-		struct RopeNode *node, rope_char_index_t char_index, uint64_t tags,
-		rope_byte_index_t *byte_index) ROPE_NO_UNUSED;
-
-enum RopeNodeType rope_node_type(const struct RopeNode *node) ROPE_NO_UNUSED;
+/**********************************
+ * node/navigation.c
+ */
 
 enum RopeDirection rope_node_which(const struct RopeNode *node) ROPE_NO_UNUSED;
 
@@ -90,15 +72,13 @@ struct RopeNode *rope_node_parent(const struct RopeNode *node) ROPE_NO_UNUSED;
 struct RopeNode *rope_node_neighbour(
 		const struct RopeNode *node, enum RopeDirection which) ROPE_NO_UNUSED;
 
-void rope_node_cleanup(struct RopeNode *node);
-
-void rope_node_free(struct RopeNode *node, struct RopePool *pool);
-
 /**********************************
  * node/tags.c
  */
 
 uint64_t rope_node_tags(struct RopeNode *node) ROPE_NO_UNUSED;
+
+bool rope_node_match_tags(struct RopeNode *node, uint64_t tags) ROPE_NO_UNUSED;
 
 void rope_node_add_tags(struct RopeNode *node, uint64_t tags);
 
@@ -110,6 +90,11 @@ void rope_node_set_tags(struct RopeNode *node, uint64_t tags);
  * node/info.c
  */
 
+size_t
+rope_node_dim(const struct RopeNode *node, enum RopeUnit unit) ROPE_NO_UNUSED;
+
+enum RopeNodeType rope_node_type(const struct RopeNode *node) ROPE_NO_UNUSED;
+
 size_t rope_node_depth(struct RopeNode *node);
 
 const uint8_t *rope_node_value(const struct RopeNode *node, size_t *size);
@@ -117,6 +102,20 @@ const uint8_t *rope_node_value(const struct RopeNode *node, size_t *size);
 /**********************************
  * node/mutation.c
  */
+
+void rope_node_delete(struct RopeNode *node, struct RopePool *pool);
+
+void rope_node_delete_child(
+		struct RopeNode *node, struct RopePool *pool, enum RopeDirection which);
+
+struct RopeNode *
+rope_node_delete_and_next(struct RopeNode *node, struct RopePool *pool);
+
+void rope_node_truncate(struct RopeNode *node, size_t byte_size);
+
+int rope_node_skip(struct RopeNode *node, size_t offset);
+
+int rope_node_merge(struct RopeNode *node, size_t count, struct RopePool *pool);
 
 void rope_node_update_depth(struct RopeNode *node);
 
@@ -136,7 +135,11 @@ int rope_node_split(
 
 void rope_node_rotate(struct RopeNode *node, enum RopeDirection which);
 
+int rope_node_chores(struct RopeNode *node, struct RopePool *pool);
+
 void rope_node_balance_up(struct RopeNode *node);
+
+int rope_node_compact(struct RopeNode *node, struct RopePool *pool);
 
 /**********************************
  * node/insert.c

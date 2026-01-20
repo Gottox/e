@@ -1,5 +1,9 @@
 librope_sources = files(
-    'cursor.c',
+    'cursor/editing.c',
+    'cursor/lifecycle.c',
+    'cursor/list.c',
+    'cursor/movement.c',
+    'cursor/query.c',
     'iterator.c',
     'node/info.c',
     'node/insert.c',
@@ -10,5 +14,6 @@ librope_sources = files(
     'pool.c',
     'range.c',
     'rope.c',
+    'util.c',
     'str.c',
 )

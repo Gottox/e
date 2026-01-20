@@ -22,7 +22,7 @@ node_tags(struct RopeNode *node) {
 	case ROPE_NODE_BRANCH:
 		return NULL;
 	case ROPE_NODE_LEAF:
-		return &node->tags;
+		return &node->bits;
 	default:
 		ROPE_UNREACHABLE();
 	}
