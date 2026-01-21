@@ -13,8 +13,7 @@
 static void str_process(
 		struct RopeStr *str, struct RopeDim *dim, size_t *last_char_index,
 		const uint8_t *data, size_t byte_size);
-
-#define IS_SLOW_STR(str) ((str->dim & ~ROPE_STR_SLOW_MASK) == ~ROPE_STR_SLOW_MASK)
+static bool str_is_slow(const struct RopeStr *str);
 
 #define ROPE_DIM_ALL \
 	((struct RopeDim){{SIZE_MAX, SIZE_MAX, SIZE_MAX, SIZE_MAX, SIZE_MAX}})
@@ -25,7 +24,7 @@ static void str_process(
 		str->dim |= (value << (offset)); \
 	} \
 	static size_t str_##name(const struct RopeStr *str) { \
-		if (IS_SLOW_STR(str)) \
+		if (str_is_slow(str)) \
 			__VA_ARGS__ \
 		return (str->dim >> (offset)) & ROPE_STR_MASK; \
 	}
@@ -51,10 +50,8 @@ GET_SET(codepoints, CP, 22)
 GET_SET(newlines, LINE, 33)
 GET_SET(utf16_cps, UTF16, 44)
 
-// Helper to convert a unit and index into limit values for str_process().
-// Initializes all limits to SIZE_MAX except the one corresponding to unit.
 static struct RopeDim
-unit_to_limits(enum RopeUnit unit, size_t index) {
+str_unit_to_limits(enum RopeUnit unit, size_t index) {
 	struct RopeDim limits = {
 			{SIZE_MAX, SIZE_MAX, SIZE_MAX, SIZE_MAX, SIZE_MAX}};
 	limits.dim[unit] = index;
@@ -64,6 +61,16 @@ unit_to_limits(enum RopeUnit unit, size_t index) {
 static bool
 str_is_inline(const struct RopeStr *str) {
 	return str_bytes(str) <= ROPE_STR_INLINE_SIZE;
+}
+
+static bool
+str_is_wrapped(const struct RopeStr *str) {
+	return !str_is_inline(str) && str->data.heap.str == NULL;
+}
+
+static bool
+str_is_slow(const struct RopeStr *str) {
+	return (str->dim & ~ROPE_STR_SLOW_MASK) == ~ROPE_STR_SLOW_MASK;
 }
 
 static uint8_t *
@@ -85,6 +92,22 @@ str_retain(const struct RopeStr *str) {
 	if (!str_is_inline(str)) {
 		str->data.heap.str->ref_count++;
 	}
+}
+
+static void
+str_try_inline(struct RopeStr *str, size_t byte_size) {
+	size_t old_byte_size = 0;
+	const uint8_t *data = rope_str_data(str, &old_byte_size);
+
+	if (byte_size <= ROPE_STR_INLINE_SIZE &&
+		old_byte_size > ROPE_STR_INLINE_SIZE) {
+		struct RopeStrHeap *heap_str = str->data.heap.str;
+		uint8_t *heap_data = str->data.heap.data;
+		memcpy(str->data.inplace, heap_data, byte_size);
+		str_heap_release(heap_str, heap_data);
+		data = str->data.inplace;
+	}
+	str_process(str, NULL, NULL, data, byte_size);
 }
 
 // Check if any dimension limit has been reached.
@@ -172,35 +195,27 @@ rope_str_init(struct RopeStr *str, const uint8_t *data, size_t byte_size) {
 	int rv = 0;
 	uint8_t *buffer = NULL;
 
-	rv = rope_str(str, byte_size, &buffer);
+	rv = rope_str_alloc(str, byte_size, &buffer);
 	if (rv < 0) {
 		goto out;
 	}
 
 	memcpy(buffer, data, byte_size);
-	str_process(str, NULL, NULL, buffer, byte_size);
+	rope_str_alloc_commit(str, byte_size);
 out:
 	return rv;
 }
 
-int
-rope_str_freeable(struct RopeStr *str, uint8_t *data, size_t byte_size) {
-	int rv = 0;
-
-	if (byte_size <= ROPE_STR_INLINE_SIZE) {
-		rv = rope_str_init(str, data, byte_size);
-		free(data);
-	} else {
-		str->data.heap.str = NULL;
-		str->data.heap.data = data;
-		str_process(str, NULL, NULL, data, byte_size);
-	}
-
-	return rv;
+void
+rope_str_wrap(struct RopeStr *str, uint8_t *data, size_t byte_size) {
+	str_set_bytes(str, ROPE_STR_FAST_SIZE);
+	str->data.heap.str = NULL;
+	str->data.heap.data = data;
+	str_try_inline(str, byte_size);
 }
 
 int
-rope_str(struct RopeStr *str, size_t byte_size, uint8_t **buffer) {
+rope_str_alloc(struct RopeStr *str, size_t byte_size, uint8_t **buffer) {
 	int rv = 0;
 
 	memset(str, 0, sizeof(struct RopeStr));
@@ -229,50 +244,43 @@ out:
 	return rv;
 }
 
-static void
-try_inline(struct RopeStr *str, size_t byte_size) {
-	size_t old_byte_size = 0;
-	const uint8_t *data = rope_str_data(str, &old_byte_size);
-
-	if (byte_size <= ROPE_STR_INLINE_SIZE &&
-		old_byte_size > ROPE_STR_INLINE_SIZE) {
-		struct RopeStrHeap *heap_str = str->data.heap.str;
-		uint8_t *heap_data = str->data.heap.data;
-		memcpy(str->data.inplace, heap_data, byte_size);
-		str_heap_release(heap_str, heap_data);
-		data = str->data.inplace;
-	}
-	str_process(str, NULL, NULL, data, byte_size);
-}
-
-int
-rope_str_skip(struct RopeStr *str, size_t offset) {
-	size_t byte_size = str_bytes(str) - offset;
-
-	if (str_is_inline(str)) {
-		uint8_t *data = str->data.inplace;
-		memmove(data, &data[offset], byte_size);
-	} else if (str->data.heap.str == NULL) {
-		uint8_t *data = str->data.heap.data;
-		int rv = rope_str_init(str, &data[offset], byte_size);
-		free(data);
-		return rv;
-	} else {
-		str->data.heap.data += offset;
-	}
-
-	try_inline(str, byte_size);
-	return 0;
-}
-
 void
-rope_str_truncate(struct RopeStr *str, size_t byte_size) {
+rope_str_alloc_commit(struct RopeStr *str, size_t byte_size) {
 	size_t old_byte_size = str_bytes(str);
 	if (byte_size == SIZE_MAX) {
 		byte_size = old_byte_size;
 	}
 
-	try_inline(str, byte_size);
+	int rv = rope_str_trim(str, 0, byte_size, ROPE_BYTE);
+	assert(rv == 0);
+}
+
+int
+rope_str_trim(
+		struct RopeStr *str, size_t offset, size_t size, enum RopeUnit unit) {
+	size_t byte_size = rope_str_unit_to_byte(str, unit, size);
+	size_t byte_offset = rope_str_unit_to_byte(str, unit, offset);
+	assert(byte_size + byte_offset <= str_bytes(str));
+
+	if (byte_offset == 0) {
+		str_try_inline(str, byte_size);
+		return 0;
+	}
+
+	if (str_is_inline(str)) {
+		uint8_t *data = str->data.inplace;
+		memmove(data, &data[byte_offset], byte_size);
+	} else if (str_is_wrapped(str)) {
+		uint8_t *data = str->data.heap.data;
+		int rv = rope_str_init(str, &data[byte_offset], byte_size);
+		free(data);
+		return rv;
+	} else {
+		str->data.heap.data += byte_offset;
+	}
+
+	str_try_inline(str, byte_size);
+	return 0;
 }
 
 void
@@ -304,49 +312,12 @@ void
 rope_str_split(
 		struct RopeStr *str, struct RopeStr *new_str, enum RopeUnit unit,
 		size_t index) {
-	struct RopeDim limits = unit_to_limits(unit, index);
+	size_t byte_index = rope_str_unit_to_byte(str, unit, index);
 
-	size_t byte_count = 0;
-	const uint8_t *data = rope_str_data(str, &byte_count);
-
-	// For ROPE_BYTE, use the index directly; otherwise use full byte_count
-	const size_t left_byte_count =
-			(unit == ROPE_BYTE) ? limits.dim[ROPE_BYTE] : byte_count;
-	assert(left_byte_count < 4096);
-
-	memset(new_str, 0, sizeof(*new_str));
-
-	str_process(str, &limits, NULL, data, left_byte_count);
-	size_t byte_index = limits.dim[ROPE_BYTE];
-
-	assert(byte_index > 0 && byte_index < byte_count);
-
-	uint8_t *split = (uint8_t *)&data[byte_index];
-
-	size_t new_byte_count = byte_count - byte_index;
-	if (new_byte_count <= ROPE_STR_INLINE_SIZE) {
-		memcpy(new_str->data.inplace, split, new_byte_count);
-	} else if (str->data.heap.str == NULL) {
-		rope_str_init(new_str, split, new_byte_count);
-	} else {
-		new_str->data.heap.str = str->data.heap.str;
-		new_str->data.heap.data = split;
-		str_set_bytes(new_str, new_byte_count);
-		str_retain(new_str);
-	}
-	str_process(new_str, NULL, NULL, split, new_byte_count);
-
-	// check if we need to inline the original string
-	if (byte_count > ROPE_STR_INLINE_SIZE &&
-		byte_index <= ROPE_STR_INLINE_SIZE) {
-		struct RopeStrHeap *heap_str = str->data.heap.str;
-		uint8_t *data = str->data.heap.data;
-
-		// We can use fixed-size copy here since we know that the original
-		// string was longer than ROPE_STR_INLINE_SIZE
-		memcpy(str->data.inplace, data, ROPE_STR_INLINE_SIZE);
-		str_heap_release(heap_str, data);
-	}
+	rope_str_clone(new_str, str);
+	rope_str_trim(
+			new_str, byte_index, str_bytes(new_str) - byte_index, ROPE_BYTE);
+	rope_str_trim(str, 0, byte_index, ROPE_BYTE);
 }
 
 const uint8_t *
@@ -359,57 +330,6 @@ rope_str_data(const struct RopeStr *str, size_t *byte_count) {
 	} else {
 		return str->data.heap.data;
 	}
-}
-
-const uint8_t *
-rope_str_offset(
-		struct RopeStr *str, enum RopeUnit unit, size_t index,
-		size_t *byte_count) {
-	if (unit == ROPE_BYTE) {
-		*byte_count = str_bytes(str) - index;
-		return &rope_str_data(str, NULL)[index];
-	}
-
-	size_t size = 0;
-	const uint8_t *data = rope_str_data(str, &size);
-	struct RopeDim limits = unit_to_limits(unit, index);
-
-	str_process(NULL, &limits, NULL, data, size);
-	size_t byte_index = limits.dim[ROPE_BYTE];
-	*byte_count = str_bytes(str) - byte_index;
-	return &rope_str_data(str, NULL)[byte_index];
-}
-
-bool
-rope_str_should_merge(
-		struct RopeStr *str, const uint8_t *data, size_t byte_size) {
-	char buffer[512] = {0};
-	uint_least32_t cp1 = 0, cp2 = 0;
-	size_t str_byte_size = 0;
-	uint_least16_t state = 0;
-
-	const uint8_t *str_data = rope_str_data(str, &str_byte_size);
-	size_t last_char_size = str_last_char_size(str);
-	size_t last_char_index = str_byte_size - last_char_size;
-	byte_size = CX_MIN(byte_size, sizeof(buffer) - last_char_size);
-
-	// Check for breaks in utf-8 sequences
-	memcpy(buffer, &str_data[last_char_index], last_char_size);
-	memcpy(&buffer[last_char_size], data, byte_size);
-	size_t cp_size = grapheme_decode_utf8(buffer, sizeof(buffer), &cp1);
-	if (cp1 == GRAPHEME_INVALID_CODEPOINT) {
-		return false;
-	} else if (cp_size > last_char_size) {
-		return true;
-	}
-
-	// Check for graphemes across the boundary
-	grapheme_decode_utf8((const char *)data, byte_size, &cp2);
-	if (cp2 == GRAPHEME_INVALID_CODEPOINT) {
-		return false;
-	}
-
-	return !grapheme_is_character_break(cp1, cp2, &state);
 }
 
 void
@@ -447,7 +367,7 @@ rope_str_unit_to_byte(
 
 	size_t byte_size = 0;
 	const uint8_t *data = rope_str_data(str, &byte_size);
-	struct RopeDim limits = unit_to_limits(unit, index);
+	struct RopeDim limits = str_unit_to_limits(unit, index);
 
 	str_process(NULL, &limits, NULL, data, byte_size);
 	return limits.dim[ROPE_BYTE];
@@ -474,14 +394,14 @@ rope_str_unit_from_byte(
 }
 
 int
-rope_str_copy(struct RopeStr *target, const struct RopeStr *src) {
-	if (src->data.heap.str != NULL) {
-		memcpy(target, src, sizeof(struct RopeStr));
-		str_retain(target);
-		return 0;
-	} else {
+rope_str_clone(struct RopeStr *target, const struct RopeStr *src) {
+	if (str_is_wrapped(src)) {
 		size_t byte_size = 0;
 		const uint8_t *data = rope_str_data(src, &byte_size);
 		return rope_str_init(target, data, byte_size);
+	} else {
+		memcpy(target, src, sizeof(struct RopeStr));
+		str_retain(target);
+		return 0;
 	}
 }

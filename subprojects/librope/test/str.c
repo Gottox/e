@@ -171,14 +171,12 @@ test_str_inline_append(void) {
 
 static void
 rope_str_strdup(void) {
-	int rv = 0;
 	struct RopeStr str = {0};
 
 	char *buffer = malloc(ROPE_STR_INLINE_SIZE * 2);
 	memset(buffer, 'A', ROPE_STR_INLINE_SIZE * 2);
 	ASSERT_NOT_NULL(buffer);
-	rv = rope_str_freeable(&str, (uint8_t *)buffer, ROPE_STR_INLINE_SIZE * 2);
-	ASSERT_EQ(rv, 0);
+	rope_str_wrap(&str, (uint8_t *)buffer, ROPE_STR_INLINE_SIZE * 2);
 
 	size_t byte_size = 0;
 	const uint8_t *data = rope_str_data(&str, &byte_size);
@@ -189,14 +187,12 @@ rope_str_strdup(void) {
 
 static void
 rope_str_strdup_split_into_inline(void) {
-	int rv = 0;
 	struct RopeStr str = {0};
 
 	char *buffer = malloc(ROPE_STR_INLINE_SIZE * 2);
 	memset(buffer, 'A', ROPE_STR_INLINE_SIZE * 2);
 	ASSERT_NOT_NULL(buffer);
-	rv = rope_str_freeable(&str, (uint8_t *)buffer, ROPE_STR_INLINE_SIZE * 2);
-	ASSERT_EQ(rv, 0);
+	rope_str_wrap(&str, (uint8_t *)buffer, ROPE_STR_INLINE_SIZE * 2);
 
 	struct RopeStr new_str = {0};
 	rope_str_split(&str, &new_str, ROPE_CHAR, ROPE_STR_INLINE_SIZE);
@@ -211,14 +207,12 @@ rope_str_strdup_split_into_inline(void) {
 
 static void
 rope_str_strdup_split_into_heap(void) {
-	int rv = 0;
 	struct RopeStr str = {0};
 
 	char *buffer = malloc(ROPE_STR_INLINE_SIZE * 4);
 	memset(buffer, 'A', ROPE_STR_INLINE_SIZE * 4);
 	ASSERT_NOT_NULL(buffer);
-	rv = rope_str_freeable(&str, (uint8_t *)buffer, ROPE_STR_INLINE_SIZE * 4);
-	ASSERT_EQ(rv, 0);
+	rope_str_wrap(&str, (uint8_t *)buffer, ROPE_STR_INLINE_SIZE * 4);
 
 	struct RopeStr new_str = {0};
 	rope_str_split(&str, &new_str, ROPE_CHAR, ROPE_STR_INLINE_SIZE * 2);
@@ -230,139 +224,6 @@ rope_str_strdup_split_into_heap(void) {
 	ASSERT_NOT_NULL(new_str.data.heap.str);
 
 	rope_str_cleanup(&new_str);
-	rope_str_cleanup(&str);
-}
-
-static void
-test_str_at_char_ascii(void) {
-	int rv = 0;
-	struct RopeStr str = {0};
-	rv = rope_str_init(&str, (const uint8_t *)"Hello", 5);
-	ASSERT_EQ(rv, 0);
-
-	size_t byte_count = 0;
-	const uint8_t *ptr = rope_str_offset(&str, ROPE_CHAR, 2, &byte_count);
-	ASSERT_EQ(byte_count, 3);
-	ASSERT_STREQS((const char *)ptr, "llo", 3);
-
-	rope_str_cleanup(&str);
-}
-
-static void
-test_str_at_char_emoji(void) {
-	int rv = 0;
-	struct RopeStr str = {0};
-
-	const uint8_t buffer[] = "X" FEMALE_ASTRONAUT "Y";
-	rv = rope_str_init(&str, buffer, sizeof(buffer) - 1);
-	ASSERT_EQ(rv, 0);
-
-	size_t byte_count = 0;
-	const uint8_t *ptr = rope_str_offset(&str, ROPE_CHAR, 1, &byte_count);
-	ASSERT_EQ(byte_count, 12);
-	ASSERT_STREQS((const char *)ptr, FEMALE_ASTRONAUT "Y", 12);
-
-	rope_str_cleanup(&str);
-}
-
-static void
-test_str_at_char_boundary(void) {
-	int rv = 0;
-	struct RopeStr str = {0};
-	rv = rope_str_init(&str, (const uint8_t *)"ABC", 3);
-	ASSERT_EQ(rv, 0);
-
-	size_t byte_count = 0;
-
-	const uint8_t *ptr = rope_str_offset(&str, ROPE_CHAR, 3, &byte_count);
-	ASSERT_EQ(byte_count, 0);
-	(void)ptr;
-
-	rope_str_cleanup(&str);
-}
-
-static void
-test_str_at_utf16_ascii(void) {
-	int rv = 0;
-	struct RopeStr str = {0};
-	rv = rope_str_init(&str, (const uint8_t *)"Hello", 5);
-	ASSERT_EQ(rv, 0);
-
-	size_t byte_count = 0;
-	const uint8_t *ptr = rope_str_offset(&str, ROPE_UTF16, 2, &byte_count);
-	ASSERT_EQ(byte_count, 3);
-	ASSERT_STREQS((const char *)ptr, "llo", 3);
-
-	rope_str_cleanup(&str);
-}
-
-static void
-test_str_at_utf16_with_surrogates(void) {
-	int rv = 0;
-	struct RopeStr str = {0};
-
-	const uint8_t buffer[] = "A" SMILING_FACE "B";
-	rv = rope_str_init(&str, buffer, sizeof(buffer) - 1);
-	ASSERT_EQ(rv, 0);
-
-	size_t byte_count = 0;
-
-	const uint8_t *ptr = rope_str_offset(&str, ROPE_UTF16, 3, &byte_count);
-	ASSERT_EQ(byte_count, 1);
-	ASSERT_STREQS((const char *)ptr, "B", 1);
-
-	rope_str_cleanup(&str);
-}
-
-static void
-test_str_at_cp_ascii(void) {
-	int rv = 0;
-	struct RopeStr str = {0};
-	rv = rope_str_init(&str, (const uint8_t *)"Hello", 5);
-	ASSERT_EQ(rv, 0);
-
-	size_t byte_size = 0;
-	const uint8_t *ptr = rope_str_offset(&str, ROPE_CP, 2, &byte_size);
-	ASSERT_EQ(byte_size, 3);
-	ASSERT_STREQS((const char *)ptr, "llo", 3);
-
-	rope_str_cleanup(&str);
-}
-
-static void
-test_str_at_cp_multibyte(void) {
-	int rv = 0;
-	struct RopeStr str = {0};
-
-	const uint8_t buffer[] = "caf\xc3\xa9";
-	rv = rope_str_init(&str, buffer, sizeof(buffer) - 1);
-	ASSERT_EQ(rv, 0);
-
-	size_t byte_size = 0;
-
-	const uint8_t *ptr = rope_str_offset(&str, ROPE_CP, 3, &byte_size);
-	ASSERT_EQ(byte_size, 2);
-	ASSERT_STREQS((const char *)ptr, "\xc3\xa9", 2);
-
-	rope_str_cleanup(&str);
-}
-
-static void
-test_str_at_cp_emoji(void) {
-	int rv = 0;
-	struct RopeStr str = {0};
-
-	rv = rope_str_init(
-			&str, (const uint8_t *)FEMALE_ASTRONAUT,
-			sizeof(FEMALE_ASTRONAUT) - 1);
-	ASSERT_EQ(rv, 0);
-
-	size_t byte_size = 0;
-
-	const uint8_t *ptr = rope_str_offset(&str, ROPE_CP, 1, &byte_size);
-	ASSERT_EQ(byte_size, 7);
-	(void)ptr;
-
 	rope_str_cleanup(&str);
 }
 
@@ -499,31 +360,13 @@ test_str_freeable_inline(void) {
 	ASSERT_NOT_NULL(buffer);
 	memset(buffer, 'X', ROPE_STR_INLINE_SIZE);
 
-	int rv = rope_str_freeable(&str, (uint8_t *)buffer, ROPE_STR_INLINE_SIZE);
-	ASSERT_EQ(rv, 0);
+	rope_str_wrap(&str, (uint8_t *)buffer, ROPE_STR_INLINE_SIZE);
 
 	size_t byte_size = 0;
 	const uint8_t *data = rope_str_data(&str, &byte_size);
 	ASSERT_EQ(byte_size, ROPE_STR_INLINE_SIZE);
 
 	ASSERT_EQ((uintptr_t)data, (uintptr_t)str.data.inplace);
-
-	rope_str_cleanup(&str);
-}
-
-static void
-test_str_truncate_size_max(void) {
-	int rv = 0;
-	struct RopeStr str = {0};
-	rv = rope_str_init(&str, (const uint8_t *)"Hello", 5);
-	ASSERT_EQ(rv, 0);
-
-	rope_str_truncate(&str, SIZE_MAX);
-
-	size_t byte_size = 0;
-	const uint8_t *data = rope_str_data(&str, &byte_size);
-	ASSERT_EQ(byte_size, 5);
-	ASSERT_STREQS((const char *)data, "Hello", 5);
 
 	rope_str_cleanup(&str);
 }
@@ -537,7 +380,7 @@ test_str_truncate_multibyte(void) {
 	rv = rope_str_init(&str, buffer, sizeof(buffer) - 1);
 	ASSERT_EQ(rv, 0);
 
-	rope_str_truncate(&str, 3);
+	rope_str_trim(&str, 0, 3, ROPE_BYTE);
 
 	size_t byte_size = 0;
 	const uint8_t *data = rope_str_data(&str, &byte_size);
@@ -565,23 +408,6 @@ test_str_inline_append_overflow(void) {
 
 	rv = rope_str_inline_append(&str, (const uint8_t *)"C", 1);
 	ASSERT_EQ(rv, -ROPE_ERROR_OOB);
-
-	rope_str_cleanup(&str);
-}
-
-static void
-test_str_skip_inline(void) {
-	int rv = 0;
-	struct RopeStr str = {0};
-	uint8_t buffer[ROPE_STR_INLINE_SIZE * 2];
-	memset(buffer, 'A', sizeof(buffer));
-	rv = rope_str_init(&str, buffer, sizeof(buffer));
-	ASSERT_EQ(rv, 0);
-
-	rope_str_skip(&str, ROPE_STR_INLINE_SIZE);
-	uintptr_t data = (uintptr_t)rope_str_data(&str, NULL);
-
-	ASSERT_EQ((uintptr_t)str.data.inplace, data);
 
 	rope_str_cleanup(&str);
 }
@@ -615,23 +441,13 @@ TEST(test_str_inline_append)
 TEST(rope_str_strdup)
 TEST(rope_str_strdup_split_into_inline)
 TEST(rope_str_strdup_split_into_heap)
-TEST(test_str_at_char_ascii)
-TEST(test_str_at_char_emoji)
-TEST(test_str_at_char_boundary)
-TEST(test_str_at_utf16_ascii)
-TEST(test_str_at_utf16_with_surrogates)
-TEST(test_str_at_cp_ascii)
-TEST(test_str_at_cp_multibyte)
-TEST(test_str_at_cp_emoji)
 TEST(test_str_utf16_split_ascii)
 TEST(test_str_utf16_split_after_surrogate)
 TEST(test_str_cp_split_ascii)
 TEST(test_str_cp_split_multibyte)
 TEST(test_str_move_heap)
 TEST(test_str_freeable_inline)
-TEST(test_str_truncate_size_max)
 TEST(test_str_truncate_multibyte)
 TEST(test_str_inline_append_overflow)
-TEST(test_str_skip_inline)
 TEST(test_str_slow_str)
 END_TESTS

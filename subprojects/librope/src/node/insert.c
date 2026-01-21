@@ -45,7 +45,7 @@ merge_next_grapheme_bytes(
 		size_t new_size = node_size + first_break;
 		uint8_t *buffer;
 		struct RopeStr new_str;
-		rv = rope_str(&new_str, new_size, &buffer);
+		rv = rope_str_alloc(&new_str, new_size, &buffer);
 		if (rv < 0) {
 			return rv;
 		}
@@ -53,7 +53,7 @@ merge_next_grapheme_bytes(
 		memcpy(buffer, node_data, node_size);
 		memcpy(buffer + node_size, next_data, first_break);
 
-		rope_str_truncate(&new_str, SIZE_MAX);
+		rope_str_alloc_commit(&new_str, SIZE_MAX);
 		rope_str_cleanup(&node->data.leaf);
 		rope_str_move(&node->data.leaf, &new_str);
 
@@ -162,7 +162,7 @@ node_insert_data(
 		// grapheme AND we're actually going to merge (first_break > 0)
 		if (!reuse_prev && prev == node && prev_char_size > 0 &&
 			last_char_index == 0 && first_break > 0) {
-			rv = rope_str_copy(&prev_char_tmp, &prev->data.leaf);
+			rv = rope_str_clone(&prev_char_tmp, &prev->data.leaf);
 			if (rv < 0) {
 				goto out;
 			}
@@ -192,7 +192,7 @@ node_insert_data(
 		}
 
 		uint8_t *buffer = NULL;
-		rv = rope_str(&new_node->data.leaf, chunk_size, &buffer);
+		rv = rope_str_alloc(&new_node->data.leaf, chunk_size, &buffer);
 		if (rv < 0) {
 			goto out;
 		}
@@ -212,7 +212,7 @@ node_insert_data(
 			}
 		}
 		memcpy(buffer, data, chunk_size);
-		rope_str_truncate(&new_node->data.leaf, SIZE_MAX);
+		rope_str_alloc_commit(&new_node->data.leaf, SIZE_MAX);
 		rope_node_set_tags(new_node, tags);
 
 		if (!reuse_prev) {
@@ -290,7 +290,7 @@ rope_node_insert_left(
 }
 
 static int
-node_insert_heap(
+node_insert_wrap(
 		struct RopeNode *node, uint8_t *data, size_t byte_size, uint64_t tags,
 		struct RopePool *pool, enum RopeDirection which) {
 	if (byte_size == 0) {
@@ -309,10 +309,7 @@ node_insert_heap(
 		}
 	}
 
-	rv = rope_str_freeable(&new_node->data.leaf, data, byte_size);
-	if (rv < 0) {
-		goto out;
-	}
+	rope_str_wrap(&new_node->data.leaf, data, byte_size);
 	rope_node_set_tags(new_node, tags);
 
 	if (new_node != node) {
@@ -332,12 +329,12 @@ int
 rope_node_insert_heap_left(
 		struct RopeNode *node, uint8_t *data, size_t byte_size, uint64_t tags,
 		struct RopePool *pool) {
-	return node_insert_heap(node, data, byte_size, tags, pool, ROPE_LEFT);
+	return node_insert_wrap(node, data, byte_size, tags, pool, ROPE_LEFT);
 }
 
 int
 rope_node_insert_heap_right(
 		struct RopeNode *node, uint8_t *data, size_t byte_size, uint64_t tags,
 		struct RopePool *pool) {
-	return node_insert_heap(node, data, byte_size, tags, pool, ROPE_RIGHT);
+	return node_insert_wrap(node, data, byte_size, tags, pool, ROPE_RIGHT);
 }

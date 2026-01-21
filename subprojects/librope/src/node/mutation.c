@@ -214,7 +214,7 @@ rope_node_truncate(struct RopeNode *node, size_t byte_size) {
 	assert(byte_size > 0);
 	assert(byte_size < rope_node_dim(node, ROPE_BYTE));
 
-	rope_str_truncate(&node->data.leaf, byte_size);
+	rope_str_trim(&node->data.leaf, 0, byte_size, ROPE_BYTE);
 	rope_node_update_dim(node);
 }
 
@@ -223,8 +223,9 @@ rope_node_skip(struct RopeNode *node, size_t offset) {
 	assert(ROPE_NODE_IS_LEAF(node));
 	assert(offset > 0);
 	assert(offset < rope_node_dim(node, ROPE_BYTE));
+	size_t new_size = rope_node_dim(node, ROPE_BYTE) - offset;
 
-	int rv = rope_str_skip(&node->data.leaf, offset);
+	int rv = rope_str_trim(&node->data.leaf, offset, new_size, ROPE_BYTE);
 	rope_node_update_dim(node);
 	return rv;
 }
@@ -245,7 +246,7 @@ rope_node_merge(struct RopeNode *node, size_t count, struct RopePool *pool) {
 
 	uint8_t *target;
 	struct RopeStr new_value;
-	rv = rope_str(&new_value, total_size, &target);
+	rv = rope_str_alloc(&new_value, total_size, &target);
 	if (rv != 0) {
 		goto out;
 	}
@@ -262,7 +263,7 @@ rope_node_merge(struct RopeNode *node, size_t count, struct RopePool *pool) {
 			node = rope_node_delete_and_next(node, pool);
 		}
 	}
-	rope_str_truncate(&new_value, SIZE_MAX);
+	rope_str_alloc_commit(&new_value, SIZE_MAX);
 	rope_str_cleanup(&node->data.leaf);
 	rope_str_move(&node->data.leaf, &new_value);
 	rope_node_balance_up(node);
@@ -381,7 +382,7 @@ rope_node_compact(struct RopeNode *node, struct RopePool *pool) {
 
 	uint8_t *buffer;
 	struct RopeStr new_str;
-	int rv = rope_str(&new_str, total_size, &buffer);
+	int rv = rope_str_alloc(&new_str, total_size, &buffer);
 	if (rv < 0) {
 		return rv;
 	}
@@ -401,7 +402,7 @@ rope_node_compact(struct RopeNode *node, struct RopePool *pool) {
 		leaf = rope_node_next(leaf);
 	}
 
-	rope_str_truncate(&new_str, SIZE_MAX);
+	rope_str_alloc_commit(&new_str, SIZE_MAX);
 
 	rope_node_free(rope_node_left(node), pool);
 	rope_node_free(rope_node_right(node), pool);
