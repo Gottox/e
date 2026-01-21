@@ -22,9 +22,11 @@ rope_cursor_insert(
 
 	rope_byte_index_t insert_at_byte = 0;
 	struct RopeNode *insert_at = rope_cursor_find_node(
-			cursor, NULL, ROPE_BYTE, cursor_byte_index, 0, NULL, &insert_at_byte);
+			cursor, NULL, ROPE_BYTE, cursor_byte_index, 0, NULL,
+			&insert_at_byte);
 
-	rv = rope_node_split(insert_at, &rope->pool, insert_at_byte, &left, &right);
+	rv = rope_node_split(
+			insert_at, &rope->pool, insert_at_byte, ROPE_BYTE, &left, &right);
 
 	if (left) {
 		rv = rope_node_insert_right(left, data, byte_size, tags, &rope->pool);
@@ -70,7 +72,8 @@ rope_cursor_delete_at(
 		node = rope_node_next(node);
 		local_byte_index = 0;
 	} else if (local_byte_index != 0) {
-		rv = rope_node_split(node, &rope->pool, local_byte_index, NULL, &node);
+		rv = rope_node_split(
+				node, &rope->pool, local_byte_index, ROPE_BYTE, NULL, &node);
 		if (rv < 0) {
 			goto out;
 		}
@@ -79,14 +82,14 @@ rope_cursor_delete_at(
 	assert(node != NULL);
 
 	while (node) {
-		size_t dim = rope_node_dim(node, unit);
-		if (dim >= remaining) {
+		size_t node_size = rope_node_dim(node, unit);
+		if (node_size >= remaining) {
 			// Need to do partial deletion (or exact match for non-additive
 			// units like ROPE_LINE where trailing content doesn't contribute to
 			// count)
 			break;
 		}
-		remaining -= dim;
+		remaining -= node_size;
 		bytes_deleted += rope_node_dim(node, ROPE_BYTE);
 		node = rope_node_delete_and_next(node, &rope->pool);
 	}
@@ -95,7 +98,13 @@ rope_cursor_delete_at(
 		local_byte_index =
 				rope_str_unit_to_byte(&node->data.leaf, unit, remaining);
 		bytes_deleted += local_byte_index;
-		rv = rope_node_split(node, &rope->pool, local_byte_index, &node, NULL);
+		// TODO: this code should work, but it doesn't
+		//if (rope_str_is_end(&node->data.leaf, remaining, unit)) {
+		//	rope_node_delete(node, &rope->pool);
+		//} else if (local_byte_index != 0) {
+		//	rope_node_skip(node, local_byte_index);
+		//}
+		rv = rope_node_split(node, &rope->pool, remaining, unit, &node, NULL);
 		if (rv < 0) {
 			goto out;
 		}

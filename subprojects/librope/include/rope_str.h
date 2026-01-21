@@ -82,6 +82,10 @@ size_t rope_str_last_char_index(const struct RopeStr *str);
 size_t rope_str_unit_from_byte(
 		const struct RopeStr *str, enum RopeUnit unit, size_t byte_index);
 
+bool rope_str_is_end(struct RopeStr *str, size_t index, enum RopeUnit unit);
+
+bool rope_str_ends_with_newline(struct RopeStr *str);
+
 void rope_str_cleanup(struct RopeStr *str);
 
 int rope_str_clone(struct RopeStr *dest, const struct RopeStr *src);

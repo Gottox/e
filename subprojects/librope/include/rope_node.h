@@ -130,8 +130,9 @@ void rope_node_move(struct RopeNode *target, struct RopeNode *node);
 void rope_node_set_type(struct RopeNode *node, enum RopeNodeType type);
 
 int rope_node_split(
-		struct RopeNode *node, struct RopePool *pool, rope_index_t byte_index,
-		struct RopeNode **left_ptr, struct RopeNode **right_ptr);
+		struct RopeNode *node, struct RopePool *pool, size_t index,
+		enum RopeUnit unit, struct RopeNode **left_ptr,
+		struct RopeNode **right_ptr);
 
 void rope_node_rotate(struct RopeNode *node, enum RopeDirection which);
 

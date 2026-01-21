@@ -36,7 +36,7 @@ test_node_split_inline_middle(void) {
 	struct RopeNode *root = from_str(&pool, "'HELO'");
 
 	struct RopeNode *left, *right;
-	rv = rope_node_split(root, &pool, 2, &left, &right);
+	rv = rope_node_split(root, &pool, 2, ROPE_BYTE, &left, &right);
 	ASSERT_EQ(0, rv);
 
 	ASSERT_JSONEQ("['HE','LO']", root);

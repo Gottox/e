@@ -5,6 +5,7 @@
 #include <rope_common.h>
 #include <rope_error.h>
 #include <rope_str.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -265,9 +266,7 @@ rope_str_trim(
 	if (byte_offset == 0) {
 		str_try_inline(str, byte_size);
 		return 0;
-	}
-
-	if (str_is_inline(str)) {
+	} else if (str_is_inline(str)) {
 		uint8_t *data = str->data.inplace;
 		memmove(data, &data[byte_offset], byte_size);
 	} else if (str_is_wrapped(str)) {
@@ -313,10 +312,12 @@ rope_str_split(
 		struct RopeStr *str, struct RopeStr *new_str, enum RopeUnit unit,
 		size_t index) {
 	size_t byte_index = rope_str_unit_to_byte(str, unit, index);
+	size_t byte_size = str_bytes(str);
+	// TODO: This should never abort, but it does
+	// assert(byte_index > 0 && byte_index < byte_size - 1);
 
 	rope_str_clone(new_str, str);
-	rope_str_trim(
-			new_str, byte_index, str_bytes(new_str) - byte_index, ROPE_BYTE);
+	rope_str_trim(new_str, byte_index, byte_size - byte_index, ROPE_BYTE);
 	rope_str_trim(str, 0, byte_index, ROPE_BYTE);
 }
 
@@ -391,6 +392,20 @@ rope_str_unit_from_byte(
 	str_process(NULL, &dim, NULL, data, byte_index);
 
 	return dim.dim[unit];
+}
+
+bool
+rope_str_is_end(struct RopeStr *str, size_t index, enum RopeUnit unit) {
+	if (unit == ROPE_LINE) {
+		size_t byte_size = 0;
+		const uint8_t *data = rope_str_data(str, &byte_size);
+		if (byte_size == 0) {
+			return true;
+		} else if (data[byte_size - 1] != '\n' && index == str_newlines(str)) {
+			return false;
+		}
+	}
+	return index >= rope_str_dim(str, unit);
 }
 
 int

@@ -1,7 +1,7 @@
-#include <rope_node.h>
 #include <assert.h>
 #include <rope.h>
 #include <rope_error.h>
+#include <rope_node.h>
 #include <stdbool.h>
 #include <string.h>
 
@@ -80,8 +80,9 @@ rope_node_set_type(struct RopeNode *node, rope_node_type_t type) {
 
 int
 rope_node_split(
-		struct RopeNode *node, struct RopePool *pool, rope_index_t byte_index,
-		struct RopeNode **left_ptr, struct RopeNode **right_ptr) {
+		struct RopeNode *node, struct RopePool *pool, rope_index_t index,
+		enum RopeUnit unit, struct RopeNode **left_ptr,
+		struct RopeNode **right_ptr) {
 	int rv = 0;
 	struct RopeNode *dummy;
 	if (left_ptr == NULL) {
@@ -93,22 +94,21 @@ rope_node_split(
 
 	while (ROPE_NODE_IS_BRANCH(node)) {
 		struct RopeNode *left = rope_node_left(node);
-		const size_t left_size = rope_node_dim(left, ROPE_BYTE);
+		const size_t left_size = rope_node_dim(left, unit);
 
-		if (byte_index < left_size) {
+		if (index < left_size) {
 			node = left;
 		} else {
 			node = rope_node_right(node);
-			byte_index -= left_size;
+			index -= left_size;
 		}
 	}
 
-	const size_t byte_size = rope_node_dim(node, ROPE_BYTE);
-	if (byte_index == byte_size) {
+	if (rope_str_is_end(&node->data.leaf, index, unit)) {
 		*left_ptr = node;
 		*right_ptr = NULL;
 		return 0;
-	} else if (byte_index == 0) {
+	} else if (index == 0) {
 		*left_ptr = NULL;
 		*right_ptr = node;
 		return 0;
@@ -124,7 +124,7 @@ rope_node_split(
 	rope_node_set_type(right, rope_node_type(node));
 
 	rope_node_move(left, node);
-	rope_str_split(&left->data.leaf, &right->data.leaf, ROPE_BYTE, byte_index);
+	rope_str_split(&left->data.leaf, &right->data.leaf, unit, index);
 
 	rope_node_cleanup(node);
 
@@ -220,10 +220,11 @@ rope_node_truncate(struct RopeNode *node, size_t byte_size) {
 
 int
 rope_node_skip(struct RopeNode *node, size_t offset) {
+	const size_t old_size = rope_node_dim(node, ROPE_BYTE);
 	assert(ROPE_NODE_IS_LEAF(node));
 	assert(offset > 0);
-	assert(offset < rope_node_dim(node, ROPE_BYTE));
-	size_t new_size = rope_node_dim(node, ROPE_BYTE) - offset;
+	assert(offset < old_size);
+	size_t new_size = old_size - offset;
 
 	int rv = rope_str_trim(&node->data.leaf, offset, new_size, ROPE_BYTE);
 	rope_node_update_dim(node);
