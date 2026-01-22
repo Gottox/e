@@ -35,6 +35,6 @@ struct RopeDeserCommand {
 	} args;
 };
 
-int rope_deserialize(struct Rope *rope, const uint8_t *data, size_t length, bool print);
+int rope_deserialize(const uint8_t *data, size_t length, bool print);
 
 #endif

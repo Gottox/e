@@ -6,8 +6,11 @@
 static void
 cursor_basic(void) {
 	int rv = 0;
+	struct RopePool pool = {0};
 	struct Rope r = {0};
-	rv = rope_init(&r);
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&r, &pool);
 	ASSERT_EQ(0, rv);
 
 	rv = rope_append_str(&r, "This is a string");
@@ -25,17 +28,20 @@ cursor_basic(void) {
 
 	ASSERT_JSONEQ("['This is an awesome',' string']", r.root);
 
-	rv = rope_cursor_cleanup(&c);
+	rope_cursor_cleanup(&c);
 	ASSERT_EQ(0, rv);
-	rv = rope_cleanup(&r);
-	ASSERT_EQ(0, rv);
+	rope_cleanup(&r);
+	rope_pool_cleanup(&pool);
 }
 
 static void
 cursor_utf8(void) {
 	int rv = 0;
+	struct RopePool pool = {0};
 	struct Rope r = {0};
-	rv = rope_init(&r);
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&r, &pool);
 	ASSERT_EQ(0, rv);
 
 	rv = rope_append_str(&r, u8"👋🦶");
@@ -60,17 +66,20 @@ cursor_utf8(void) {
 	ASSERT_EQ(0, memcmp(value, u8"👋🙂🦶", size));
 	free(value);
 
-	rv = rope_cursor_cleanup(&c);
+	rope_cursor_cleanup(&c);
 	ASSERT_EQ(0, rv);
-	rv = rope_cleanup(&r);
-	ASSERT_EQ(0, rv);
+	rope_cleanup(&r);
+	rope_pool_cleanup(&pool);
 }
 
 static void
 cursor_event(void) {
 	int rv = 0;
+	struct RopePool pool = {0};
 	struct Rope r = {0};
-	rv = rope_init(&r);
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&r, &pool);
 	ASSERT_EQ(0, rv);
 
 	rv = rope_append_str(&r, u8"This is a test");
@@ -95,19 +104,22 @@ cursor_event(void) {
 
 	ASSERT_EQ((size_t)3, c1.index);
 
-	rv = rope_cursor_cleanup(&c1);
+	rope_cursor_cleanup(&c1);
 	ASSERT_EQ(0, rv);
-	rv = rope_cursor_cleanup(&c2);
+	rope_cursor_cleanup(&c2);
 	ASSERT_EQ(0, rv);
-	rv = rope_cleanup(&r);
-	ASSERT_EQ(0, rv);
+	rope_cleanup(&r);
+	rope_pool_cleanup(&pool);
 }
 
 static void
 cursor_insert_cursor_move(void) {
 	int rv = 0;
+	struct RopePool pool = {0};
 	struct Rope r = {0};
-	rv = rope_init(&r);
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&r, &pool);
 	ASSERT_EQ(0, rv);
 
 	rv = rope_append_str(&r, "Hello World");
@@ -126,19 +138,22 @@ cursor_insert_cursor_move(void) {
 	ASSERT_EQ(0, c2.index);
 	ASSERT_EQ(2, c1.index);
 
-	rv = rope_cursor_cleanup(&c1);
+	rope_cursor_cleanup(&c1);
 	ASSERT_EQ(0, rv);
-	rv = rope_cursor_cleanup(&c2);
+	rope_cursor_cleanup(&c2);
 	ASSERT_EQ(0, rv);
-	rv = rope_cleanup(&r);
-	ASSERT_EQ(0, rv);
+	rope_cleanup(&r);
+	rope_pool_cleanup(&pool);
 }
 
 static void
 cursor_delete_collapses_following(void) {
 	int rv = 0;
+	struct RopePool pool = {0};
 	struct Rope r = {0};
-	rv = rope_init(&r);
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&r, &pool);
 	ASSERT_EQ(0, rv);
 
 	rv = rope_append_str(&r, "Hello");
@@ -160,12 +175,12 @@ cursor_delete_collapses_following(void) {
 	ASSERT_EQ((size_t)0, follower.index);
 	ASSERT_EQ(0, rope_char_size(&r));
 
-	rv = rope_cursor_cleanup(&start);
+	rope_cursor_cleanup(&start);
 	ASSERT_EQ(0, rv);
-	rv = rope_cursor_cleanup(&follower);
+	rope_cursor_cleanup(&follower);
 	ASSERT_EQ(0, rv);
-	rv = rope_cleanup(&r);
-	ASSERT_EQ(0, rv);
+	rope_cleanup(&r);
+	rope_pool_cleanup(&pool);
 }
 
 static void
@@ -173,8 +188,11 @@ cursor_delete_updates_tagged_cursors(void) {
 	const uint64_t TAG_RED = 1u << 0;
 	const uint64_t TAG_BLUE = 1u << 1;
 	int rv = 0;
+	struct RopePool pool = {0};
 	struct Rope r = {0};
-	rv = rope_init(&r);
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&r, &pool);
 	ASSERT_EQ(0, rv);
 
 	struct RopeCursor editor = {0};
@@ -209,21 +227,24 @@ cursor_delete_updates_tagged_cursors(void) {
 	const uint8_t *value = rope_node_value(node, &size);
 	ASSERT_STREQS("blue", (const char *)value, size);
 
-	rv = rope_cursor_cleanup(&tagged);
+	rope_cursor_cleanup(&tagged);
 	ASSERT_EQ(0, rv);
-	rv = rope_cursor_cleanup(&editor);
+	rope_cursor_cleanup(&editor);
 	ASSERT_EQ(0, rv);
-	rv = rope_cleanup(&r);
-	ASSERT_EQ(0, rv);
+	rope_cleanup(&r);
+	rope_pool_cleanup(&pool);
 }
 
 static void
 cursor_delete_at_eof(void) {
+	struct RopePool pool = {0};
 	struct Rope r = {0};
 	struct RopeCursor c = {0};
 	int rv = 0;
 
-	rv = rope_init(&r);
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&r, &pool);
 	ASSERT_EQ(0, rv);
 
 	rv = rope_cursor_init(&c, &r);
@@ -246,6 +267,7 @@ cursor_delete_at_eof(void) {
 
 	rope_cursor_cleanup(&c);
 	rope_cleanup(&r);
+	rope_pool_cleanup(&pool);
 }
 
 static void
@@ -317,11 +339,14 @@ cursor_delete_edit_traces_error1(void) {
 			0x74, 0x75, 0x70, 0x22, 0x20, 0x7c, 0x20, 0x22, 0x62, 0x69, 0x6e,
 			0x22, 0x3b, 0x0a, 0x7d, 0x0a, 0x60, 0x60, 0x60, 0x0a, 0,
 	};
+	struct RopePool pool = {0};
 	struct Rope r = {0};
 	struct RopeCursor c = {0};
 	int rv = 0;
 
-	rv = rope_init(&r);
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&r, &pool);
 	ASSERT_EQ(0, rv);
 
 	rv = rope_cursor_init(&c, &r);
@@ -340,21 +365,24 @@ cursor_delete_edit_traces_error1(void) {
 
 	rope_cursor_cleanup(&c);
 	rope_cleanup(&r);
+	rope_pool_cleanup(&pool);
 }
 
 static void
 test_cursor_delete_multi_node(void) {
+	struct RopePool pool = {0};
 	struct Rope r = {0};
 	struct RopeCursor c = {0};
 	int rv = 0;
 
-	rv = rope_init(&r);
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&r, &pool);
 	ASSERT_EQ(0, rv);
 
-	rope_node_free(r.root, &r.pool);
+	rope_node_free(r.root, &pool);
 
-	r.root = from_str(
-			&r.pool, "[[['HE','L'],['L','O']],[['W','O'],['R','LD']]]");
+	r.root = from_str(&pool, "[[['HE','L'],['L','O']],[['W','O'],['R','LD']]]");
 
 	rv = rope_cursor_init(&c, &r);
 	ASSERT_EQ(0, rv);
@@ -368,17 +396,21 @@ test_cursor_delete_multi_node(void) {
 
 	rope_cursor_cleanup(&c);
 	rope_cleanup(&r);
+	rope_pool_cleanup(&pool);
 }
 
 static void
 test_cursor_delete_root_noninline_leaf(void) {
 	int rv = 0;
-	struct Rope rope = {0};
+	struct RopePool pool = {0};
+	struct Rope r = {0};
 	struct RopeRange range = {0};
 
-	rv = rope_init(&rope);
+	rv = rope_pool_init(&pool);
 	ASSERT_EQ(0, rv);
-	rv = rope_range_init(&range, &rope);
+	rv = rope_init(&r, &pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_range_init(&range, &r);
 	ASSERT_EQ(0, rv);
 
 	rv = rope_range_insert_str(
@@ -390,22 +422,26 @@ test_cursor_delete_root_noninline_leaf(void) {
 	rv = rope_range_delete(&range);
 	ASSERT_EQ(0, rv);
 	rope_range_cleanup(&range);
-	rope_cleanup(&rope);
+	rope_cleanup(&r);
+	rope_pool_cleanup(&pool);
 }
 
 static void
 test_cursor_editing_traces_error1(void) {
 	int rv = 0;
+	struct RopePool pool = {0};
 	struct Rope rope = {0};
 	struct RopeCursor c = {0};
 
-	rv = rope_init(&rope);
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&rope, &pool);
 	ASSERT_EQ(0, rv);
 	rv = rope_cursor_init(&c, &rope);
 	ASSERT_EQ(0, rv);
 
-	rope_node_free(rope.root, &rope.pool);
-	rope.root = from_str(&rope.pool, STRFY([
+	rope_node_free(rope.root, &pool);
+	rope.root = from_str(&pool, STRFY([
 		[ [ "\n\n\n", "When I see peop" ], "le again, they a" ], "lways"
 	]));
 
@@ -421,22 +457,26 @@ test_cursor_editing_traces_error1(void) {
 
 	rope_cursor_cleanup(&c);
 	rope_cleanup(&rope);
+	rope_pool_cleanup(&pool);
 }
 
 static void
 test_cursor_editing_traces_error2(void) {
 	int rv = 0;
+	struct RopePool pool = {0};
 	struct Rope rope = {0};
 	struct RopeCursor c = {0};
 
-	rv = rope_init(&rope);
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&rope, &pool);
 	ASSERT_EQ(0, rv);
 	rv = rope_cursor_init(&c, &rope);
 	ASSERT_EQ(0, rv);
 
-	rope_node_free(rope.root, &rope.pool);
+	rope_node_free(rope.root, &pool);
 	rope.root = from_str(
-			&rope.pool,
+			&pool,
 			"[[[[[[\"<script>\",\"\\n\"],\"\\n\"],[[[\"\\texport let "
 			"\",\"room\"],\"\\n\"],[[\"\\texport let "
 			"\",\"connection\"],\"\\n\"]]],[[\"\\texport let "
@@ -538,13 +578,17 @@ test_cursor_editing_traces_error2(void) {
 
 	rope_cursor_cleanup(&c);
 	rope_cleanup(&rope);
+	rope_pool_cleanup(&pool);
 }
 
 static void
 test_rope_size(void) {
 	int rv = 0;
+	struct RopePool pool = {0};
 	struct Rope r = {0};
-	rv = rope_init(&r);
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&r, &pool);
 	ASSERT_EQ(0, rv);
 
 	// "Hello\nWorld" - 11 bytes, 11 chars, 1 newline
@@ -555,15 +599,18 @@ test_rope_size(void) {
 	ASSERT_EQ((size_t)11, rope_size(&r, ROPE_CHAR));
 	ASSERT_EQ((size_t)1, rope_size(&r, ROPE_LINE));
 
-	rv = rope_cleanup(&r);
-	ASSERT_EQ(0, rv);
+	rope_cleanup(&r);
+	rope_pool_cleanup(&pool);
 }
 
 static void
 test_rope_size_utf8(void) {
 	int rv = 0;
+	struct RopePool pool = {0};
 	struct Rope r = {0};
-	rv = rope_init(&r);
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&r, &pool);
 	ASSERT_EQ(0, rv);
 
 	// "👋🙂" - 8 bytes, 2 grapheme chars, 2 codepoints
@@ -574,15 +621,18 @@ test_rope_size_utf8(void) {
 	ASSERT_EQ((size_t)2, rope_size(&r, ROPE_CHAR));
 	ASSERT_EQ((size_t)2, rope_size(&r, ROPE_CP));
 
-	rv = rope_cleanup(&r);
-	ASSERT_EQ(0, rv);
+	rope_cleanup(&r);
+	rope_pool_cleanup(&pool);
 }
 
 static void
 test_cursor_delete_at_bytes(void) {
 	int rv = 0;
+	struct RopePool pool = {0};
 	struct Rope r = {0};
-	rv = rope_init(&r);
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&r, &pool);
 	ASSERT_EQ(0, rv);
 
 	rv = rope_append_str(&r, "Hello World");
@@ -603,17 +653,20 @@ test_cursor_delete_at_bytes(void) {
 	ASSERT_STREQ(" World", result);
 	free(result);
 
-	rv = rope_cursor_cleanup(&c);
+	rope_cursor_cleanup(&c);
 	ASSERT_EQ(0, rv);
-	rv = rope_cleanup(&r);
-	ASSERT_EQ(0, rv);
+	rope_cleanup(&r);
+	rope_pool_cleanup(&pool);
 }
 
 static void
 test_cursor_delete_at_lines(void) {
 	int rv = 0;
+	struct RopePool pool = {0};
 	struct Rope r = {0};
-	rv = rope_init(&r);
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&r, &pool);
 	ASSERT_EQ(0, rv);
 
 	rv = rope_append_str(&r, "Line1\nLine2\nLine3");
@@ -634,17 +687,20 @@ test_cursor_delete_at_lines(void) {
 	ASSERT_STREQ("Line3", result);
 	free(result);
 
-	rv = rope_cursor_cleanup(&c);
+	rope_cursor_cleanup(&c);
 	ASSERT_EQ(0, rv);
-	rv = rope_cleanup(&r);
-	ASSERT_EQ(0, rv);
+	rope_cleanup(&r);
+	rope_pool_cleanup(&pool);
 }
 
 static void
 test_cursor_move_at_bytes(void) {
 	int rv = 0;
+	struct RopePool pool = {0};
 	struct Rope r = {0};
-	rv = rope_init(&r);
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&r, &pool);
 	ASSERT_EQ(0, rv);
 
 	// "👋" is 4 bytes
@@ -669,17 +725,20 @@ test_cursor_move_at_bytes(void) {
 	ASSERT_STREQ(u8"👋!Hello", result);
 	free(result);
 
-	rv = rope_cursor_cleanup(&c);
+	rope_cursor_cleanup(&c);
 	ASSERT_EQ(0, rv);
-	rv = rope_cleanup(&r);
-	ASSERT_EQ(0, rv);
+	rope_cleanup(&r);
+	rope_pool_cleanup(&pool);
 }
 
 static void
 test_cursor_move_at_lines(void) {
 	int rv = 0;
+	struct RopePool pool = {0};
 	struct Rope r = {0};
-	rv = rope_init(&r);
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&r, &pool);
 	ASSERT_EQ(0, rv);
 
 	rv = rope_append_str(&r, "Line1\nLine2\nLine3");
@@ -695,17 +754,20 @@ test_cursor_move_at_lines(void) {
 
 	ASSERT_EQ((size_t)6, c.index); // "Line1\n" is 6 bytes
 
-	rv = rope_cursor_cleanup(&c);
+	rope_cursor_cleanup(&c);
 	ASSERT_EQ(0, rv);
-	rv = rope_cleanup(&r);
-	ASSERT_EQ(0, rv);
+	rope_cleanup(&r);
+	rope_pool_cleanup(&pool);
 }
 
 static void
 test_rope_insert_at_bytes(void) {
 	int rv = 0;
+	struct RopePool pool = {0};
 	struct Rope r = {0};
-	rv = rope_init(&r);
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&r, &pool);
 	ASSERT_EQ(0, rv);
 
 	// "👋" is 4 bytes
@@ -720,15 +782,18 @@ test_rope_insert_at_bytes(void) {
 	ASSERT_STREQ(u8"👋Hello World", result);
 	free(result);
 
-	rv = rope_cleanup(&r);
-	ASSERT_EQ(0, rv);
+	rope_cleanup(&r);
+	rope_pool_cleanup(&pool);
 }
 
 static void
 test_rope_delete_at_bytes(void) {
 	int rv = 0;
+	struct RopePool pool = {0};
 	struct Rope r = {0};
-	rv = rope_init(&r);
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&r, &pool);
 	ASSERT_EQ(0, rv);
 
 	rv = rope_append_str(&r, "Hello World");
@@ -742,15 +807,18 @@ test_rope_delete_at_bytes(void) {
 	ASSERT_STREQ("World", result);
 	free(result);
 
-	rv = rope_cleanup(&r);
-	ASSERT_EQ(0, rv);
+	rope_cleanup(&r);
+	rope_pool_cleanup(&pool);
 }
 
 static void
 test_range_move_to_at(void) {
 	int rv = 0;
+	struct RopePool pool = {0};
 	struct Rope r = {0};
-	rv = rope_init(&r);
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&r, &pool);
 	ASSERT_EQ(0, rv);
 
 	rv = rope_append_str(&r, u8"👋Hello World");
@@ -772,10 +840,10 @@ test_range_move_to_at(void) {
 	ASSERT_STREQ("Hello", result);
 	free(result);
 
-	rv = rope_range_cleanup(&range);
+	rope_range_cleanup(&range);
 	ASSERT_EQ(0, rv);
-	rv = rope_cleanup(&r);
-	ASSERT_EQ(0, rv);
+	rope_cleanup(&r);
+	rope_pool_cleanup(&pool);
 }
 
 DECLARE_TESTS

@@ -26,12 +26,12 @@ rope_cursor_insert(
 			&insert_at_byte);
 
 	rv = rope_node_split(
-			insert_at, &rope->pool, insert_at_byte, ROPE_BYTE, &left, &right);
+			insert_at, rope->pool, insert_at_byte, ROPE_BYTE, &left, &right);
 
 	if (left) {
-		rv = rope_node_insert_right(left, data, byte_size, tags, &rope->pool);
+		rv = rope_node_insert_right(left, data, byte_size, tags, rope->pool);
 	} else {
-		rv = rope_node_insert_left(right, data, byte_size, tags, &rope->pool);
+		rv = rope_node_insert_left(right, data, byte_size, tags, rope->pool);
 	}
 	if (rv < 0) {
 		goto out;
@@ -73,7 +73,7 @@ rope_cursor_delete_at(
 		local_byte_index = 0;
 	} else if (local_byte_index != 0) {
 		rv = rope_node_split(
-				node, &rope->pool, local_byte_index, ROPE_BYTE, NULL, &node);
+				node, rope->pool, local_byte_index, ROPE_BYTE, NULL, &node);
 		if (rv < 0) {
 			goto out;
 		}
@@ -88,13 +88,13 @@ rope_cursor_delete_at(
 		}
 		remaining -= node_size;
 		bytes_deleted += rope_node_dim(node, ROPE_BYTE);
-		node = rope_node_delete_and_next(node, &rope->pool);
+		node = rope_node_delete_and_next(node, rope->pool);
 	}
 
 	if (node && remaining > 0) {
 		local_byte_index = rope_node_dim(node, ROPE_BYTE);
 		if (rope_str_is_end(&node->data.leaf, remaining, unit)) {
-			rope_node_delete(node, &rope->pool);
+			rope_node_delete(node, rope->pool);
 		} else {
 			rv = rope_node_skip(node, remaining, unit);
 			if (rv < 0) {

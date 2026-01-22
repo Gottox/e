@@ -7,12 +7,16 @@
 static void
 iterator_full(void) {
 	int rv = 0;
+	struct RopePool pool = {0};
 	struct Rope r = {0};
-	rv = rope_init(&r);
+
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&r, &pool);
 	ASSERT_EQ(0, rv);
 
-	rope_node_free(r.root, &r.pool);
-	r.root = from_str(&r.pool, "'HelloWorld'");
+	rope_node_free(r.root, &pool);
+	r.root = from_str(&pool, "'HelloWorld'");
 
 	struct RopeRange range = {0};
 	rv = rope_range_init(&range, &r);
@@ -33,23 +37,24 @@ iterator_full(void) {
 	has_next = rope_iterator_next(&it, &data, &size);
 	ASSERT_FALSE(has_next);
 
-	rv = rope_iterator_cleanup(&it);
-	ASSERT_EQ(0, rv);
-	rv = rope_range_cleanup(&range);
-	ASSERT_EQ(0, rv);
-	rv = rope_cleanup(&r);
-	ASSERT_EQ(0, rv);
+	rope_iterator_cleanup(&it);
+	rope_range_cleanup(&range);
+	rope_cleanup(&r);
+	rope_pool_cleanup(&pool);
 }
 
 static void
 iterator_partial(void) {
 	int rv = 0;
+	struct RopePool pool = {0};
 	struct Rope r = {0};
-	rv = rope_init(&r);
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&r, &pool);
 	ASSERT_EQ(0, rv);
 
-	rope_node_free(r.root, &r.pool);
-	r.root = from_str(&r.pool, "['HelloWorld','Test']");
+	rope_node_free(r.root, &pool);
+	r.root = from_str(&pool, "['HelloWorld','Test']");
 
 	struct RopeRange range = {0};
 	rv = rope_range_init(&range, &r);
@@ -79,19 +84,21 @@ iterator_partial(void) {
 	ASSERT_STREQ(str, "lloWor");
 	free(str);
 
-	rv = rope_iterator_cleanup(&it);
-	ASSERT_EQ(0, rv);
-	rv = rope_range_cleanup(&range);
-	ASSERT_EQ(0, rv);
-	rv = rope_cleanup(&r);
-	ASSERT_EQ(0, rv);
+	rope_iterator_cleanup(&it);
+	rope_range_cleanup(&range);
+	rope_cleanup(&r);
+	rope_pool_cleanup(&pool);
 }
 
 static void
 iterator_empty(void) {
 	int rv = 0;
+	struct RopePool pool = {0};
 	struct Rope r = {0};
-	rv = rope_init(&r);
+
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&r, &pool);
 	ASSERT_EQ(0, rv);
 	rv = rope_append_str(&r, "Hello");
 	ASSERT_EQ(0, rv);
@@ -114,19 +121,20 @@ iterator_empty(void) {
 	ASSERT_STREQ(str, "");
 	free(str);
 
-	rv = rope_iterator_cleanup(&it);
-	ASSERT_EQ(0, rv);
-	rv = rope_range_cleanup(&range);
-	ASSERT_EQ(0, rv);
-	rv = rope_cleanup(&r);
-	ASSERT_EQ(0, rv);
+	rope_iterator_cleanup(&it);
+	rope_range_cleanup(&range);
+	rope_cleanup(&r);
+	rope_pool_cleanup(&pool);
 }
 
 static void
 iterator_big_non_inline(void) {
 	int rv = 0;
+	struct RopePool pool = {0};
 	struct Rope r = {0};
-	rv = rope_init(&r);
+
+	rv = rope_pool_init(&pool);
+	rv = rope_init(&r, &pool);
 	ASSERT_EQ(0, rv);
 
 	const char *part1 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
@@ -158,19 +166,21 @@ iterator_big_non_inline(void) {
 			"ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyz0987"
 			"654321");
 
-	rv = rope_iterator_cleanup(&it);
-	ASSERT_EQ(0, rv);
-	rv = rope_range_cleanup(&range);
-	ASSERT_EQ(0, rv);
-	rv = rope_cleanup(&r);
-	ASSERT_EQ(0, rv);
+	rope_iterator_cleanup(&it);
+	rope_range_cleanup(&range);
+	rope_cleanup(&r);
+	rope_pool_cleanup(&pool);
 }
 
 static void
 iterator_multibyte(void) {
 	int rv = 0;
+	struct RopePool pool = {0};
 	struct Rope r = {0};
-	rv = rope_init(&r);
+
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&r, &pool);
 	ASSERT_EQ(0, rv);
 
 	rv = rope_append_str(&r, u8"abc🙂def");
@@ -202,12 +212,10 @@ iterator_multibyte(void) {
 	ASSERT_STREQ(str, u8"🙂");
 	free(str);
 
-	rv = rope_iterator_cleanup(&it);
-	ASSERT_EQ(0, rv);
-	rv = rope_range_cleanup(&range);
-	ASSERT_EQ(0, rv);
-	rv = rope_cleanup(&r);
-	ASSERT_EQ(0, rv);
+	rope_iterator_cleanup(&it);
+	rope_range_cleanup(&range);
+	rope_cleanup(&r);
+	rope_pool_cleanup(&pool);
 }
 
 static void
@@ -216,9 +224,13 @@ iterator_tagged_filter(void) {
 	const uint64_t TAG_BLUE = 1ULL << 1;
 
 	int rv = 0;
+	struct RopePool pool = {0};
 	struct Rope r = {0};
 	bool has_next;
-	rv = rope_init(&r);
+
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&r, &pool);
 	ASSERT_EQ(0, rv);
 	struct RopeCursor cursor = {0};
 	const uint8_t *data = NULL;
@@ -267,8 +279,7 @@ iterator_tagged_filter(void) {
 	ASSERT_EQ(5, size);
 	has_next = rope_iterator_next(&all_it, &data, &size);
 	ASSERT_FALSE(has_next);
-	rv = rope_iterator_cleanup(&all_it);
-	ASSERT_EQ(0, rv);
+	rope_iterator_cleanup(&all_it);
 
 	struct RopeIterator red_it = {0};
 	rv = rope_iterator_init(&red_it, &range, TAG_RED);
@@ -281,18 +292,16 @@ iterator_tagged_filter(void) {
 	ASSERT_TRUE(has_next);
 	ASSERT_STREQS((const char *)data, "magenta", size);
 	ASSERT_EQ(7, size);
-	rv = rope_iterator_cleanup(&red_it);
-	ASSERT_EQ(0, rv);
+	rope_iterator_cleanup(&red_it);
 
 	char *str = rope_range_to_str(&range, TAG_RED);
 	ASSERT_TRUE(str != NULL);
 	ASSERT_STREQS(str, "redmagenta", size);
 	free(str);
 
-	rv = rope_range_cleanup(&range);
-	ASSERT_EQ(0, rv);
-	rv = rope_cleanup(&r);
-	ASSERT_EQ(0, rv);
+	rope_range_cleanup(&range);
+	rope_cleanup(&r);
+	rope_pool_cleanup(&pool);
 }
 
 DECLARE_TESTS

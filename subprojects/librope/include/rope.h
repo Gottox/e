@@ -35,11 +35,11 @@ void rope_pool_cleanup(struct RopePool *pool);
 struct Rope {
 	struct RopeNode *root;
 	struct RopeCursor *last_cursor;
-	struct RopePool pool;
+	struct RopePool *pool;
 	size_t chores_counter;
 };
 
-int rope_init(struct Rope *rope);
+int rope_init(struct Rope *rope, struct RopePool *pool);
 
 int rope_chores(struct Rope *rope);
 
@@ -73,7 +73,7 @@ char *rope_to_str(struct Rope *rope, uint64_t tags);
 
 struct RopeNode *rope_first(struct Rope *rope);
 
-int rope_cleanup(struct Rope *rope);
+void rope_cleanup(struct Rope *rope);
 
 int rope_char_size(struct Rope *rope);
 
@@ -138,7 +138,7 @@ size_t rope_cursor_index(struct RopeCursor *cursor, enum RopeUnit unit);
 
 rope_char_index_t rope_cursor_char_index(struct RopeCursor *cursor);
 
-int rope_cursor_cleanup(struct RopeCursor *cursor);
+void rope_cursor_cleanup(struct RopeCursor *cursor);
 
 /**********************************
  * range.c
@@ -199,7 +199,7 @@ int rope_range_line(struct RopeRange *range, rope_index_t line);
 
 char *rope_range_to_str(struct RopeRange *range, uint64_t tags);
 
-int rope_range_cleanup(struct RopeRange *range);
+void rope_range_cleanup(struct RopeRange *range);
 
 /**********************************
  * iterator.c
@@ -221,6 +221,6 @@ int rope_iterator_init(
 bool rope_iterator_next(
 		struct RopeIterator *iter, const uint8_t **value, size_t *size);
 
-int rope_iterator_cleanup(struct RopeIterator *iter);
+void rope_iterator_cleanup(struct RopeIterator *iter);
 
 #endif

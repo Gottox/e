@@ -84,20 +84,27 @@ print_rv_check(int rv, bool print) {
 
 int
 rope_deserialize(
-		struct Rope *rope, const uint8_t *data, size_t length, bool print) {
+		const uint8_t *data, size_t length, bool print) {
 	int rv = 0;
 	uint8_t *payload;
 	uint8_t tmp = 0;
 	struct RopeDeserCommand command = {0};
 	struct RopeRange ranges[ROPE_DESER_RANGE_COUNT] = {0};
+	struct RopePool pool = {0};
+	struct Rope rope = {0};
 
-	rv = rope_init(rope);
+	rv = rope_pool_init(&pool);
+	if (rv < 0) {
+		return rv;
+	}
+
+	rv = rope_init(&rope, &pool);
 	if (rv < 0) {
 		return rv;
 	}
 
 	for (int i = 0; i < ROPE_DESER_RANGE_COUNT; i++) {
-		rv = rope_range_init(&ranges[i], rope);
+		rv = rope_range_init(&ranges[i], &rope);
 		if (rv < 0) {
 			goto out;
 		}
@@ -195,7 +202,8 @@ out:
 		rope_range_cleanup(&ranges[i]);
 	}
 	if (rv < 0) {
-		rope_cleanup(rope);
+		rope_cleanup(&rope);
 	}
+	rope_pool_cleanup(&pool);
 	return rv;
 }

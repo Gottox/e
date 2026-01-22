@@ -3,14 +3,12 @@
 #include <string.h>
 
 int
-rope_init(struct Rope *rope) {
+rope_init(struct Rope *rope, struct RopePool *pool) {
 	int rv = 0;
-	rv = rope_pool_init(&rope->pool);
-	if (rv < 0) {
-		goto out;
-	}
 
-	rope->root = rope_pool_get(&rope->pool);
+	rope->pool = pool;
+
+	rope->root = rope_pool_get(rope->pool);
 	if (rope->root == NULL) {
 		rv = -1;
 		goto out;
@@ -26,7 +24,7 @@ rope_chores(struct Rope *rope) {
 	if (rope->chores_counter % ROPE_CHORE_RUN_INTERVAL != 0) {
 		return 0;
 	}
-	return rope_node_chores(rope->root, &rope->pool);
+	return rope_node_chores(rope->root, rope->pool);
 }
 
 int
@@ -179,9 +177,7 @@ out:
 	return str;
 }
 
-int
+void
 rope_cleanup(struct Rope *rope) {
-	rope_node_free(rope->root, &rope->pool);
-	rope_pool_cleanup(&rope->pool);
-	return 0;
+	rope_node_free(rope->root, rope->pool);
 }

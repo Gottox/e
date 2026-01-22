@@ -160,10 +160,14 @@ run_trace(json_object *trace) {
 	json_object *end_content_obj = NULL;
 	json_object *txns_obj = NULL;
 	char *naive_content = NULL;
+	struct RopePool pool = {0};
 	struct Rope rope = {0};
 	struct RopeCursor cursor = {0};
 	int rv = 0;
-	rv = rope_init(&rope);
+
+	rv = rope_pool_init(&pool);
+
+	rv = rope_init(&rope, &pool);
 	if (rv < 0) {
 		goto out;
 	}
@@ -200,6 +204,7 @@ out:
 	free(naive_content);
 	free(actual_content);
 	rope_cleanup(&rope);
+	rope_pool_cleanup(&pool);
 	return 0;
 }
 

@@ -4,10 +4,9 @@
 
 #define CRASH_TEST(name, ...) \
 	static void name(void) { \
-		struct Rope rope = {0}; \
 		static const uint8_t serialized_data[] = {__VA_ARGS__}; \
 		(void)rope_deserialize( \
-				&rope, serialized_data, sizeof(serialized_data), true); \
+				serialized_data, sizeof(serialized_data), true); \
 	}
 
 CRASH_TEST(
@@ -55,10 +54,14 @@ CRASH_TEST(
 static void
 crash_2_reduced(void) {
 	int rv = 0;
+	struct RopePool pool = {0};
 	struct Rope rope = {0};
 	struct RopeRange ranges[2] = {0};
 
-	rv = rope_init(&rope);
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+
+	rv = rope_init(&rope, &pool);
 	ASSERT_EQ(0, rv);
 	rv = rope_range_init(&ranges[0], &rope);
 	ASSERT_EQ(0, rv);
@@ -83,15 +86,19 @@ crash_2_reduced(void) {
 	rope_range_cleanup(&ranges[1]);
 	rope_range_cleanup(&ranges[0]);
 	rope_cleanup(&rope);
+	rope_pool_cleanup(&pool);
 }
 
 static void
 crash_2_reduced2(void) {
 	int rv = 0;
+	struct RopePool pool = {0};
 	struct Rope rope = {0};
 	struct RopeRange ranges[2] = {0};
 
-	rv = rope_init(&rope);
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&rope, &pool);
 	ASSERT_EQ(0, rv);
 	rv = rope_range_init(&ranges[0], &rope);
 	ASSERT_EQ(0, rv);
@@ -109,15 +116,19 @@ crash_2_reduced2(void) {
 	rope_range_cleanup(&ranges[1]);
 	rope_range_cleanup(&ranges[0]);
 	rope_cleanup(&rope);
+	rope_pool_cleanup(&pool);
 }
 
 static void
 crash_2_reduced3(void) {
 	int rv = 0;
+	struct RopePool pool = {0};
 	struct Rope rope = {0};
 	struct RopeRange range = {0};
 
-	rv = rope_init(&rope);
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&rope, &pool);
 	ASSERT_EQ(0, rv);
 	rv = rope_range_init(&range, &rope);
 	ASSERT_EQ(0, rv);
@@ -135,6 +146,7 @@ crash_2_reduced3(void) {
 	ASSERT_EQ(0, rv);
 	rope_range_cleanup(&range);
 	rope_cleanup(&rope);
+	rope_pool_cleanup(&pool);
 }
 
 CRASH_TEST(
@@ -149,10 +161,13 @@ CRASH_TEST(
 static void
 crash_3_reduced(void) {
 	int rv = 0;
+	struct RopePool pool = {0};
 	struct Rope rope = {0};
 	struct RopeRange ranges[2] = {0};
 
-	rv = rope_init(&rope);
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&rope, &pool);
 	ASSERT_EQ(0, rv);
 	rv = rope_range_init(&ranges[0], &rope);
 	ASSERT_EQ(0, rv);
@@ -172,6 +187,7 @@ crash_3_reduced(void) {
 	rope_range_cleanup(&ranges[1]);
 	rope_range_cleanup(&ranges[0]);
 	rope_cleanup(&rope);
+	rope_pool_cleanup(&pool);
 }
 
 CRASH_TEST(
@@ -187,9 +203,13 @@ CRASH_TEST(
 static void
 crash_4_reduced(void) {
 	int rv = 0;
+	struct RopePool pool = {0};
 	struct Rope rope = {0};
 	struct RopeRange ranges[2] = {0};
-	rv = rope_init(&rope);
+
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&rope, &pool);
 	ASSERT_EQ(0, rv);
 	rv = rope_range_init(&ranges[0], &rope);
 	ASSERT_EQ(0, rv);
@@ -210,6 +230,7 @@ crash_4_reduced(void) {
 	rope_range_cleanup(&ranges[1]);
 	rope_range_cleanup(&ranges[0]);
 	rope_cleanup(&rope);
+	rope_pool_cleanup(&pool);
 }
 
 DECLARE_TESTS

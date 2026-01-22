@@ -249,12 +249,11 @@ rope_range_to_str(struct RopeRange *range, uint64_t tags) {
 	return res;
 }
 
-int
+void
 rope_range_cleanup(struct RopeRange *range) {
 	if (range == NULL) {
-		return 0;
+		return;
 	}
 	rope_cursor_cleanup(&range->cursor_start);
 	rope_cursor_cleanup(&range->cursor_end);
-	return 0;
 }

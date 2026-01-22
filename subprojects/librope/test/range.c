@@ -7,8 +7,11 @@
 static void
 range_basic(void) {
 	int rv = 0;
+	struct RopePool pool = {0};
 	struct Rope r = {0};
-	rv = rope_init(&r);
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&r, &pool);
 	ASSERT_EQ(0, rv);
 
 	rv = rope_append_str(&r, "Hello World This is a string");
@@ -18,17 +21,20 @@ range_basic(void) {
 	rv = rope_range_init(&range, &r);
 	ASSERT_EQ(0, rv);
 
-	rv = rope_range_cleanup(&range);
-	ASSERT_EQ(0, rv);
-	rv = rope_cleanup(&r);
+	rope_range_cleanup(&range);
+	rope_cleanup(&r);
+	rope_pool_cleanup(&pool);
 	ASSERT_EQ(0, rv);
 }
 
 static void
 range_insert_delete(void) {
 	int rv = 0;
+	struct RopePool pool = {0};
 	struct Rope r = {0};
-	rv = rope_init(&r);
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&r, &pool);
 	ASSERT_EQ(0, rv);
 
 	struct RopeRange range = {0};
@@ -43,8 +49,7 @@ range_insert_delete(void) {
 	const uint8_t *data = rope_node_value(node, &size);
 	ASSERT_STREQS("Hello", (char *)data, size);
 
-	rv = rope_range_end_move_to_index(
-			&range, rope_char_size(&r), 0);
+	rv = rope_range_end_move_to_index(&range, rope_char_size(&r), 0);
 	ASSERT_EQ(0, rv);
 	rv = rope_range_start_move_to_index(&range, 0, 0);
 	ASSERT_EQ(0, rv);
@@ -55,17 +60,19 @@ range_insert_delete(void) {
 	data = rope_node_value(node, &size);
 	ASSERT_EQ((size_t)0, size);
 
-	rv = rope_range_cleanup(&range);
-	ASSERT_EQ(0, rv);
-	rv = rope_cleanup(&r);
-	ASSERT_EQ(0, rv);
+	rope_range_cleanup(&range);
+	rope_cleanup(&r);
+	rope_pool_cleanup(&pool);
 }
 
 static void
 range_to_str(void) {
 	int rv = 0;
+	struct RopePool pool = {0};
 	struct Rope r = {0};
-	rv = rope_init(&r);
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&r, &pool);
 	ASSERT_EQ(0, rv);
 
 	rv = rope_append_str(&r, "Hello World");
@@ -105,17 +112,19 @@ range_to_str(void) {
 	ASSERT_STREQ("", str);
 	free(str);
 
-	rv = rope_range_cleanup(&range);
-	ASSERT_EQ(0, rv);
-	rv = rope_cleanup(&r);
-	ASSERT_EQ(0, rv);
+	rope_range_cleanup(&range);
+	rope_cleanup(&r);
+	rope_pool_cleanup(&pool);
 }
 
 static void
 range_select_portion(void) {
 	int rv = 0;
+	struct RopePool pool = {0};
 	struct Rope r = {0};
-	rv = rope_init(&r);
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&r, &pool);
 	ASSERT_EQ(0, rv);
 
 	rv = rope_append_str(&r, "Hello World This is a Test");
@@ -153,17 +162,19 @@ range_select_portion(void) {
 	ASSERT_STREQ("Hello World  a Test", str);
 	free(str);
 
-	rv = rope_range_cleanup(&range);
-	ASSERT_EQ(0, rv);
-	rv = rope_cleanup(&r);
-	ASSERT_EQ(0, rv);
+	rope_range_cleanup(&range);
+	rope_cleanup(&r);
+	rope_pool_cleanup(&pool);
 }
 
 static void
 range_move_to_line_column(void) {
 	int rv = 0;
+	struct RopePool pool = {0};
 	struct Rope r = {0};
-	rv = rope_init(&r);
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&r, &pool);
 	ASSERT_EQ(0, rv);
 
 	rv = rope_append_str(&r, "Hello World Test");
@@ -193,10 +204,9 @@ range_move_to_line_column(void) {
 	ASSERT_STREQ("Hello", str);
 	free(str);
 
-	rv = rope_range_cleanup(&range);
-	ASSERT_EQ(0, rv);
-	rv = rope_cleanup(&r);
-	ASSERT_EQ(0, rv);
+	rope_range_cleanup(&range);
+	rope_cleanup(&r);
+	rope_pool_cleanup(&pool);
 }
 
 struct callback_data {
@@ -218,8 +228,12 @@ test_callback(
 static void
 range_callback(void) {
 	int rv = 0;
+	struct RopePool pool = {0};
 	struct Rope r = {0};
-	rv = rope_init(&r);
+
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&r, &pool);
 	ASSERT_EQ(0, rv);
 
 	rv = rope_append_str(&r, "Hello World");
@@ -250,19 +264,21 @@ range_callback(void) {
 
 	ASSERT_EQ((size_t)9, range.cursor_start.index);
 
-	rv = rope_cursor_cleanup(&c);
-	ASSERT_EQ(0, rv);
-	rv = rope_range_cleanup(&range);
-	ASSERT_EQ(0, rv);
-	rv = rope_cleanup(&r);
-	ASSERT_EQ(0, rv);
+	rope_cursor_cleanup(&c);
+	rope_range_cleanup(&range);
+	rope_cleanup(&r);
+	rope_pool_cleanup(&pool);
 }
 
 static void
 range_ordering(void) {
 	int rv = 0;
+	struct RopePool pool = {0};
 	struct Rope r = {0};
-	rv = rope_init(&r);
+
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&r, &pool);
 	ASSERT_EQ(0, rv);
 
 	rv = rope_append_str(&r, "Hello World");
@@ -296,17 +312,19 @@ range_ordering(void) {
 	ASSERT_EQ((size_t)0, range.cursor_start.index);
 	ASSERT_EQ((size_t)0, range.cursor_end.index);
 
-	rv = rope_range_cleanup(&range);
-	ASSERT_EQ(0, rv);
-	rv = rope_cleanup(&r);
-	ASSERT_EQ(0, rv);
+	rope_range_cleanup(&range);
+	rope_cleanup(&r);
+	rope_pool_cleanup(&pool);
 }
 
 static void
 range_insert_raw(void) {
 	int rv = 0;
+	struct RopePool pool = {0};
 	struct Rope r = {0};
-	rv = rope_init(&r);
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&r, &pool);
 	ASSERT_EQ(0, rv);
 
 	struct RopeRange range = {0};
@@ -336,17 +354,19 @@ range_insert_raw(void) {
 	ASSERT_STREQ("Hello World", str);
 	free(str);
 
-	rv = rope_range_cleanup(&range);
-	ASSERT_EQ(0, rv);
-	rv = rope_cleanup(&r);
-	ASSERT_EQ(0, rv);
+	rope_range_cleanup(&range);
+	rope_cleanup(&r);
+	rope_pool_cleanup(&pool);
 }
 
 static void
 range_utf8(void) {
 	int rv = 0;
+	struct RopePool pool = {0};
 	struct Rope r = {0};
-	rv = rope_init(&r);
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&r, &pool);
 	ASSERT_EQ(0, rv);
 
 	rv = rope_append_str(&r, u8"Héllo Wörld");
@@ -366,21 +386,23 @@ range_utf8(void) {
 	ASSERT_STREQ(u8"Wörld", str);
 	free(str);
 
-	rv = rope_range_cleanup(&range);
-	ASSERT_EQ(0, rv);
-	rv = rope_cleanup(&r);
-	ASSERT_EQ(0, rv);
+	rope_range_cleanup(&range);
+	rope_cleanup(&r);
+	rope_pool_cleanup(&pool);
 }
 
 static void
 range_multinode(void) {
 	int rv = 0;
+	struct RopePool pool = {0};
 	struct Rope r = {0};
-	rv = rope_init(&r);
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&r, &pool);
 	ASSERT_EQ(0, rv);
 
-	rope_node_free(r.root, &r.pool);
-	r.root = from_str(&r.pool, "[['Hello',' '],['Wor','ld']]");
+	rope_node_free(r.root, &pool);
+	r.root = from_str(&pool, "[['Hello',' '],['Wor','ld']]");
 
 	struct RopeRange range = {0};
 	rv = rope_range_init(&range, &r);
@@ -404,10 +426,9 @@ range_multinode(void) {
 	ASSERT_STREQ("Hellld", str);
 	free(str);
 
-	rv = rope_range_cleanup(&range);
-	ASSERT_EQ(0, rv);
-	rv = rope_cleanup(&r);
-	ASSERT_EQ(0, rv);
+	rope_range_cleanup(&range);
+	rope_cleanup(&r);
+	rope_pool_cleanup(&pool);
 }
 
 DECLARE_TESTS

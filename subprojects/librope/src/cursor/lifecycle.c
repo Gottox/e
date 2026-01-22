@@ -32,12 +32,11 @@ rope_cursor_set_callback(
 	return 0;
 }
 
-int
+void
 rope_cursor_cleanup(struct RopeCursor *cursor) {
 	if (cursor->rope == NULL) {
-		return 0;
+		return;
 	}
 	cursor_detach(cursor);
 	cursor->prev = NULL;
-	return 0;
 }

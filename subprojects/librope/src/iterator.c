@@ -59,8 +59,7 @@ rope_iterator_next(
 	return true;
 }
 
-int
+void
 rope_iterator_cleanup(struct RopeIterator *iter) {
 	(void)iter;
-	return 0;
 }

@@ -5,8 +5,12 @@
 static void
 test_librope_insert(void) {
 	int rv = 0;
+	struct RopePool pool = {0};
 	struct Rope r = {0};
-	rv = rope_init(&r);
+
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&r, &pool);
 	ASSERT_EQ(0, rv);
 
 	rv = rope_append(&r, (uint8_t *)"Hello", 5);
@@ -22,14 +26,19 @@ test_librope_insert(void) {
 	node = rope_node_next(node);
 	ASSERT_TRUE(NULL == node);
 
-	rv = rope_cleanup(&r);
+	rope_cleanup(&r);
+	rope_pool_cleanup(&pool);
 }
 
 static void
 test_librope_split_insert(void) {
 	int rv = 0;
+	struct RopePool pool = {0};
 	struct Rope r = {0};
-	rv = rope_init(&r);
+
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&r, &pool);
 	ASSERT_EQ(0, rv);
 
 	rv = rope_append(&r, (uint8_t *)"Hello", 5);
@@ -44,14 +53,19 @@ test_librope_split_insert(void) {
 	ASSERT_EQ(0, memcmp(data, "Hello Hello", size));
 	free(data);
 
-	rv = rope_cleanup(&r);
+	rope_cleanup(&r);
+	rope_pool_cleanup(&pool);
 }
 
 static void
 test_librope_split_delete(void) {
 	int rv = 0;
+	struct RopePool pool = {0};
 	struct Rope r = {0};
-	rv = rope_init(&r);
+
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&r, &pool);
 	ASSERT_EQ(0, rv);
 
 	rv = rope_append(&r, (uint8_t *)"Hello", 5);
@@ -76,14 +90,19 @@ test_librope_split_delete(void) {
 	node = rope_node_next(node);
 	ASSERT_TRUE(NULL == node);
 
-	rv = rope_cleanup(&r);
+	rope_cleanup(&r);
+	rope_pool_cleanup(&pool);
 }
 
 static void
 test_librope_tail_delete(void) {
 	int rv = 0;
+	struct RopePool pool = {0};
 	struct Rope r = {0};
-	rv = rope_init(&r);
+
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&r, &pool);
 	ASSERT_EQ(0, rv);
 
 	rv = rope_append(&r, (uint8_t *)"Hello", 5);
@@ -102,14 +121,19 @@ test_librope_tail_delete(void) {
 
 	node = rope_node_next(node);
 
-	rv = rope_cleanup(&r);
+	rope_cleanup(&r);
+	rope_pool_cleanup(&pool);
 }
 
 static void
 test_librope_head_delete(void) {
 	int rv = 0;
+	struct RopePool pool = {0};
 	struct Rope r = {0};
-	rv = rope_init(&r);
+
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&r, &pool);
 	ASSERT_EQ(0, rv);
 
 	rv = rope_append(&r, (uint8_t *)"Hello", 5);
@@ -128,14 +152,19 @@ test_librope_head_delete(void) {
 
 	node = rope_node_next(node);
 
-	rv = rope_cleanup(&r);
+	rope_cleanup(&r);
+	rope_pool_cleanup(&pool);
 }
 
 static void
 test_librope_insert_utf8(void) {
 	int rv = 0;
+	struct RopePool pool = {0};
 	struct Rope r = {0};
-	rv = rope_init(&r);
+
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&r, &pool);
 	ASSERT_EQ(0, rv);
 
 	rv = rope_append_str(&r, u8"Hello 👋 World");
@@ -149,14 +178,19 @@ test_librope_insert_utf8(void) {
 	ASSERT_EQ((size_t)11, index);
 	ASSERT_EQ(0, memcmp(&data[index], "World", size - index));
 
-	rv = rope_cleanup(&r);
+	rope_cleanup(&r);
+	rope_pool_cleanup(&pool);
 }
 
 static void
 test_librope_delete_utf8(void) {
 	int rv = 0;
+	struct RopePool pool = {0};
 	struct Rope r = {0};
-	rv = rope_init(&r);
+
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&r, &pool);
 	ASSERT_EQ(0, rv);
 
 	rv = rope_append_str(&r, u8"Hello 👋 World");
@@ -175,7 +209,8 @@ test_librope_delete_utf8(void) {
 
 	node = rope_node_next(node);
 	ASSERT_TRUE(NULL == node);
-	rv = rope_cleanup(&r);
+	rope_cleanup(&r);
+	rope_pool_cleanup(&pool);
 }
 
 DECLARE_TESTS
