@@ -1,9 +1,15 @@
 configure:
   #- -Db_coverage=true
   - -Dtest=true
+  #- -Dwarning_level=everything
   #- -Dfuzzer=true
+  - -Db_sanitize=address,undefined
+  #- -Db_lto=true
+  #- -Dbuildtype=release
+  #- -Dwerror=true
 env:
-  CC: clang
-  CC_LD: mold
+  #CC: clang
+  #CC_LD: mold
+  #CFLAGS: -march=native
 default:
   - test
