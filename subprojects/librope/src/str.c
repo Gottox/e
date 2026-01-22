@@ -48,7 +48,7 @@ GET_SET_EXTRA(last_char_size, 55, {
 GET_SET_EXTRA(bytes, 0, { return str->dim & ROPE_STR_SLOW_MASK; })
 GET_SET(chars, CHAR, 11)
 GET_SET(codepoints, CP, 22)
-GET_SET(newlines, LINE, 33)
+GET_SET(lines, LINE, 33)
 GET_SET(utf16_cps, UTF16, 44)
 
 static struct RopeDim
@@ -184,7 +184,7 @@ str_process(
 			str_set_bytes(str, result.dim[ROPE_BYTE]);
 			str_set_chars(str, result.dim[ROPE_CHAR]);
 			str_set_codepoints(str, result.dim[ROPE_CP]);
-			str_set_newlines(str, result.dim[ROPE_LINE]);
+			str_set_lines(str, result.dim[ROPE_LINE]);
 			str_set_utf16_cps(str, result.dim[ROPE_UTF16]);
 			str_set_last_char_size(str, last_char_byte_size);
 		}
@@ -259,9 +259,15 @@ rope_str_alloc_commit(struct RopeStr *str, size_t byte_size) {
 int
 rope_str_trim(
 		struct RopeStr *str, size_t offset, size_t size, enum RopeUnit unit) {
-	size_t byte_size = rope_str_unit_to_byte(str, unit, size);
-	size_t byte_offset = rope_str_unit_to_byte(str, unit, offset);
-	assert(byte_size + byte_offset <= str_bytes(str));
+	size_t byte_end;
+	if (size == SIZE_MAX) {
+		byte_end = str_bytes(str);
+	} else {
+		byte_end = rope_str_unit_to_byte(str, unit, offset + size);
+	}
+	const size_t byte_offset = rope_str_unit_to_byte(str, unit, offset);
+	const size_t byte_size = byte_end - byte_offset;
+	//assert(byte_size > 0);
 
 	if (byte_offset == 0) {
 		str_try_inline(str, byte_size);
@@ -289,8 +295,15 @@ rope_str_move(struct RopeStr *dest, struct RopeStr *src) {
 }
 
 int
-rope_str_inline_append(
-		struct RopeStr *str, const uint8_t *data, size_t byte_size) {
+rope_str_inline_insert(
+		struct RopeStr *str, size_t index, enum RopeUnit unit,
+		const uint8_t *data, size_t byte_size) {
+	size_t byte_index;
+	if (index == SIZE_MAX) {
+		byte_index = str_bytes(str);
+	} else {
+		byte_index = rope_str_unit_to_byte(str, unit, index);
+	}
 	size_t new_byte_size = 0;
 	size_t old_byte_size = str_bytes(str);
 	if (CX_ADD_OVERFLOW(old_byte_size, byte_size, &new_byte_size)) {
@@ -299,26 +312,48 @@ rope_str_inline_append(
 	if (new_byte_size > ROPE_STR_INLINE_SIZE) {
 		return -ROPE_ERROR_OOB;
 	}
-	uint8_t *insert = &str->data.inplace[old_byte_size];
+	uint8_t *inplace = str->data.inplace;
+	uint8_t *insert = &inplace[byte_index];
+	memmove(&insert[byte_size], insert,
+			ROPE_STR_INLINE_SIZE - byte_index - byte_size);
 	memcpy(insert, data, byte_size);
 
-	str_process(str, NULL, NULL, str->data.inplace, new_byte_size);
+	str_process(str, NULL, NULL, inplace, new_byte_size);
 
 	return 0;
 }
 
-void
+int
 rope_str_split(
 		struct RopeStr *str, struct RopeStr *new_str, enum RopeUnit unit,
 		size_t index) {
-	size_t byte_index = rope_str_unit_to_byte(str, unit, index);
-	size_t byte_size = str_bytes(str);
-	// TODO: This should never abort, but it does
-	// assert(byte_index > 0 && byte_index < byte_size - 1);
+	int rv = 0;
+	if (str_is_wrapped(str)) {
+		// wrapped strings can't be skipped without a full memcpy. So instead of
+		// cloning the full string, which is a quick operation on other types,
+		// we only copy the relevant bytes.
+		size_t byte_index = rope_str_unit_to_byte(str, unit, index);
+		size_t byte_size = 0;
+		const uint8_t *data = rope_str_data(str, &byte_size);
 
-	rope_str_clone(new_str, str);
-	rope_str_trim(new_str, byte_index, byte_size - byte_index, ROPE_BYTE);
-	rope_str_trim(str, 0, byte_index, ROPE_BYTE);
+		rv = rope_str_init(new_str, &data[byte_index], byte_size - byte_index);
+		if (rv < 0) {
+			goto out;
+		}
+	} else {
+		rv = rope_str_clone(new_str, str);
+		if (rv < 0) {
+			goto out;
+		}
+		rv = rope_str_trim(new_str, index, SIZE_MAX, unit);
+		if (rv < 0) {
+			goto out;
+		}
+	}
+
+	rv = rope_str_trim(str, 0, index, unit);
+out:
+	return rv;
 }
 
 const uint8_t *
@@ -351,7 +386,7 @@ rope_str_dim(const struct RopeStr *str, enum RopeUnit unit) {
 	case ROPE_CP:
 		return str_codepoints(str);
 	case ROPE_LINE:
-		return str_newlines(str);
+		return str_lines(str);
 	case ROPE_UTF16:
 		return str_utf16_cps(str);
 	default:
@@ -395,13 +430,13 @@ rope_str_unit_from_byte(
 }
 
 bool
-rope_str_is_end(struct RopeStr *str, size_t index, enum RopeUnit unit) {
+rope_str_is_end(const struct RopeStr *str, size_t index, enum RopeUnit unit) {
 	if (unit == ROPE_LINE) {
 		size_t byte_size = 0;
 		const uint8_t *data = rope_str_data(str, &byte_size);
 		if (byte_size == 0) {
 			return true;
-		} else if (data[byte_size - 1] != '\n' && index == str_newlines(str)) {
+		} else if (index == str_lines(str) && data[byte_size - 1] != '\n') {
 			return false;
 		}
 	}

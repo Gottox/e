@@ -23,7 +23,7 @@ cursor_basic(void) {
 	rv = rope_cursor_insert_str(&c, "n awesome", 0);
 	ASSERT_EQ(0, rv);
 
-	ASSERT_JSONEQ("[['This is a','n awesome'],' string']", r.root);
+	ASSERT_JSONEQ("['This is an awesome',' string']", r.root);
 
 	rv = rope_cursor_cleanup(&c);
 	ASSERT_EQ(0, rv);

@@ -84,9 +84,6 @@ rope_cursor_delete_at(
 	while (node) {
 		size_t node_size = rope_node_dim(node, unit);
 		if (node_size >= remaining) {
-			// Need to do partial deletion (or exact match for non-additive
-			// units like ROPE_LINE where trailing content doesn't contribute to
-			// count)
 			break;
 		}
 		remaining -= node_size;
@@ -95,20 +92,17 @@ rope_cursor_delete_at(
 	}
 
 	if (node && remaining > 0) {
-		local_byte_index =
-				rope_str_unit_to_byte(&node->data.leaf, unit, remaining);
-		bytes_deleted += local_byte_index;
-		// TODO: this code should work, but it doesn't
-		//if (rope_str_is_end(&node->data.leaf, remaining, unit)) {
-		//	rope_node_delete(node, &rope->pool);
-		//} else if (local_byte_index != 0) {
-		//	rope_node_skip(node, local_byte_index);
-		//}
-		rv = rope_node_split(node, &rope->pool, remaining, unit, &node, NULL);
-		if (rv < 0) {
-			goto out;
+		local_byte_index = rope_node_dim(node, ROPE_BYTE);
+		if (rope_str_is_end(&node->data.leaf, remaining, unit)) {
+			rope_node_delete(node, &rope->pool);
+		} else {
+			rv = rope_node_skip(node, remaining, unit);
+			if (rv < 0) {
+				goto out;
+			}
+			local_byte_index -= rope_node_dim(node, ROPE_BYTE);
 		}
-		rope_node_delete(node, &rope->pool);
+		bytes_deleted += local_byte_index;
 		remaining = 0;
 	}
 	assert(remaining == 0);

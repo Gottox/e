@@ -120,13 +120,14 @@ rope_node_split(
 		rv = -ROPE_ERROR_OOM;
 		goto out;
 	}
-	rope_node_set_type(left, rope_node_type(node));
-	rope_node_set_type(right, rope_node_type(node));
+	rope_node_set_type(left, ROPE_NODE_LEAF);
+	rope_node_set_type(right, ROPE_NODE_LEAF);
 
 	rope_node_move(left, node);
-	rope_str_split(&left->data.leaf, &right->data.leaf, unit, index);
-
-	rope_node_cleanup(node);
+	rv = rope_str_split(&left->data.leaf, &right->data.leaf, unit, index);
+	if (rv < 0) {
+		goto out;
+	}
 
 	rope_node_set_type(node, ROPE_NODE_BRANCH);
 	struct RopeNode **children = node->data.branch.children;
@@ -193,41 +194,44 @@ rope_node_delete_child(
 }
 
 struct RopeNode *
-rope_node_delete_and_next(struct RopeNode *node, struct RopePool *pool) {
-	struct RopeNode *next = rope_node_next(node);
-	if (next != NULL) {
-		struct RopeNode *parent = rope_node_parent(next);
-		if (rope_node_left(parent) == node) {
+rope_node_delete_and_neighbour(
+		struct RopeNode *node, struct RopePool *pool,
+		enum RopeDirection which) {
+	struct RopeNode *neighbour = rope_node_neighbour(node, which);
+	if (neighbour != NULL) {
+		struct RopeNode *parent = rope_node_parent(neighbour);
+		if (rope_node_child(parent, !which) == node) {
 			// If next and node are siblings, node will be collapsed into parent
 			// on deletion of next. So we need to continue from parent
-			next = parent;
+			neighbour = parent;
 		}
 	}
 	node_delete(node, pool);
 	// TODO: balance up.
-	return next;
-}
-
-void
-rope_node_truncate(struct RopeNode *node, size_t byte_size) {
-	assert(ROPE_NODE_IS_LEAF(node));
-	assert(byte_size > 0);
-	assert(byte_size < rope_node_dim(node, ROPE_BYTE));
-
-	rope_str_trim(&node->data.leaf, 0, byte_size, ROPE_BYTE);
-	rope_node_update_dim(node);
+	return neighbour;
 }
 
 int
-rope_node_skip(struct RopeNode *node, size_t offset) {
-	const size_t old_size = rope_node_dim(node, ROPE_BYTE);
+rope_node_truncate(struct RopeNode *node, size_t size, enum RopeUnit unit) {
 	assert(ROPE_NODE_IS_LEAF(node));
-	assert(offset > 0);
-	assert(offset < old_size);
-	size_t new_size = old_size - offset;
+	struct RopeStr *str = &node->data.leaf;
+	assert(size > 0);
+	assert(rope_str_is_end(str, size, unit) == false);
 
-	int rv = rope_str_trim(&node->data.leaf, offset, new_size, ROPE_BYTE);
-	rope_node_update_dim(node);
+	int rv = rope_str_trim(&node->data.leaf, 0, size, unit);
+	rope_node_propagate_dim(node);
+	return rv;
+}
+
+int
+rope_node_skip(struct RopeNode *node, size_t offset, enum RopeUnit unit) {
+	assert(ROPE_NODE_IS_LEAF(node));
+	struct RopeStr *str = &node->data.leaf;
+	assert(offset > 0);
+	assert(rope_str_is_end(str, offset, unit) == false);
+
+	int rv = rope_str_trim(str, offset, SIZE_MAX, unit);
+	rope_node_propagate_dim(node);
 	return rv;
 }
 

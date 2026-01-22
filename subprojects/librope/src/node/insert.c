@@ -1,47 +1,40 @@
 #include "rope_node.h"
+#include "rope_str.h"
 #include <assert.h>
 #include <grapheme.h>
 #include <rope.h>
 #include <rope_util.h>
 #include <string.h>
 
-// Merge bytes from subsequent nodes that form part of the same grapheme
-// cluster as the last character of `node`. Returns 0 on success, negative on
-// error.
 static int
-merge_next_grapheme_bytes(
-		struct RopeNode *node, uint64_t tags, struct RopePool *pool) {
+merge_next_char_bytes(struct RopeNode *node, struct RopePool *pool) {
 	int rv = 0;
 
+	uint64_t tags = rope_node_tags(node);
 	for (;;) {
 		struct RopeNode *next = rope_node_next(node);
 		if (next == NULL || rope_node_tags(next) != tags) {
 			break;
 		}
 
-		// Get the last character of the current node
 		size_t node_size;
 		const uint8_t *node_data = rope_node_value(node, &node_size);
 		size_t last_char_index = rope_str_last_char_index(&node->data.leaf);
 
-		// Initialize counter from the last char of current node
 		struct RopeUtf8Counter counter = {0};
 		rope_utf8_char_break(
 				&counter, node_data + last_char_index,
 				node_size - last_char_index);
 
-		// Check where the first grapheme break is in the next node
 		size_t next_size;
 		const uint8_t *next_data = rope_node_value(next, &next_size);
 		size_t first_break =
 				rope_utf8_char_break(&counter, next_data, next_size);
 
 		if (first_break == 0) {
-			// No bytes from next need to be merged
 			break;
 		}
 
-		// We need to merge first_break bytes from next into node
 		size_t new_size = node_size + first_break;
 		uint8_t *buffer;
 		struct RopeStr new_str;
@@ -58,22 +51,9 @@ merge_next_grapheme_bytes(
 		rope_str_move(&node->data.leaf, &new_str);
 
 		if (first_break >= next_size) {
-			// All of next was merged, delete it.
-			// Check if node and next are siblings - if so, node's content
-			// will be moved to parent when next is deleted.
-			struct RopeNode *parent = rope_node_parent(node);
-			bool siblings = parent && rope_node_right(parent) == next;
-
-			rope_node_delete_and_next(next, pool);
-
-			if (siblings) {
-				// node was collapsed into parent
-				node = parent;
-			}
-			// Continue loop to check for more nodes to merge
+			node = rope_node_delete_and_prev(next, pool);
 		} else {
-			// Skip the merged bytes from next
-			rv = rope_node_skip(next, first_break);
+			rv = rope_node_skip(next, first_break, ROPE_BYTE);
 			if (rv < 0) {
 				return rv;
 			}
@@ -155,17 +135,11 @@ node_insert_data(
 			rope_utf8_char_break(&counter, prev_char, prev_char_size);
 		}
 
-		// Compute first_break EARLY to determine merge behavior
 		size_t first_break = rope_utf8_char_break(&counter, data, byte_size);
 
-		// Extend reuse_prev when prev == node and entire content is one
-		// grapheme AND we're actually going to merge (first_break > 0)
 		if (!reuse_prev && prev == node && prev_char_size > 0 &&
 			last_char_index == 0 && first_break > 0) {
-			rv = rope_str_clone(&prev_char_tmp, &prev->data.leaf);
-			if (rv < 0) {
-				goto out;
-			}
+			rope_str_move(&prev_char_tmp, &prev->data.leaf);
 			prev_char = rope_str_data(&prev_char_tmp, NULL);
 			reuse_prev = true;
 		}
@@ -200,13 +174,13 @@ node_insert_data(
 			memcpy(buffer, prev_char, prev_char_size);
 			buffer += prev_char_size;
 			chunk_size -= prev_char_size;
-			// Only modify prev if we didn't copy to tmp (i.e., prev is still
-			// valid)
 			if (prev_char_tmp.dim == 0) {
 				if (last_char_index > 0) {
-					rope_node_truncate(prev, last_char_index);
+					rv = rope_node_truncate(prev, last_char_index, ROPE_BYTE);
+					if (rv < 0) {
+						goto out;
+					}
 				} else {
-					// Entire prev node is a single grapheme, delete it
 					rope_node_delete(prev, pool);
 				}
 			}
@@ -226,15 +200,17 @@ node_insert_data(
 		node = new_node;
 		which = ROPE_RIGHT;
 
-		// Clean up tmp at end of each iteration
 		rope_str_cleanup(&prev_char_tmp);
 	}
 
 	rope_node_propagate_dim(node);
 
-	rv = merge_next_grapheme_bytes(node, tags, pool);
-	if (rv < 0) {
-		goto out;
+	struct RopeNode *prev = rope_node_prev(node);
+	if (prev) {
+		rv = merge_next_char_bytes(prev, pool);
+		if (rv < 0) {
+			goto out;
+		}
 	}
 	new_node = NULL;
 
@@ -245,48 +221,37 @@ out:
 }
 
 int
-rope_node_insert_right(
+rope_node_insert(
 		struct RopeNode *node, const uint8_t *data, size_t byte_size,
-		uint64_t tags, struct RopePool *pool) {
+		uint64_t tags, struct RopePool *pool, enum RopeDirection which) {
 	if (byte_size == 0) {
 		return 0;
 	}
 
-	int rv = -1;
-	bool inserted = false;
-
 	if (rope_node_tags(node) == tags) {
-		rv = rope_str_inline_append(&node->data.leaf, data, byte_size);
-	}
-	inserted = rv == 0;
-
-	rv = 0;
-	if (!inserted) {
-		rv = node_insert_data(
-				node, data, byte_size, tags, pool, ROPE_RIGHT);
-	} else {
-		rope_node_propagate_dim(node);
-		rv = merge_next_grapheme_bytes(node, tags, pool);
+		size_t position = which == ROPE_LEFT ? 0 : SIZE_MAX;
+		int rv = rope_str_inline_insert(&node->data.leaf, position, ROPE_BYTE, data, byte_size);
+		if (rv == 0) {
+			rope_node_propagate_dim(node);
+			return merge_next_char_bytes(node, pool);
+		}
 	}
 
-	return rv;
+	return node_insert_data(node, data, byte_size, tags, pool, which);
+}
+
+int
+rope_node_insert_right(
+		struct RopeNode *node, const uint8_t *data, size_t byte_size,
+		uint64_t tags, struct RopePool *pool) {
+	return rope_node_insert(node, data, byte_size, tags, pool, ROPE_RIGHT);
 }
 
 int
 rope_node_insert_left(
 		struct RopeNode *node, const uint8_t *data, size_t byte_size,
 		uint64_t tags, struct RopePool *pool) {
-	if (byte_size == 0) {
-		return 0;
-	}
-
-	struct RopeNode *neighbour = rope_node_prev(node);
-	if (neighbour) {
-		return rope_node_insert_right(neighbour, data, byte_size, tags, pool);
-	} else {
-		return node_insert_data(
-				node, data, byte_size, tags, pool, ROPE_LEFT);
-	}
+	return rope_node_insert(node, data, byte_size, tags, pool, ROPE_LEFT);
 }
 
 static int
