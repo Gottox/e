@@ -39,7 +39,10 @@ struct RopeNode *
 rope_node_neighbour(const struct RopeNode *node, enum RopeDirection which) {
 	while (!ROPE_NODE_IS_ROOT(node)) {
 		if (rope_node_which(node) != which) {
-			return rope_node_leaf(rope_node_child(node->parent, which), !which);
+			struct RopeNode *parent = rope_node_parent(node);
+			struct RopeNode *child = rope_node_child(parent, which);
+
+			return rope_node_leaf(child, !which);
 		}
 		node = rope_node_parent(node);
 	}

@@ -16,14 +16,14 @@
 #define STRFY(...) #__VA_ARGS__
 
 struct RopeNode *
-node_from_json(struct json_object *obj, struct RopePool *pool) {
+node_from_json(struct json_object *obj, struct RopePool *pool, struct RopeNode *parent) {
 	if (obj == NULL || pool == NULL) {
 		return NULL;
 	}
 
 	struct RopeNode *node = rope_pool_get(pool);
 	assert(node);
-	node->parent = NULL;
+	node->parent = parent;
 
 	enum json_type type = json_object_get_type(obj);
 
@@ -34,15 +34,13 @@ node_from_json(struct json_object *obj, struct RopePool *pool) {
 		struct json_object *left_json = json_object_array_get_idx(obj, 0);
 		struct json_object *right_json = json_object_array_get_idx(obj, 1);
 
-		struct RopeNode *left = node_from_json(left_json, pool);
-		struct RopeNode *right = node_from_json(right_json, pool);
+		struct RopeNode *left = node_from_json(left_json, pool, node);
+		struct RopeNode *right = node_from_json(right_json, pool, node);
 		size_t depth =
 				CX_MAX(rope_node_depth(left), rope_node_depth(right)) + 1;
 		node->bits = (uint64_t)ROPE_NODE_BRANCH << 63;
 		node->bits |= depth;
 
-		left->parent = node;
-		right->parent = node;
 		node->data.branch.children[ROPE_LEFT] = left;
 		node->data.branch.children[ROPE_RIGHT] = right;
 		rope_node_update_dim(node);
@@ -100,7 +98,7 @@ to_str(struct RopeNode *node) {
 static inline struct RopeNode *
 from_str(struct RopePool *pool, const char *str) {
 	json_object *json = json_tokener_parse(str);
-	struct RopeNode *node = node_from_json(json, pool);
+	struct RopeNode *node = node_from_json(json, pool, NULL);
 	json_object_put(json);
 	return node;
 }

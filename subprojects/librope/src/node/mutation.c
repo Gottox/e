@@ -6,6 +6,11 @@
 #include <string.h>
 
 static void
+node_set_parent(struct RopeNode *node, struct RopeNode *parent) {
+	node->parent = parent;
+}
+
+static void
 node_set_depth(struct RopeNode *node, size_t depth) {
 	assert(ROPE_NODE_IS_BRANCH(node));
 	assert(depth <= ROPE_NODE_TYPE_MASK);
@@ -59,7 +64,8 @@ rope_node_update_children(struct RopeNode *node) {
 	struct RopeNode *left = rope_node_left(node);
 	struct RopeNode *right = rope_node_right(node);
 
-	left->parent = right->parent = node;
+	node_set_parent(left, node);
+	node_set_parent(right, node);
 }
 
 void
@@ -68,8 +74,8 @@ rope_node_move(struct RopeNode *target, struct RopeNode *node) {
 	struct RopeNode *node_parent = rope_node_parent(node);
 	memcpy(target, node, sizeof(struct RopeNode));
 	memset(node, 0, sizeof(struct RopeNode));
-	target->parent = target_parent;
-	node->parent = node_parent;
+	node_set_parent(target, target_parent);
+	node_set_parent(node, node_parent);
 }
 
 void
