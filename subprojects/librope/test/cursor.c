@@ -20,7 +20,7 @@ cursor_basic(void) {
 	rv = rope_cursor_init(&c, &r);
 	ASSERT_EQ(0, rv);
 
-	rv = rope_cursor_move_to_line_col(&c, 0, 9);
+	rv = rope_cursor_move_to(&c, ROPE_CHAR, 9, 0);
 	ASSERT_EQ(0, rv);
 
 	rv = rope_cursor_insert_str(&c, "n awesome", 0);
@@ -51,15 +51,15 @@ cursor_utf8(void) {
 	rv = rope_cursor_init(&c, &r);
 	ASSERT_EQ(0, rv);
 
-	rv = rope_cursor_move_to_line_col(&c, 0, 1);
+	rv = rope_cursor_move_to(&c, ROPE_CHAR, 1, 0);
 	ASSERT_EQ(0, rv);
 
 	rv = rope_cursor_insert_str(&c, u8"🙂", 0);
 	ASSERT_EQ(0, rv);
 
-	struct RopeNode *node = rope_first(&r);
+	struct RopeNode *node = rope_node_first(r.root);
 	ASSERT_TRUE(NULL != node);
-	size_t size = rope_byte_size(&r);
+	size_t size = rope_size(&r, ROPE_BYTE);
 	char *value = rope_to_str(&r, 0);
 	ASSERT_TRUE(NULL != value);
 	ASSERT_EQ((size_t)12, size);
@@ -89,17 +89,17 @@ cursor_event(void) {
 	rv = rope_cursor_init(&c1, &r);
 	ASSERT_EQ(0, rv);
 
-	rv = rope_cursor_move_to_line_col(&c1, 0, 10);
+	rv = rope_cursor_move_to(&c1, ROPE_CHAR, 10, 0);
 	ASSERT_EQ(0, rv);
 
 	struct RopeCursor c2 = {0};
 	rv = rope_cursor_init(&c2, &r);
 	ASSERT_EQ(0, rv);
 
-	rv = rope_cursor_move_to_line_col(&c2, 0, 0);
+	rv = rope_cursor_move_to(&c2, ROPE_CHAR, 0, 0);
 	ASSERT_EQ(0, rv);
 
-	rv = rope_cursor_delete(&c2, 7);
+	rv = rope_cursor_delete(&c2, ROPE_CHAR, 7);
 	ASSERT_EQ(0, rv);
 
 	ASSERT_EQ((size_t)3, c1.index);
@@ -166,14 +166,14 @@ cursor_delete_collapses_following(void) {
 	rv = rope_cursor_init(&follower, &r);
 	ASSERT_EQ(0, rv);
 
-	rv = rope_cursor_move_to_index(&follower, rope_char_size(&r), 0);
+	rv = rope_cursor_move_to_index(&follower, rope_size(&r, ROPE_BYTE), 0);
 	ASSERT_EQ(0, rv);
 
-	rv = rope_cursor_delete(&start, 5);
+	rv = rope_cursor_delete(&start, ROPE_CHAR, 5);
 	ASSERT_EQ(0, rv);
 
 	ASSERT_EQ((size_t)0, follower.index);
-	ASSERT_EQ(0, rope_char_size(&r));
+	ASSERT_EQ(0, rope_size(&r, ROPE_BYTE));
 
 	rope_cursor_cleanup(&start);
 	ASSERT_EQ(0, rv);
@@ -201,7 +201,7 @@ cursor_delete_updates_tagged_cursors(void) {
 
 	rv = rope_cursor_insert_str(&editor, "red", TAG_RED);
 	ASSERT_EQ(0, rv);
-	rv = rope_cursor_move_to_index(&editor, rope_char_size(&r), 0);
+	rv = rope_cursor_move_to_index(&editor, rope_size(&r, ROPE_BYTE), 0);
 	ASSERT_EQ(0, rv);
 	rv = rope_cursor_insert_str(&editor, "blue", TAG_BLUE);
 	ASSERT_EQ(0, rv);
@@ -215,13 +215,13 @@ cursor_delete_updates_tagged_cursors(void) {
 
 	rv = rope_cursor_move_to_index(&editor, 0, 0);
 	ASSERT_EQ(0, rv);
-	rv = rope_cursor_delete(&editor, 3);
+	rv = rope_cursor_delete(&editor, ROPE_CHAR, 3);
 	ASSERT_EQ(0, rv);
 
 	ASSERT_EQ((size_t)0, tagged.index);
-	ASSERT_EQ(4, rope_char_size(&r));
+	ASSERT_EQ(4, rope_size(&r, ROPE_BYTE));
 
-	struct RopeNode *node = rope_first(&r);
+	struct RopeNode *node = rope_node_first(r.root);
 	ASSERT_TRUE(NULL != node);
 	size_t size = 0;
 	const uint8_t *value = rope_node_value(node, &size);
@@ -258,7 +258,7 @@ cursor_delete_at_eof(void) {
 	}
 	rv = rope_cursor_move_to_index(&c, 10, 0);
 	ASSERT_EQ(0, rv);
-	rv = rope_cursor_delete(&c, 1);
+	rv = rope_cursor_delete(&c, ROPE_CHAR, 1);
 	ASSERT_EQ(0, rv);
 
 	char *result = rope_to_str(&r, 0);
@@ -356,7 +356,7 @@ cursor_delete_edit_traces_error1(void) {
 	ASSERT_EQ(0, rv);
 	rv = rope_cursor_move_to_index(&c, 326, 0);
 	ASSERT_EQ(0, rv);
-	rv = rope_cursor_delete(&c, 10);
+	rv = rope_cursor_delete(&c, ROPE_CHAR, 10);
 	ASSERT_EQ(0, rv);
 
 	char *result = rope_to_str(&r, 0);
@@ -390,7 +390,7 @@ test_cursor_delete_multi_node(void) {
 	rv = rope_cursor_move_to_index(&c, 1, 0);
 	ASSERT_EQ(0, rv);
 
-	rv = rope_cursor_delete(&c, 8);
+	rv = rope_cursor_delete(&c, ROPE_CHAR, 8);
 
 	ASSERT_JSONEQ("['H','D']", r.root);
 
@@ -536,7 +536,7 @@ test_cursor_editing_traces_error2(void) {
 	rv = rope_cursor_move_to_index(&c, 742, 0);
 	ASSERT_EQ(0, rv);
 
-	rv = rope_cursor_delete(&c, 18);
+	rv = rope_cursor_delete(&c, ROPE_CHAR, 18);
 
 	rv = rope_cursor_insert_str(&c, "u", 0);
 	ASSERT_EQ(0, rv);
@@ -646,7 +646,7 @@ test_cursor_delete_at_bytes(void) {
 	ASSERT_EQ(0, rv);
 
 	// Delete 5 bytes "Hello"
-	rv = rope_cursor_delete_at(&c, ROPE_BYTE, 5);
+	rv = rope_cursor_delete(&c, ROPE_BYTE, 5);
 	ASSERT_EQ(0, rv);
 
 	char *result = rope_to_str(&r, 0);
@@ -680,7 +680,7 @@ test_cursor_delete_at_lines(void) {
 	ASSERT_EQ(0, rv);
 
 	// Delete 2 newlines (2 lines worth)
-	rv = rope_cursor_delete_at(&c, ROPE_LINE, 2);
+	rv = rope_cursor_delete(&c, ROPE_LINE, 2);
 	ASSERT_EQ(0, rv);
 
 	char *result = rope_to_str(&r, 0);
@@ -775,7 +775,7 @@ test_rope_insert_at_bytes(void) {
 	ASSERT_EQ(0, rv);
 
 	// Insert at byte 4 (after emoji)
-	rv = rope_insert_at(&r, ROPE_BYTE, 4, (const uint8_t *)"Hello ", 6);
+	rv = rope_insert(&r, ROPE_BYTE, 4, (const uint8_t *)"Hello ", 6);
 	ASSERT_EQ(0, rv);
 
 	char *result = rope_to_str(&r, 0);
@@ -800,7 +800,7 @@ test_rope_delete_at_bytes(void) {
 	ASSERT_EQ(0, rv);
 
 	// Delete 6 bytes "Hello " from start
-	rv = rope_delete_at(&r, ROPE_BYTE, 0, 6);
+	rv = rope_delete(&r, ROPE_BYTE, 0, 6);
 	ASSERT_EQ(0, rv);
 
 	char *result = rope_to_str(&r, 0);
@@ -829,11 +829,13 @@ test_range_move_to_at(void) {
 	ASSERT_EQ(0, rv);
 
 	// Move start to byte 4 (after emoji)
-	rv = rope_range_start_move_to_at(&range, ROPE_BYTE, 4, 0);
+	struct RopeCursor *start = rope_range_start(&range);
+	rv = rope_cursor_move_to(start, ROPE_BYTE, 4, 0);
 	ASSERT_EQ(0, rv);
 
 	// Move end to byte 9 (after "Hello")
-	rv = rope_range_end_move_to_at(&range, ROPE_BYTE, 9, 0);
+	struct RopeCursor *end = rope_range_end(&range);
+	rv = rope_cursor_move_to(end, ROPE_BYTE, 9, 0);
 	ASSERT_EQ(0, rv);
 
 	char *result = rope_range_to_str(&range, 0);

@@ -16,12 +16,9 @@ rope_cursor_move_to(
 		return -1;
 	}
 	cursor->index = node_byte_index + local_byte_index;
-	// old:
-	//   cursor->index = local_byte_index;
-	//   while ((node = rope_node_prev(node))) {
-	//   	cursor->index += rope_node_dim(node, ROPE_BYTE);
-	//   }
-	return cursor_update(cursor);
+	cursor_update(cursor);
+	// TODO: Make void
+	return 0;
 }
 
 int
@@ -29,17 +26,6 @@ rope_cursor_move_to_index(
 		struct RopeCursor *cursor, rope_char_index_t char_index,
 		uint64_t tags) {
 	return rope_cursor_move_to(cursor, ROPE_CHAR, char_index, tags);
-}
-
-int
-rope_cursor_move_to_line_col(
-		struct RopeCursor *cursor, rope_index_t line,
-		rope_char_index_t column) {
-	int rv = rope_cursor_move_to(cursor, ROPE_LINE, line, 0);
-	if (rv < 0) {
-		return rv;
-	}
-	return rope_cursor_move_by(cursor, ROPE_CHAR, column);
 }
 
 int
@@ -57,10 +43,11 @@ rope_cursor_move_by(
 			cursor->index = 0;
 		} else {
 			size_t new_index = cursor->index + offset;
-			size_t max_byte = rope_node_dim(rope->root, ROPE_BYTE);
+			size_t max_byte = rope_node_size(rope->root, ROPE_BYTE);
 			cursor->index = new_index > max_byte ? max_byte : new_index;
 		}
-		return cursor_update(cursor);
+		cursor_update(cursor);
+		return 0;
 	}
 
 	rope_byte_index_t local_byte = 0;
@@ -68,27 +55,29 @@ rope_cursor_move_by(
 			cursor, NULL, ROPE_BYTE, cursor->index, 0, NULL, &local_byte);
 	if (leaf == NULL) {
 		cursor->index = 0;
-		return cursor_update(cursor);
+		cursor_update(cursor);
+		return 0;
 	}
 
 	const struct RopeStr *str = &leaf->data.leaf;
 	const size_t local_unit = rope_str_unit_from_byte(str, unit, local_byte);
-	const size_t leaf_dim = rope_node_dim(leaf, unit);
+	const size_t leaf_size = rope_node_size(leaf, unit);
 
 	const size_t abs_offset = CX_MAX(offset, -offset);
-	if ((offset >= 0 && !rope_str_is_end(str, local_unit + abs_offset, unit)) ||
+	if ((offset >= 0 && !rope_str_is_end(str, unit, local_unit + abs_offset)) ||
 		(offset < 0 && abs_offset <= local_unit)) {
 		size_t new_local_byte = rope_str_unit_to_byte(
 				&leaf->data.leaf, unit, local_unit + offset);
 		cursor->index -= local_byte - new_local_byte;
-		return cursor_update(cursor);
+		cursor_update(cursor);
+		return 0;
 	}
 
 	enum RopeDirection direction;
 	size_t remaining;
 	if (offset > 0) {
 		direction = ROPE_RIGHT;
-		remaining = (size_t)offset - (leaf_dim - local_unit);
+		remaining = (size_t)offset - (leaf_size - local_unit);
 	} else {
 		direction = ROPE_LEFT;
 		remaining = (size_t)-offset - local_unit;
@@ -101,14 +90,14 @@ rope_cursor_move_by(
 		if (rope_node_which(node) != direction) {
 			// Coming from opposite child, check sibling in direction
 			struct RopeNode *sibling = rope_node_child(parent, direction);
-			size_t sibling_dim = rope_node_dim(sibling, unit);
+			size_t sibling_size = rope_node_size(sibling, unit);
 
-			if (remaining <= sibling_dim) {
+			if (remaining <= sibling_size) {
 				size_t target_index;
 				if (direction == ROPE_RIGHT) {
 					target_index = remaining;
 				} else {
-					target_index = sibling_dim - remaining;
+					target_index = sibling_size - remaining;
 				}
 				rope_byte_index_t target_local_byte = 0;
 				rope_byte_index_t target_node_byte = 0;
@@ -119,20 +108,22 @@ rope_cursor_move_by(
 					break;
 				}
 				cursor->index = target_node_byte + target_local_byte;
-				return cursor_update(cursor);
+				cursor_update(cursor);
+				return 0;
 			}
-			remaining -= sibling_dim;
+			remaining -= sibling_size;
 		}
 		node = parent;
 	}
 
 	// Reached root without finding target - clamp
 	if (direction == ROPE_RIGHT) {
-		cursor->index = rope_node_dim(rope->root, ROPE_BYTE);
+		cursor->index = rope_node_size(rope->root, ROPE_BYTE);
 	} else {
 		cursor->index = 0;
 	}
-	return cursor_update(cursor);
+	cursor_update(cursor);
+	return 0;
 }
 
 int

@@ -336,7 +336,7 @@ test_unbreak_utf8_sequence(void) {
 	rv = rope_pool_init(&pool);
 	ASSERT_EQ(0, rv);
 
-	struct RopeNode *root = from_str(&pool, "['','']");
+	struct RopeNode *root = from_str(&pool, "['dummy','dummy']");
 	struct RopeNode *left = rope_node_left(root);
 	struct RopeNode *right = rope_node_right(root);
 

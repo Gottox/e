@@ -8,7 +8,7 @@ struct RopeCursor **cursor_detach(struct RopeCursor *cursor);
 void cursor_attach_at(struct RopeCursor *cursor, struct RopeCursor **ptr);
 void cursor_attach(struct RopeCursor *cursor);
 void cursor_bubble_up(struct RopeCursor *cursor);
-int cursor_update(struct RopeCursor *cursor);
+void cursor_update(struct RopeCursor *cursor);
 void cursor_damaged(
 		struct RopeCursor *cursor, rope_byte_index_t lower_bound,
 		off_t byte_offset);

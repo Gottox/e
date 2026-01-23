@@ -41,7 +41,7 @@ cursor_bubble_up(struct RopeCursor *cursor) {
 	cursor_attach_at(cursor, ptr);
 }
 
-int
+void
 cursor_update(struct RopeCursor *cursor) {
 	if (cursor->prev && cursor->prev->index <= cursor->index) {
 		cursor_bubble_up(cursor);
@@ -49,7 +49,6 @@ cursor_update(struct RopeCursor *cursor) {
 		cursor_detach(cursor);
 		cursor_attach(cursor);
 	}
-	return 0;
 }
 
 void

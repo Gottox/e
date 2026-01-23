@@ -35,7 +35,7 @@ rope_node_update_depth(struct RopeNode *node) {
 }
 
 void
-rope_node_update_dim(struct RopeNode *node) {
+rope_node_update_sizes(struct RopeNode *node) {
 	if (!ROPE_NODE_IS_BRANCH(node)) {
 		return;
 	}
@@ -44,14 +44,14 @@ rope_node_update_dim(struct RopeNode *node) {
 	struct RopeDim *dim = &node->data.branch.dim;
 
 	for (size_t unit = 0; unit < ROPE_UNIT_COUNT; unit++) {
-		dim->dim[unit] = rope_node_dim(left, unit) + rope_node_dim(right, unit);
+		dim->dim[unit] = rope_node_size(left, unit) + rope_node_size(right, unit);
 	}
 }
 
 void
-rope_node_propagate_dim(struct RopeNode *node) {
+rope_node_propagate_sizes(struct RopeNode *node) {
 	while ((node = rope_node_parent(node))) {
-		rope_node_update_dim(node);
+		rope_node_update_sizes(node);
 	}
 }
 
@@ -100,7 +100,7 @@ rope_node_split(
 
 	while (ROPE_NODE_IS_BRANCH(node)) {
 		struct RopeNode *left = rope_node_left(node);
-		const size_t left_size = rope_node_dim(left, unit);
+		const size_t left_size = rope_node_size(left, unit);
 
 		if (index < left_size) {
 			node = left;
@@ -110,7 +110,7 @@ rope_node_split(
 		}
 	}
 
-	if (rope_str_is_end(&node->data.leaf, index, unit)) {
+	if (rope_str_is_end(&node->data.leaf, unit, index)) {
 		*left_ptr = node;
 		*right_ptr = NULL;
 		return 0;
@@ -142,7 +142,7 @@ rope_node_split(
 
 	rope_node_update_children(node);
 	node_set_depth(node, 1);
-	rope_node_update_dim(node);
+	rope_node_update_sizes(node);
 	rope_node_balance_up(node);
 
 	*left_ptr = left;
@@ -186,7 +186,7 @@ node_delete_child(
 	rope_node_move(node, sibling);
 	rope_node_update_children(node);
 	rope_node_update_depth(node);
-	rope_node_update_dim(node);
+	rope_node_update_sizes(node);
 	rope_node_free(sibling, pool);
 	rope_node_free(child, pool);
 }
@@ -218,26 +218,26 @@ rope_node_delete_and_neighbour(
 }
 
 int
-rope_node_truncate(struct RopeNode *node, size_t size, enum RopeUnit unit) {
+rope_node_truncate(struct RopeNode *node, enum RopeUnit unit, size_t size) {
 	assert(ROPE_NODE_IS_LEAF(node));
 	struct RopeStr *str = &node->data.leaf;
 	assert(size > 0);
-	assert(rope_str_is_end(str, size, unit) == false);
+	assert(rope_str_is_end(str, unit, size) == false);
 
-	int rv = rope_str_trim(&node->data.leaf, 0, size, unit);
-	rope_node_propagate_dim(node);
+	int rv = rope_str_trim(&node->data.leaf, unit, 0, size);
+	rope_node_propagate_sizes(node);
 	return rv;
 }
 
 int
-rope_node_skip(struct RopeNode *node, size_t offset, enum RopeUnit unit) {
+rope_node_skip(struct RopeNode *node, enum RopeUnit unit, size_t offset) {
 	assert(ROPE_NODE_IS_LEAF(node));
 	struct RopeStr *str = &node->data.leaf;
 	assert(offset > 0);
-	assert(rope_str_is_end(str, offset, unit) == false);
+	assert(rope_str_is_end(str, unit, offset) == false);
 
-	int rv = rope_str_trim(str, offset, SIZE_MAX, unit);
-	rope_node_propagate_dim(node);
+	int rv = rope_str_trim(str, unit, offset, SIZE_MAX);
+	rope_node_propagate_sizes(node);
 	return rv;
 }
 
@@ -249,10 +249,10 @@ rope_node_merge(struct RopeNode *node, size_t count, struct RopePool *pool) {
 	}
 	struct RopeNode *start_node = node;
 
-	size_t total_size = rope_node_dim(node, ROPE_BYTE);
+	size_t total_size = rope_node_size(node, ROPE_BYTE);
 	for (; count; count--) {
 		node = rope_node_next(node);
-		total_size += rope_node_dim(node, ROPE_BYTE);
+		total_size += rope_node_size(node, ROPE_BYTE);
 	}
 
 	uint8_t *target;
@@ -308,8 +308,8 @@ rope_node_rotate(struct RopeNode *node, enum RopeDirection which) {
 	rope_node_update_children(node);
 	rope_node_update_depth(pivot);
 	rope_node_update_depth(node);
-	rope_node_update_dim(pivot);
-	rope_node_update_dim(node);
+	rope_node_update_sizes(pivot);
+	rope_node_update_sizes(node);
 }
 
 void
@@ -328,7 +328,7 @@ rope_node_balance_up(struct RopeNode *node) {
 			rope_node_rotate(node, ROPE_LEFT);
 		} else {
 			rope_node_update_depth(node);
-			rope_node_update_dim(node);
+			rope_node_update_sizes(node);
 		}
 
 		// Recalculate depth
@@ -339,7 +339,7 @@ rope_node_balance_up(struct RopeNode *node) {
 		// balance was only damaged by a single operation on the node.
 		// Continue propagating dimensions to the root.
 		if (new_depth == old_depth) {
-			rope_node_propagate_dim(node);
+			rope_node_propagate_sizes(node);
 			break;
 		}
 	}
@@ -353,7 +353,7 @@ rope_node_chores(struct RopeNode *node, struct RopePool *pool) {
 	}
 
 	const size_t depth = rope_node_depth(node);
-	const size_t byte_size = rope_node_dim(node, ROPE_BYTE);
+	const size_t byte_size = rope_node_size(node, ROPE_BYTE);
 	if (depth << ROPE_NODE_COMPACT_THRESHOLD < byte_size) {
 		goto out;
 	}
@@ -386,7 +386,7 @@ rope_node_compact(struct RopeNode *node, struct RopePool *pool) {
 		return 0;
 	}
 
-	const size_t total_size = rope_node_dim(node, ROPE_BYTE);
+	const size_t total_size = rope_node_size(node, ROPE_BYTE);
 	if (total_size > ROPE_STR_FAST_SIZE) {
 		return 0;
 	}

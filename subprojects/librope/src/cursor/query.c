@@ -21,26 +21,26 @@ rope_cursor_find_node(
 	if (tags == 0) {
 		while (ROPE_NODE_IS_BRANCH(node)) {
 			struct RopeNode *left = rope_node_left(node);
-			const size_t left_size = rope_node_dim(left, unit);
+			const size_t left_size = rope_node_size(left, unit);
 			if (index < left_size) {
 				node = left;
 			} else {
 				node = rope_node_right(node);
 				index -= left_size;
-				byte_index += rope_node_dim(left, ROPE_BYTE);
+				byte_index += rope_node_size(left, ROPE_BYTE);
 			}
 		}
 	} else {
 		node = rope_node_first(node);
 		do {
-			const size_t size = rope_node_dim(node, unit);
+			const size_t size = rope_node_size(node, unit);
 			if (rope_node_match_tags(node, tags)) {
 				if (index < size) {
 					break;
 				}
 				index -= size;
 			}
-			byte_index += rope_node_dim(node, ROPE_BYTE);
+			byte_index += rope_node_size(node, ROPE_BYTE);
 		} while ((node = rope_node_next(node)));
 	}
 
@@ -70,12 +70,12 @@ rope_node_byte_to_index(
 	// O(log n) descent: navigate by BYTE, accumulate in target unit
 	while (ROPE_NODE_IS_BRANCH(node)) {
 		struct RopeNode *left = rope_node_left(node);
-		const size_t left_byte_size = rope_node_dim(left, ROPE_BYTE);
+		const size_t left_byte_size = rope_node_size(left, ROPE_BYTE);
 
 		if (byte_idx < left_byte_size) {
 			node = left;
 		} else {
-			prefix += rope_node_dim(left, unit);
+			prefix += rope_node_size(left, unit);
 			byte_idx -= left_byte_size;
 			node = rope_node_right(node);
 		}

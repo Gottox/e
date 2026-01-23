@@ -94,7 +94,7 @@ void rope_node_set_tags(struct RopeNode *node, uint64_t tags);
  */
 
 ROPE_NO_UNUSED size_t
-rope_node_dim(const struct RopeNode *node, enum RopeUnit unit) ROPE_NO_UNUSED;
+rope_node_size(const struct RopeNode *node, enum RopeUnit unit) ROPE_NO_UNUSED;
 
 ROPE_NO_UNUSED enum RopeNodeType
 rope_node_type(const struct RopeNode *node) ROPE_NO_UNUSED;
@@ -117,19 +117,19 @@ struct RopeNode *rope_node_delete_and_neighbour(
 		struct RopeNode *node, struct RopePool *pool, enum RopeDirection which);
 
 ROPE_NO_UNUSED int
-rope_node_truncate(struct RopeNode *node, size_t byte_size, enum RopeUnit unit);
+rope_node_truncate(struct RopeNode *node, enum RopeUnit unit, size_t size);
 
 ROPE_NO_UNUSED int
-rope_node_skip(struct RopeNode *node, size_t offset, enum RopeUnit unit);
+rope_node_skip(struct RopeNode *node, enum RopeUnit unit, size_t offset);
 
 ROPE_NO_UNUSED int
 rope_node_merge(struct RopeNode *node, size_t count, struct RopePool *pool);
 
 void rope_node_update_depth(struct RopeNode *node);
 
-void rope_node_update_dim(struct RopeNode *node);
+void rope_node_update_sizes(struct RopeNode *node);
 
-void rope_node_propagate_dim(struct RopeNode *node);
+void rope_node_propagate_sizes(struct RopeNode *node);
 
 void rope_node_update_children(struct RopeNode *node);
 

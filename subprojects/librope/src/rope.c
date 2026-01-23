@@ -35,13 +35,12 @@ rope_append_str(struct Rope *rope, const char *str) {
 
 int
 rope_append(struct Rope *rope, const uint8_t *data, size_t byte_size) {
-	size_t char_count = rope_node_dim(rope->root, ROPE_CHAR);
-	return rope_insert(rope, char_count, data, byte_size);
+	size_t root_byte_size = rope_node_size(rope->root, ROPE_BYTE);
+	return rope_insert(rope, ROPE_CHAR, root_byte_size, data, byte_size);
 }
 
 int
-rope_delete_at(
-		struct Rope *rope, enum RopeUnit unit, size_t index, size_t count) {
+rope_delete(struct Rope *rope, enum RopeUnit unit, size_t index, size_t count) {
 	int rv = 0;
 	struct RopeCursor cursor = {0};
 	rv = rope_cursor_init(&cursor, rope);
@@ -54,7 +53,7 @@ rope_delete_at(
 		goto out;
 	}
 
-	rv = rope_cursor_delete_at(&cursor, unit, count);
+	rv = rope_cursor_delete(&cursor, unit, count);
 	if (rv < 0) {
 		goto out;
 	}
@@ -64,51 +63,7 @@ out:
 }
 
 int
-rope_delete(
-		struct Rope *rope, rope_char_index_t char_index, size_t char_count) {
-	return rope_delete_at(rope, ROPE_CHAR, char_index, char_count);
-}
-
-struct RopeNode *
-rope_find_at(
-		struct Rope *rope, enum RopeUnit unit, size_t index,
-		rope_byte_index_t *byte_index) {
-	int rv = 0;
-	struct RopeNode *node = NULL;
-	struct RopeCursor cursor = {0};
-	rv = rope_cursor_init(&cursor, rope);
-	if (rv < 0) {
-		goto out;
-	}
-
-	rv = rope_cursor_move_to(&cursor, unit, index, 0);
-	if (rv < 0) {
-		goto out;
-	}
-
-	node = rope_cursor_node(&cursor, byte_index);
-	if (rv < 0) {
-		goto out;
-	}
-out:
-	rope_cursor_cleanup(&cursor);
-	return node;
-}
-
-struct RopeNode *
-rope_find(
-		struct Rope *rope, rope_char_index_t char_index,
-		rope_byte_index_t *byte_index) {
-	return rope_find_at(rope, ROPE_CHAR, char_index, byte_index);
-}
-
-struct RopeNode *
-rope_first(struct Rope *rope) {
-	return rope_node_first(rope->root);
-}
-
-int
-rope_insert_at(
+rope_insert(
 		struct Rope *rope, enum RopeUnit unit, size_t index,
 		const uint8_t *data, size_t byte_size) {
 	int rv = 0;
@@ -132,26 +87,31 @@ out:
 	return rv;
 }
 
-int
-rope_insert(
-		struct Rope *rope, size_t char_index, const uint8_t *data,
-		size_t byte_size) {
-	return rope_insert_at(rope, ROPE_CHAR, char_index, data, byte_size);
-}
-
 size_t
 rope_size(struct Rope *rope, enum RopeUnit unit) {
-	return rope_node_dim(rope->root, unit);
+	return rope_node_size(rope->root, unit);
 }
 
 int
-rope_char_size(struct Rope *rope) {
-	return rope_size(rope, ROPE_CHAR);
-}
+rope_to_range(struct Rope *rope, struct RopeRange *range) {
+	int rv = 0;
 
-int
-rope_byte_size(struct Rope *rope) {
-	return rope_size(rope, ROPE_BYTE);
+	rv = rope_range_init(range, rope);
+	if (rv < 0) {
+		goto out;
+	}
+	struct RopeCursor *end = rope_range_end(range);
+	size_t byte_size = rope_size(rope, ROPE_BYTE);
+	rv = rope_cursor_move_to(end, ROPE_BYTE, byte_size, 0);
+	if (rv < 0) {
+		goto out;
+	}
+
+out:
+	if (rv < 0) {
+		rope_range_cleanup(range);
+	}
+	return rv;
 }
 
 char *
@@ -159,17 +119,17 @@ rope_to_str(struct Rope *rope, uint64_t tags) {
 	char *str = NULL;
 	int rv = 0;
 	struct RopeRange range = {0};
-	rope_char_index_t char_size = rope_char_size(rope);
+	rope_char_index_t byte_size = rope_size(rope, ROPE_BYTE);
 
 	rv = rope_range_init(&range, rope);
 	if (rv < 0) {
 		goto out;
 	}
-	rv = rope_range_start_move_to_index(&range, 0, 0);
+	rv = rope_cursor_move_to(rope_range_start(&range), ROPE_BYTE, 0, 0);
 	if (rv < 0) {
 		goto out;
 	}
-	rv = rope_range_end_move_to_index(&range, char_size, 0);
+	rv = rope_cursor_move_to(rope_range_end(&range), ROPE_BYTE, byte_size, 0);
 
 	str = rope_range_to_str(&range, tags);
 out:

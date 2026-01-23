@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-
 static void
 dummy_callback(
 		struct Rope *rope, struct RopeRange *range, bool damaged,
@@ -21,13 +20,22 @@ is_collapsed(struct RopeRange *range) {
 }
 
 static void
+range_ensure_order(struct RopeRange *range) {
+	struct RopeCursor *start = rope_range_start(range);
+	struct RopeCursor *end = rope_range_end(range);
+
+	if (!rope_cursor_is_order(start, end)) {
+		size_t start_index = rope_cursor_index(start, ROPE_BYTE);
+		rope_cursor_move_to(end, ROPE_BYTE, start_index, 0);
+	}
+}
+static void
 handle_change(struct Rope *rope, struct RopeCursor *cursor, void *userdata) {
 	(void)rope;
 	(void)cursor;
 	struct RopeRange *range = userdata;
 	if (cursor == &range->cursor_end &&
 		rope_cursor_is_order(cursor, &range->cursor_start)) {
-
 		// Moves the end pointer after the start pointer if they aren't in
 		// order. As the cursors are updated back to front.
 		rope_char_index_t char_index =
@@ -41,80 +49,14 @@ handle_change(struct Rope *rope, struct RopeCursor *cursor, void *userdata) {
 	}
 }
 
-int
-rope_range_start_move_to(
-		struct RopeRange *range, rope_index_t line, rope_char_index_t column) {
-	struct RopeCursor *start = &range->cursor_start;
-	struct RopeCursor *end = &range->cursor_end;
-	int rv = rope_cursor_move_to_line_col(start, line, column);
-	if (rv < 0) {
-		return rv;
-	}
-	if (!rope_cursor_is_order(start, end)) {
-		rope_char_index_t char_index = rope_cursor_char_index(start);
-		rv = rope_cursor_move_to_index(end, char_index, 0);
-	}
-	return rv;
+struct RopeCursor *
+rope_range_start(struct RopeRange *range) {
+	return &range->cursor_start;
 }
 
-int
-rope_range_end_move_to(
-		struct RopeRange *range, rope_index_t line, rope_char_index_t column) {
-	struct RopeCursor *start = &range->cursor_start;
-	struct RopeCursor *end = &range->cursor_end;
-	int rv = rope_cursor_move_to_line_col(end, line, column);
-	if (rv < 0) {
-		return rv;
-	}
-	if (!rope_cursor_is_order(start, end)) {
-		rope_char_index_t char_index = rope_cursor_char_index(end);
-		rv = rope_cursor_move_to_index(start, char_index, 0);
-	}
-	return rv;
-}
-
-int
-rope_range_start_move_to_at(
-		struct RopeRange *range, enum RopeUnit unit, size_t index, uint64_t tags) {
-	struct RopeCursor *start = &range->cursor_start;
-	struct RopeCursor *end = &range->cursor_end;
-	int rv = rope_cursor_move_to(start, unit, index, tags);
-	if (rv < 0) {
-		return rv;
-	}
-	if (!rope_cursor_is_order(start, end)) {
-		size_t start_index = rope_cursor_index(start, unit);
-		rv = rope_cursor_move_to(end, unit, start_index, 0);
-	}
-	return rv;
-}
-
-int
-rope_range_start_move_to_index(
-		struct RopeRange *range, rope_char_index_t index, uint64_t tags) {
-	return rope_range_start_move_to_at(range, ROPE_CHAR, index, tags);
-}
-
-int
-rope_range_end_move_to_at(
-		struct RopeRange *range, enum RopeUnit unit, size_t index, uint64_t tags) {
-	struct RopeCursor *start = &range->cursor_start;
-	struct RopeCursor *end = &range->cursor_end;
-	int rv = rope_cursor_move_to(end, unit, index, tags);
-	if (rv < 0) {
-		return rv;
-	}
-	if (!rope_cursor_is_order(start, end)) {
-		size_t end_index = rope_cursor_index(end, unit);
-		rv = rope_cursor_move_to(start, unit, end_index, 0);
-	}
-	return rv;
-}
-
-int
-rope_range_end_move_to_index(
-		struct RopeRange *range, rope_char_index_t index, uint64_t tags) {
-	return rope_range_end_move_to_at(range, ROPE_CHAR, index, tags);
+struct RopeCursor *
+rope_range_end(struct RopeRange *range) {
+	return &range->cursor_end;
 }
 
 int
@@ -157,12 +99,12 @@ rope_range_insert(
 		struct RopeRange *range, const uint8_t *data, size_t byte_size,
 		uint64_t tags) {
 	int rv = 0;
+	struct RopeCursor *end = rope_range_end(range);
 	rv = rope_range_delete(range);
 	if (rv < 0) {
 		goto out;
 	}
 
-	struct RopeCursor *end = &range->cursor_end;
 
 	rv = rope_cursor_insert(end, data, byte_size, tags);
 	if (rv < 0) {
@@ -183,35 +125,19 @@ rope_range_insert_str(struct RopeRange *range, const char *str, uint64_t tags) {
 
 int
 rope_range_delete(struct RopeRange *range) {
-	struct RopeCursor *start = &range->cursor_start;
-	struct RopeCursor *end = &range->cursor_end;
+	struct RopeCursor *start = rope_range_start(range);
+	struct RopeCursor *end = rope_range_end(range);
 
-	// Use byte-based deletion to avoid iterating to convert byte range to chars
+	range_ensure_order(range);
+
 	size_t byte_count = end->index - start->index;
 
-	return rope_cursor_delete_at(start, ROPE_BYTE, byte_count);
-}
-
-int
-rope_range_line(struct RopeRange *range, rope_index_t line) {
-	struct RopeCursor *start = &range->cursor_start;
-	struct RopeCursor *end = &range->cursor_end;
-
-	int rv = rope_cursor_move_to_line_col(start, line, 0);
+	int rv = rope_cursor_delete(start, ROPE_BYTE, byte_count);
 	if (rv < 0) {
 		return rv;
 	}
 
-	rv = rope_cursor_move_to_line_col(end, line + 1, 0);
-	if (rv < 0) {
-		int size = rope_char_size(range->rope);
-		if (size < 0) {
-			return size;
-		}
-		rv = rope_cursor_move_to_index(end, (rope_char_index_t)size, 0);
-	}
-
-	return rv;
+	return 0;
 }
 
 char *

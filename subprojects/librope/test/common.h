@@ -43,7 +43,7 @@ node_from_json(struct json_object *obj, struct RopePool *pool, struct RopeNode *
 
 		node->data.branch.children[ROPE_LEFT] = left;
 		node->data.branch.children[ROPE_RIGHT] = right;
-		rope_node_update_dim(node);
+		rope_node_update_sizes(node);
 	} else if (type == json_type_string) {
 		int len = json_object_get_string_len(obj);
 		const char *str = json_object_get_string(obj);

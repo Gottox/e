@@ -167,8 +167,8 @@ rope_deserialize(
 			}
 
 			tmp = command.args.span_range.position;
-			rv = rope_range_start_move_to_index(
-					range, command.args.span_range.position,
+			rv = rope_cursor_move_to(
+					rope_range_start(range), ROPE_CHAR, command.args.span_range.position,
 					command.args.span_range.tags & TAG_MASK);
 
 			print_rv_check(rv, print);
@@ -183,8 +183,8 @@ rope_deserialize(
 					   command.range_index, command.args.span_range.position,
 					   command.args.span_range.tags & TAG_MASK);
 			}
-			rv = rope_range_end_move_to_index(
-					range, command.args.span_range.position,
+			rv = rope_cursor_move_to(
+					rope_range_end(range), ROPE_CHAR, command.args.span_range.position,
 					command.args.span_range.tags & TAG_MASK);
 			print_rv_check(rv, print);
 			break;

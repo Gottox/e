@@ -165,7 +165,7 @@ test_str_inline_append(void) {
 	rv = rope_str_init(&str, (const uint8_t *)"Hello", 5);
 	ASSERT_EQ(rv, 0);
 
-	rv = rope_str_inline_insert(&str, 5, ROPE_BYTE, (const uint8_t *)"World", 5);
+	rv = rope_str_inline_insert(&str, ROPE_BYTE, 5, (const uint8_t *)"World", 5);
 	ASSERT_EQ(rv, 0);
 	size_t byte_size = 0;
 	const uint8_t *data = rope_str_data(&str, &byte_size);
@@ -181,7 +181,7 @@ test_str_inline_prepend(void) {
 	rv = rope_str_init(&str, (const uint8_t *)"World", 5);
 	ASSERT_EQ(rv, 0);
 
-	rv = rope_str_inline_insert(&str, 0, ROPE_BYTE, (const uint8_t *)"Hello", 5);
+	rv = rope_str_inline_insert(&str, ROPE_BYTE, 0, (const uint8_t *)"Hello", 5);
 	ASSERT_EQ(rv, 0);
 	size_t byte_size = 0;
 	const uint8_t *data = rope_str_data(&str, &byte_size);
@@ -376,7 +376,7 @@ test_str_move_heap(void) {
 	ASSERT_EQ(dest_byte_size, sizeof(buffer));
 	ASSERT_EQ((uintptr_t)src_data, (uintptr_t)dest_data);
 
-	ASSERT_EQ(rope_str_dim(&src, ROPE_BYTE), 0);
+	ASSERT_EQ(rope_str_size(&src, ROPE_BYTE), 0);
 
 	rope_str_cleanup(&dest);
 }
@@ -410,10 +410,10 @@ test_str_inline_append_overflow(void) {
 	rv = rope_str_init(&str, buffer, sizeof(buffer));
 	ASSERT_EQ(rv, 0);
 
-	rv = rope_str_inline_insert(&str, SIZE_MAX, ROPE_BYTE, (const uint8_t *)"BB", 2);
+	rv = rope_str_inline_insert(&str, ROPE_BYTE, SIZE_MAX, (const uint8_t *)"BB", 2);
 	ASSERT_EQ(rv, 0);
 
-	rv = rope_str_inline_insert(&str, SIZE_MAX, ROPE_BYTE, (const uint8_t *)"C", 1);
+	rv = rope_str_inline_insert(&str, ROPE_BYTE, SIZE_MAX, (const uint8_t *)"C", 1);
 	ASSERT_EQ(rv, -ROPE_ERROR_OOB);
 
 	rope_str_cleanup(&str);
@@ -428,9 +428,9 @@ test_str_slow_str(void) {
 	rv = rope_str_init(&str, buffer, sizeof(buffer));
 	ASSERT_EQ(rv, 0);
 
-	ASSERT_EQ(sizeof(buffer), rope_str_dim(&str, ROPE_BYTE));
-	ASSERT_EQ(sizeof(buffer), rope_str_dim(&str, ROPE_CHAR));
-	ASSERT_EQ(sizeof(buffer), rope_str_dim(&str, ROPE_UTF16));
+	ASSERT_EQ(sizeof(buffer), rope_str_size(&str, ROPE_BYTE));
+	ASSERT_EQ(sizeof(buffer), rope_str_size(&str, ROPE_CHAR));
+	ASSERT_EQ(sizeof(buffer), rope_str_size(&str, ROPE_UTF16));
 	ASSERT_EQ(sizeof(buffer)-1, rope_str_last_char_index(&str));
 
 	rope_str_cleanup(&str);

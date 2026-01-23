@@ -11,6 +11,7 @@
 #include <sys/types.h>
 
 struct Rope;
+struct RopeRange;
 
 /**********************************
  * pool.c
@@ -49,35 +50,19 @@ int rope_append_str(struct Rope *rope, const char *str);
 
 size_t rope_size(struct Rope *rope, enum RopeUnit unit);
 
-struct RopeNode *rope_find_at(
-		struct Rope *rope, enum RopeUnit unit, size_t index,
-		rope_byte_index_t *byte_index);
-
-struct RopeNode *rope_find(
-		struct Rope *rope, rope_char_index_t char_index,
-		rope_byte_index_t *byte_index);
-
-int rope_insert_at(
+int rope_insert(
 		struct Rope *rope, enum RopeUnit unit, size_t index,
 		const uint8_t *data, size_t byte_size);
 
-int rope_insert(
-		struct Rope *rope, size_t index, const uint8_t *data, size_t byte_size);
-
-int rope_delete_at(
+int rope_delete(
 		struct Rope *rope, enum RopeUnit unit, size_t index, size_t count);
 
-int rope_delete(struct Rope *rope, size_t index, size_t char_count);
+int
+rope_to_range(struct Rope *rope, struct RopeRange *range);
 
 char *rope_to_str(struct Rope *rope, uint64_t tags);
 
-struct RopeNode *rope_first(struct Rope *rope);
-
 void rope_cleanup(struct Rope *rope);
-
-int rope_char_size(struct Rope *rope);
-
-int rope_byte_size(struct Rope *rope);
 
 /**********************************
  * cursor.c
@@ -111,9 +96,6 @@ int rope_cursor_move_to(
 int rope_cursor_move_to_index(
 		struct RopeCursor *cursor, rope_char_index_t char_index, uint64_t tags);
 
-int rope_cursor_move_to_line_col(
-		struct RopeCursor *cursor, rope_index_t line, rope_char_index_t column);
-
 int rope_cursor_insert(
 		struct RopeCursor *cursor, const uint8_t *data, size_t byte_size,
 		uint64_t tags);
@@ -126,10 +108,8 @@ int rope_cursor_move(struct RopeCursor *cursor, off_t offset);
 int rope_cursor_insert_str(
 		struct RopeCursor *cursor, const char *str, uint64_t tags);
 
-int rope_cursor_delete_at(
+int rope_cursor_delete(
 		struct RopeCursor *cursor, enum RopeUnit unit, size_t count);
-
-int rope_cursor_delete(struct RopeCursor *cursor, size_t char_count);
 
 struct RopeNode *
 rope_cursor_node(struct RopeCursor *cursor, rope_byte_index_t *byte_index);
@@ -166,26 +146,6 @@ int rope_range_set_callback(
 		struct RopeRange *range, rope_range_callback_t callback,
 		void *userdata);
 
-int rope_range_start_move_to(
-		struct RopeRange *range, rope_index_t line, rope_char_index_t column);
-
-int rope_range_end_move_to(
-		struct RopeRange *range, rope_index_t line, rope_char_index_t column);
-
-int rope_range_start_move_to_at(
-		struct RopeRange *range, enum RopeUnit unit, size_t index,
-		uint64_t tags);
-
-int rope_range_start_move_to_index(
-		struct RopeRange *range, rope_char_index_t index, uint64_t tags);
-
-int rope_range_end_move_to_at(
-		struct RopeRange *range, enum RopeUnit unit, size_t index,
-		uint64_t tags);
-
-int rope_range_end_move_to_index(
-		struct RopeRange *range, rope_char_index_t index, uint64_t tags);
-
 int
 rope_range_insert_str(struct RopeRange *range, const char *str, uint64_t tags);
 
@@ -193,9 +153,11 @@ int rope_range_insert(
 		struct RopeRange *range, const uint8_t *data, size_t byte_size,
 		uint64_t tags);
 
-int rope_range_delete(struct RopeRange *range);
+struct RopeCursor *rope_range_start(struct RopeRange *range);
 
-int rope_range_line(struct RopeRange *range, rope_index_t line);
+struct RopeCursor *rope_range_end(struct RopeRange *range);
+
+int rope_range_delete(struct RopeRange *range);
 
 char *rope_range_to_str(struct RopeRange *range, uint64_t tags);
 

@@ -53,11 +53,11 @@ merge_next_char_bytes(struct RopeNode *node, struct RopePool *pool) {
 		if (first_break >= next_size) {
 			node = rope_node_delete_and_prev(next, pool);
 		} else {
-			rv = rope_node_skip(next, first_break, ROPE_BYTE);
+			rv = rope_node_skip(next, ROPE_BYTE, first_break);
 			if (rv < 0) {
 				return rv;
 			}
-			rope_node_propagate_dim(node);
+			rope_node_propagate_sizes(node);
 			break;
 		}
 	}
@@ -114,7 +114,7 @@ node_insert_data(
 
 		bool reuse_prev = false;
 		struct RopeNode *prev;
-		if (rope_node_dim(node, ROPE_BYTE) == 0) {
+		if (rope_node_size(node, ROPE_BYTE) == 0) {
 			reuse_prev = true;
 			prev = node;
 		} else if (which == ROPE_RIGHT) {
@@ -176,7 +176,7 @@ node_insert_data(
 			chunk_size -= prev_char_size;
 			if (prev_char_tmp.dim == 0) {
 				if (last_char_index > 0) {
-					rv = rope_node_truncate(prev, last_char_index, ROPE_BYTE);
+					rv = rope_node_truncate(prev, ROPE_BYTE, last_char_index);
 					if (rv < 0) {
 						goto out;
 					}
@@ -203,7 +203,7 @@ node_insert_data(
 		rope_str_cleanup(&prev_char_tmp);
 	}
 
-	rope_node_propagate_dim(node);
+	rope_node_propagate_sizes(node);
 
 	struct RopeNode *prev = rope_node_prev(node);
 	if (prev) {
@@ -230,9 +230,9 @@ rope_node_insert(
 
 	if (rope_node_tags(node) == tags) {
 		size_t position = which == ROPE_LEFT ? 0 : SIZE_MAX;
-		int rv = rope_str_inline_insert(&node->data.leaf, position, ROPE_BYTE, data, byte_size);
+		int rv = rope_str_inline_insert(&node->data.leaf, ROPE_BYTE, position, data, byte_size);
 		if (rv == 0) {
-			rope_node_propagate_dim(node);
+			rope_node_propagate_sizes(node);
 			return merge_next_char_bytes(node, pool);
 		}
 	}
@@ -264,7 +264,7 @@ node_insert_wrap(
 
 	int rv = 0;
 	struct RopeNode *new_node;
-	if (rope_node_dim(node, ROPE_BYTE) == 0) {
+	if (rope_node_size(node, ROPE_BYTE) == 0) {
 		new_node = node;
 	} else {
 		new_node = rope_node_new(pool);

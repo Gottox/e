@@ -1,8 +1,8 @@
+#include "common.h"
 #include <rope.h>
 #include <stdlib.h>
 #include <string.h>
 #include <testlib.h>
-#include "common.h"
 
 static void
 iterator_full(void) {
@@ -19,9 +19,7 @@ iterator_full(void) {
 	r.root = from_str(&pool, "'HelloWorld'");
 
 	struct RopeRange range = {0};
-	rv = rope_range_init(&range, &r);
-	ASSERT_EQ(0, rv);
-	rv = rope_range_end_move_to_index(&range, rope_char_size(&r), 0);
+	rv = rope_to_range(&r, &range);
 	ASSERT_EQ(0, rv);
 
 	struct RopeIterator it = {0};
@@ -59,9 +57,9 @@ iterator_partial(void) {
 	struct RopeRange range = {0};
 	rv = rope_range_init(&range, &r);
 	ASSERT_EQ(0, rv);
-	rv = rope_range_start_move_to_index(&range, 2, 0);
+	rv = rope_cursor_move_to(rope_range_start(&range), ROPE_CHAR, 2, 0);
 	ASSERT_EQ(0, rv);
-	rv = rope_range_end_move_to_index(&range, 8, 0);
+	rv = rope_cursor_move_to(rope_range_end(&range), ROPE_CHAR, 8, 0);
 	ASSERT_EQ(0, rv);
 
 	struct RopeIterator it = {0};
@@ -146,9 +144,7 @@ iterator_big_non_inline(void) {
 	ASSERT_EQ(0, rv);
 
 	struct RopeRange range = {0};
-	rv = rope_range_init(&range, &r);
-	ASSERT_EQ(0, rv);
-	rv = rope_range_end_move_to_index(&range, rope_char_size(&r), 0);
+	rv = rope_to_range(&r, &range);
 	ASSERT_EQ(0, rv);
 
 	struct RopeIterator it = {0};
@@ -189,9 +185,9 @@ iterator_multibyte(void) {
 	struct RopeRange range = {0};
 	rv = rope_range_init(&range, &r);
 	ASSERT_EQ(0, rv);
-	rv = rope_range_start_move_to_index(&range, 3, 0);
+	rv = rope_cursor_move_to(rope_range_start(&range), ROPE_CHAR, 3, 0);
 	ASSERT_EQ(0, rv);
-	rv = rope_range_end_move_to_index(&range, 4, 0);
+	rv = rope_cursor_move_to(rope_range_end(&range), ROPE_CHAR, 4, 0);
 	ASSERT_EQ(0, rv);
 
 	struct RopeIterator it = {0};
@@ -249,12 +245,7 @@ iterator_tagged_filter(void) {
 	ASSERT_EQ(0, rv);
 
 	struct RopeRange range = {0};
-	rv = rope_range_init(&range, &r);
-	ASSERT_EQ(0, rv);
-	rv = rope_range_start_move_to_index((&range), 0, 0);
-	ASSERT_EQ(0, rv);
-	rv = rope_range_end_move_to_index(
-			(&range), rope_char_size(&r), 0);
+	rv = rope_to_range(&r, &range);
 	ASSERT_EQ(0, rv);
 
 	struct RopeIterator all_it = {0};

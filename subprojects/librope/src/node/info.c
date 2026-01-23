@@ -3,11 +3,11 @@
 #include <string.h>
 
 size_t
-rope_node_dim(const struct RopeNode *node, enum RopeUnit unit) {
+rope_node_size(const struct RopeNode *node, enum RopeUnit unit) {
 	if (ROPE_NODE_IS_BRANCH(node)) {
 		return node->data.branch.dim.dim[unit];
 	} else {
-		return rope_str_dim(&node->data.leaf, unit);
+		return rope_str_size(&node->data.leaf, unit);
 	}
 }
 

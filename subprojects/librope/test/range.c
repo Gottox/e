@@ -44,19 +44,20 @@ range_insert_delete(void) {
 	rv = rope_range_insert_str(&range, "Hello", 0);
 	ASSERT_EQ(0, rv);
 
-	struct RopeNode *node = rope_first(&r);
+	struct RopeNode *node = rope_node_first(r.root);
 	size_t size = 0;
 	const uint8_t *data = rope_node_value(node, &size);
 	ASSERT_STREQS("Hello", (char *)data, size);
 
-	rv = rope_range_end_move_to_index(&range, rope_char_size(&r), 0);
+	rv = rope_cursor_move_to(
+			rope_range_end(&range), ROPE_CHAR, rope_size(&r, ROPE_CHAR), 0);
 	ASSERT_EQ(0, rv);
-	rv = rope_range_start_move_to_index(&range, 0, 0);
+	rv = rope_cursor_move_to(rope_range_start(&range), ROPE_CHAR, 0, 0);
 	ASSERT_EQ(0, rv);
 	rv = rope_range_delete(&range);
 	ASSERT_EQ(0, rv);
 
-	node = rope_first(&r);
+	node = rope_node_first(r.root);
 	data = rope_node_value(node, &size);
 	ASSERT_EQ((size_t)0, size);
 
@@ -82,9 +83,9 @@ range_to_str(void) {
 	rv = rope_range_init(&range, &r);
 	ASSERT_EQ(0, rv);
 
-	rv = rope_range_start_move_to_index(&range, 6, 0);
+	rv = rope_cursor_move_to(rope_range_start(&range), ROPE_CHAR, 6, 0);
 	ASSERT_EQ(0, rv);
-	rv = rope_range_end_move_to_index(&range, 11, 0);
+	rv = rope_cursor_move_to(rope_range_end(&range), ROPE_CHAR, 11, 0);
 	ASSERT_EQ(0, rv);
 
 	char *str = rope_range_to_str(&range, 0);
@@ -92,9 +93,9 @@ range_to_str(void) {
 	ASSERT_STREQ("World", str);
 	free(str);
 
-	rv = rope_range_start_move_to_index(&range, 0, 0);
+	rv = rope_cursor_move_to(rope_range_start(&range), ROPE_CHAR, 0, 0);
 	ASSERT_EQ(0, rv);
-	rv = rope_range_end_move_to_index(&range, 11, 0);
+	rv = rope_cursor_move_to(rope_range_end(&range), ROPE_CHAR, 11, 0);
 	ASSERT_EQ(0, rv);
 
 	str = rope_range_to_str(&range, 0);
@@ -102,9 +103,9 @@ range_to_str(void) {
 	ASSERT_STREQ("Hello World", str);
 	free(str);
 
-	rv = rope_range_start_move_to_index(&range, 5, 0);
+	rv = rope_cursor_move_to(rope_range_start(&range), ROPE_CHAR, 5, 0);
 	ASSERT_EQ(0, rv);
-	rv = rope_range_end_move_to_index(&range, 5, 0);
+	rv = rope_cursor_move_to(rope_range_end(&range), ROPE_CHAR, 5, 0);
 	ASSERT_EQ(0, rv);
 
 	str = rope_range_to_str(&range, 0);
@@ -134,9 +135,9 @@ range_select_portion(void) {
 	rv = rope_range_init(&range, &r);
 	ASSERT_EQ(0, rv);
 
-	rv = rope_range_start_move_to_index(&range, 6, 0);
+	rv = rope_cursor_move_to(rope_range_start(&range), ROPE_CHAR, 6, 0);
 	ASSERT_EQ(0, rv);
-	rv = rope_range_end_move_to_index(&range, 11, 0);
+	rv = rope_cursor_move_to(rope_range_end(&range), ROPE_CHAR, 11, 0);
 	ASSERT_EQ(0, rv);
 
 	char *str = rope_range_to_str(&range, 0);
@@ -144,9 +145,9 @@ range_select_portion(void) {
 	ASSERT_STREQ("World", str);
 	free(str);
 
-	rv = rope_range_start_move_to_index(&range, 12, 0);
+	rv = rope_cursor_move_to(rope_range_start(&range), ROPE_CHAR, 12, 0);
 	ASSERT_EQ(0, rv);
-	rv = rope_range_end_move_to_index(&range, 19, 0);
+	rv = rope_cursor_move_to(rope_range_end(&range), ROPE_CHAR, 19, 0);
 	ASSERT_EQ(0, rv);
 
 	str = rope_range_to_str(&range, 0);
@@ -160,48 +161,6 @@ range_select_portion(void) {
 	str = rope_to_str(&r, 0);
 	ASSERT_TRUE(str != NULL);
 	ASSERT_STREQ("Hello World  a Test", str);
-	free(str);
-
-	rope_range_cleanup(&range);
-	rope_cleanup(&r);
-	rope_pool_cleanup(&pool);
-}
-
-static void
-range_move_to_line_column(void) {
-	int rv = 0;
-	struct RopePool pool = {0};
-	struct Rope r = {0};
-	rv = rope_pool_init(&pool);
-	ASSERT_EQ(0, rv);
-	rv = rope_init(&r, &pool);
-	ASSERT_EQ(0, rv);
-
-	rv = rope_append_str(&r, "Hello World Test");
-	ASSERT_EQ(0, rv);
-
-	struct RopeRange range = {0};
-	rv = rope_range_init(&range, &r);
-	ASSERT_EQ(0, rv);
-
-	rv = rope_range_start_move_to(&range, 0, 6);
-	ASSERT_EQ(0, rv);
-	rv = rope_range_end_move_to(&range, 0, 11);
-	ASSERT_EQ(0, rv);
-
-	char *str = rope_range_to_str(&range, 0);
-	ASSERT_TRUE(str != NULL);
-	ASSERT_STREQ("World", str);
-	free(str);
-
-	rv = rope_range_start_move_to(&range, 0, 0);
-	ASSERT_EQ(0, rv);
-	rv = rope_range_end_move_to(&range, 0, 5);
-	ASSERT_EQ(0, rv);
-
-	str = rope_range_to_str(&range, 0);
-	ASSERT_TRUE(str != NULL);
-	ASSERT_STREQ("Hello", str);
 	free(str);
 
 	rope_range_cleanup(&range);
@@ -242,9 +201,9 @@ range_callback(void) {
 	struct RopeRange range = {0};
 	rv = rope_range_init(&range, &r);
 	ASSERT_EQ(0, rv);
-	rv = rope_range_start_move_to_index(&range, 6, 0);
+	rv = rope_cursor_move_to(rope_range_start(&range), ROPE_CHAR, 6, 0);
 	ASSERT_EQ(0, rv);
-	rv = rope_range_end_move_to_index(&range, 11, 0);
+	rv = rope_cursor_move_to(rope_range_end(&range), ROPE_CHAR, 11, 0);
 	ASSERT_EQ(0, rv);
 
 	struct callback_data data = {0};
@@ -288,29 +247,33 @@ range_ordering(void) {
 	rv = rope_range_init(&range, &r);
 	ASSERT_EQ(0, rv);
 
-	rv = rope_range_end_move_to_index(&range, 5, 0);
+	rv = rope_cursor_move_to(rope_range_end(&range), ROPE_CHAR, 5, 0);
 	ASSERT_EQ(0, rv);
-	ASSERT_EQ((size_t)0, range.cursor_start.index);
-	ASSERT_EQ((size_t)5, range.cursor_end.index);
+	ASSERT_EQ((size_t)0, rope_range_start(&range)->index);
+	ASSERT_EQ((size_t)5, rope_range_end(&range)->index);
 
-	rv = rope_range_start_move_to_index(&range, 8, 0);
-	ASSERT_EQ(0, rv);
-
-	ASSERT_EQ((size_t)8, range.cursor_start.index);
-	ASSERT_EQ((size_t)8, range.cursor_end.index);
-
-	rv = rope_range_start_move_to_index(&range, 0, 0);
-	ASSERT_EQ(0, rv);
-	rv = rope_range_end_move_to_index(&range, 5, 0);
-	ASSERT_EQ(0, rv);
-	ASSERT_EQ((size_t)0, range.cursor_start.index);
-	ASSERT_EQ((size_t)5, range.cursor_end.index);
-
-	rv = rope_range_end_move_to_index(&range, 0, 0);
+	rv = rope_cursor_move_to(rope_range_start(&range), ROPE_CHAR, 8, 0);
 	ASSERT_EQ(0, rv);
 
-	ASSERT_EQ((size_t)0, range.cursor_start.index);
-	ASSERT_EQ((size_t)0, range.cursor_end.index);
+	// trigger rerdering by deleting the range, which will collapse to the start
+	rv = rope_range_delete(&range);
+	ASSERT_EQ(0, rv);
+
+	ASSERT_EQ((size_t)8, rope_range_start(&range)->index);
+	ASSERT_EQ((size_t)8, rope_range_end(&range)->index);
+
+	rv = rope_cursor_move_to(rope_range_start(&range), ROPE_CHAR, 0, 0);
+	ASSERT_EQ(0, rv);
+	rv = rope_cursor_move_to(rope_range_end(&range), ROPE_CHAR, 5, 0);
+	ASSERT_EQ(0, rv);
+	ASSERT_EQ((size_t)0, rope_range_start(&range)->index);
+	ASSERT_EQ((size_t)5, rope_range_end(&range)->index);
+
+	rv = rope_cursor_move_to(rope_range_end(&range), ROPE_CHAR, 0, 0);
+	ASSERT_EQ(0, rv);
+
+	ASSERT_EQ((size_t)0, rope_range_start(&range)->index);
+	ASSERT_EQ((size_t)0, rope_range_end(&range)->index);
 
 	rope_range_cleanup(&range);
 	rope_cleanup(&r);
@@ -340,9 +303,10 @@ range_insert_raw(void) {
 	ASSERT_STREQ("Hello", str);
 	free(str);
 
-	rv = rope_range_start_move_to_index(&range, rope_char_size(&r), 0);
+	rv = rope_cursor_move_to(rope_range_start(&range), ROPE_CHAR, 0, 0);
 	ASSERT_EQ(0, rv);
-	rv = rope_range_end_move_to_index(&range, rope_char_size(&r), 0);
+	rv = rope_cursor_move_to(
+			rope_range_end(&range), ROPE_CHAR, rope_size(&r, ROPE_CHAR), 0);
 	ASSERT_EQ(0, rv);
 
 	const uint8_t data2[] = {' ', 'W', 'o', 'r', 'l', 'd'};
@@ -351,7 +315,7 @@ range_insert_raw(void) {
 
 	str = rope_to_str(&r, 0);
 	ASSERT_TRUE(str != NULL);
-	ASSERT_STREQ("Hello World", str);
+	ASSERT_STREQ(" World", str);
 	free(str);
 
 	rope_range_cleanup(&range);
@@ -376,9 +340,9 @@ range_utf8(void) {
 	rv = rope_range_init(&range, &r);
 	ASSERT_EQ(0, rv);
 
-	rv = rope_range_start_move_to_index(&range, 6, 0);
+	rv = rope_cursor_move_to(rope_range_start(&range), ROPE_CHAR, 6, 0);
 	ASSERT_EQ(0, rv);
-	rv = rope_range_end_move_to_index(&range, 11, 0);
+	rv = rope_cursor_move_to(rope_range_end(&range), ROPE_CHAR, 11, 0);
 	ASSERT_EQ(0, rv);
 
 	char *str = rope_range_to_str(&range, 0);
@@ -408,9 +372,9 @@ range_multinode(void) {
 	rv = rope_range_init(&range, &r);
 	ASSERT_EQ(0, rv);
 
-	rv = rope_range_start_move_to_index(&range, 4, 0);
+	rv = rope_cursor_move_to(rope_range_start(&range), ROPE_CHAR, 4, 0);
 	ASSERT_EQ(0, rv);
-	rv = rope_range_end_move_to_index(&range, 9, 0);
+	rv = rope_cursor_move_to(rope_range_end(&range), ROPE_CHAR, 9, 0);
 	ASSERT_EQ(0, rv);
 
 	char *str = rope_range_to_str(&range, 0);
@@ -436,7 +400,6 @@ TEST(range_basic)
 TEST(range_insert_delete)
 TEST(range_to_str)
 TEST(range_select_portion)
-TEST(range_move_to_line_column)
 TEST(range_callback)
 TEST(range_ordering)
 TEST(range_insert_raw)

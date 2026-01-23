@@ -52,9 +52,10 @@ rope_cursor_insert_str(
 }
 
 int
-rope_cursor_delete_at(
+rope_cursor_delete(
 		struct RopeCursor *cursor, enum RopeUnit unit, size_t count) {
 	int rv = 0;
+
 	rope_byte_index_t cursor_byte_index = cursor->index;
 	rope_byte_index_t local_byte_index = 0;
 	struct Rope *rope = cursor->rope;
@@ -68,7 +69,7 @@ rope_cursor_delete_at(
 		return 0;
 	}
 
-	if (rope_node_dim(node, ROPE_BYTE) == local_byte_index) {
+	if (rope_node_size(node, ROPE_BYTE) == local_byte_index) {
 		node = rope_node_next(node);
 		local_byte_index = 0;
 	} else if (local_byte_index != 0) {
@@ -82,25 +83,25 @@ rope_cursor_delete_at(
 	assert(node != NULL);
 
 	while (node) {
-		size_t node_size = rope_node_dim(node, unit);
+		size_t node_size = rope_node_size(node, unit);
 		if (node_size >= remaining) {
 			break;
 		}
 		remaining -= node_size;
-		bytes_deleted += rope_node_dim(node, ROPE_BYTE);
+		bytes_deleted += rope_node_size(node, ROPE_BYTE);
 		node = rope_node_delete_and_next(node, rope->pool);
 	}
 
 	if (node && remaining > 0) {
-		local_byte_index = rope_node_dim(node, ROPE_BYTE);
-		if (rope_str_is_end(&node->data.leaf, remaining, unit)) {
+		local_byte_index = rope_node_size(node, ROPE_BYTE);
+		if (rope_str_is_end(&node->data.leaf, unit, remaining)) {
 			rope_node_delete(node, rope->pool);
 		} else {
-			rv = rope_node_skip(node, remaining, unit);
+			rv = rope_node_skip(node, unit, remaining);
 			if (rv < 0) {
 				goto out;
 			}
-			local_byte_index -= rope_node_dim(node, ROPE_BYTE);
+			local_byte_index -= rope_node_size(node, ROPE_BYTE);
 		}
 		bytes_deleted += local_byte_index;
 		remaining = 0;
@@ -112,9 +113,4 @@ rope_cursor_delete_at(
 	rv = rope_chores(rope);
 out:
 	return rv;
-}
-
-int
-rope_cursor_delete(struct RopeCursor *cursor, size_t char_count) {
-	return rope_cursor_delete_at(cursor, ROPE_CHAR, char_count);
 }

@@ -59,11 +59,11 @@ void rope_str_alloc_commit(struct RopeStr *str, size_t byte_size);
 void rope_str_move(struct RopeStr *dest, struct RopeStr *src);
 
 ROPE_NO_UNUSED int rope_str_inline_insert(
-		struct RopeStr *str, size_t index, enum RopeUnit unit,
+		struct RopeStr *str, enum RopeUnit unit, size_t index,
 		const uint8_t *data, size_t byte_size);
 
 ROPE_NO_UNUSED int rope_str_trim(
-		struct RopeStr *str, size_t offset, size_t size, enum RopeUnit unit);
+		struct RopeStr *str, enum RopeUnit unit, size_t offset, size_t size);
 
 ROPE_NO_UNUSED const uint8_t *
 rope_str_data(const struct RopeStr *str, size_t *byte_size);
@@ -73,7 +73,7 @@ ROPE_NO_UNUSED int rope_str_split(
 		size_t index);
 
 ROPE_NO_UNUSED size_t
-rope_str_dim(const struct RopeStr *str, enum RopeUnit unit);
+rope_str_size(const struct RopeStr *str, enum RopeUnit unit);
 
 ROPE_NO_UNUSED size_t rope_str_unit_to_byte(
 		const struct RopeStr *str, enum RopeUnit unit, size_t index);
@@ -84,7 +84,7 @@ ROPE_NO_UNUSED size_t rope_str_unit_from_byte(
 		const struct RopeStr *str, enum RopeUnit unit, size_t byte_index);
 
 ROPE_NO_UNUSED bool
-rope_str_is_end(const struct RopeStr *str, size_t index, enum RopeUnit unit);
+rope_str_is_end(const struct RopeStr *str, enum RopeUnit unit, size_t index);
 
 void rope_str_cleanup(struct RopeStr *str);
 

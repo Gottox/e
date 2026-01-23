@@ -108,7 +108,7 @@ run_patch(
 	if (rv < 0) {
 		goto out;
 	}
-	rv = rope_cursor_delete(cursor, del);
+	rv = rope_cursor_delete(cursor, ROPE_CHAR, del);
 	if (rv < 0) {
 		goto out;
 	}

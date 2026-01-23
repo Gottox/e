@@ -17,7 +17,7 @@ static void str_process(
 static bool str_is_slow(const struct RopeStr *str);
 
 #define ROPE_DIM_ALL \
-	((struct RopeDim){{SIZE_MAX, SIZE_MAX, SIZE_MAX, SIZE_MAX, SIZE_MAX}})
+	*((struct RopeDim *)memset(&(struct RopeDim){0}, UINT8_MAX, sizeof(struct RopeDim)))
 
 #define GET_SET_EXTRA(name, offset, ...) \
 	static void str_set_##name(struct RopeStr *str, size_t value) { \
@@ -53,8 +53,7 @@ GET_SET(utf16_cps, UTF16, 44)
 
 static struct RopeDim
 str_unit_to_limits(enum RopeUnit unit, size_t index) {
-	struct RopeDim limits = {
-			{SIZE_MAX, SIZE_MAX, SIZE_MAX, SIZE_MAX, SIZE_MAX}};
+	struct RopeDim limits = ROPE_DIM_ALL;
 	limits.dim[unit] = index;
 	return limits;
 }
@@ -252,13 +251,13 @@ rope_str_alloc_commit(struct RopeStr *str, size_t byte_size) {
 		byte_size = old_byte_size;
 	}
 
-	int rv = rope_str_trim(str, 0, byte_size, ROPE_BYTE);
+	int rv = rope_str_trim(str, ROPE_BYTE, 0, byte_size);
 	assert(rv == 0);
 }
 
 int
 rope_str_trim(
-		struct RopeStr *str, size_t offset, size_t size, enum RopeUnit unit) {
+		struct RopeStr *str, enum RopeUnit unit, size_t offset, size_t size) {
 	size_t byte_end;
 	if (size == SIZE_MAX) {
 		byte_end = str_bytes(str);
@@ -267,11 +266,9 @@ rope_str_trim(
 	}
 	const size_t byte_offset = rope_str_unit_to_byte(str, unit, offset);
 	const size_t byte_size = byte_end - byte_offset;
-	//assert(byte_size > 0);
 
 	if (byte_offset == 0) {
-		str_try_inline(str, byte_size);
-		return 0;
+		// Do nothing
 	} else if (str_is_inline(str)) {
 		uint8_t *data = str->data.inplace;
 		memmove(data, &data[byte_offset], byte_size);
@@ -296,7 +293,7 @@ rope_str_move(struct RopeStr *dest, struct RopeStr *src) {
 
 int
 rope_str_inline_insert(
-		struct RopeStr *str, size_t index, enum RopeUnit unit,
+		struct RopeStr *str, enum RopeUnit unit, size_t index,
 		const uint8_t *data, size_t byte_size) {
 	size_t byte_index;
 	if (index == SIZE_MAX) {
@@ -345,13 +342,13 @@ rope_str_split(
 		if (rv < 0) {
 			goto out;
 		}
-		rv = rope_str_trim(new_str, index, SIZE_MAX, unit);
+		rv = rope_str_trim(new_str, unit, index, SIZE_MAX);
 		if (rv < 0) {
 			goto out;
 		}
 	}
 
-	rv = rope_str_trim(str, 0, index, unit);
+	rv = rope_str_trim(str, unit, 0, index);
 out:
 	return rv;
 }
@@ -377,7 +374,7 @@ rope_str_cleanup(struct RopeStr *str) {
 }
 
 size_t
-rope_str_dim(const struct RopeStr *str, enum RopeUnit unit) {
+rope_str_size(const struct RopeStr *str, enum RopeUnit unit) {
 	switch (unit) {
 	case ROPE_BYTE:
 		return str_bytes(str);
@@ -430,7 +427,7 @@ rope_str_unit_from_byte(
 }
 
 bool
-rope_str_is_end(const struct RopeStr *str, size_t index, enum RopeUnit unit) {
+rope_str_is_end(const struct RopeStr *str, enum RopeUnit unit, size_t index) {
 	if (unit == ROPE_LINE) {
 		size_t byte_size = 0;
 		const uint8_t *data = rope_str_data(str, &byte_size);
@@ -440,7 +437,7 @@ rope_str_is_end(const struct RopeStr *str, size_t index, enum RopeUnit unit) {
 			return false;
 		}
 	}
-	return index >= rope_str_dim(str, unit);
+	return index >= rope_str_size(str, unit);
 }
 
 int
