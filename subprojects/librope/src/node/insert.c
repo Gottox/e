@@ -1,68 +1,34 @@
+#include "rope_error.h"
 #include "rope_node.h"
 #include "rope_str.h"
 #include <assert.h>
 #include <grapheme.h>
 #include <rope.h>
-#include <rope_util.h>
 #include <string.h>
 
 static int
 merge_next_char_bytes(struct RopeNode *node, struct RopePool *pool) {
-	int rv = 0;
-
-	uint64_t tags = rope_node_tags(node);
-	for (;;) {
-		struct RopeNode *next = rope_node_next(node);
-		if (next == NULL || rope_node_tags(next) != tags) {
+	size_t merge_count = 0;
+	struct RopeNode *current = node;
+	uint64_t tags = rope_node_tags(current);
+	for (uint_least16_t state = 0;;) {
+		struct RopeNode *next = rope_node_next(current);
+		if (next == NULL) {
 			break;
 		}
-
-		size_t node_size;
-		const uint8_t *node_data = rope_node_value(node, &node_size);
-		size_t last_char_index = rope_str_last_char_index(&node->data.leaf);
-
-		struct RopeUtf8Counter counter = {0};
-		rope_utf8_char_break(
-				&counter, node_data + last_char_index,
-				node_size - last_char_index);
-
-		size_t next_size;
-		const uint8_t *next_data = rope_node_value(next, &next_size);
-		size_t first_break =
-				rope_utf8_char_break(&counter, next_data, next_size);
-
-		if (first_break == 0) {
+		if (rope_node_tags(next) != tags) {
 			break;
 		}
-
-		size_t new_size = node_size + first_break;
-		uint8_t *buffer;
-		struct RopeStr new_str;
-		rv = rope_str_alloc(&new_str, new_size, &buffer);
-		if (rv < 0) {
-			return rv;
-		}
-
-		memcpy(buffer, node_data, node_size);
-		memcpy(buffer + node_size, next_data, first_break);
-
-		rope_str_alloc_commit(&new_str, SIZE_MAX);
-		rope_str_cleanup(&node->data.leaf);
-		rope_str_move(&node->data.leaf, &new_str);
-
-		if (first_break >= next_size) {
-			node = rope_node_delete_and_prev(next, pool);
-		} else {
-			rv = rope_node_skip(next, ROPE_BYTE, first_break);
-			if (rv < 0) {
-				return rv;
-			}
-			rope_node_propagate_sizes(node);
+		size_t should_stitch = rope_str_should_stitch(
+				&current->data.leaf, &next->data.leaf, &state);
+		if (should_stitch == 0) {
 			break;
 		}
+		current = next;
+		merge_count++;
 	}
 
-	return 0;
+	return rope_node_merge(node, merge_count, pool);
 }
 
 static int
@@ -103,121 +69,116 @@ out:
 }
 
 static int
-node_insert_data(
-		struct RopeNode *node, const uint8_t *data, size_t byte_size,
-		uint64_t tags, struct RopePool *pool, enum RopeDirection which) {
+node_try_stitch(
+		struct RopeNode **node, struct RopeStr *str, struct RopePool *pool) {
 	int rv = 0;
-	struct RopeNode *new_node = NULL;
-	struct RopeStr prev_char_tmp = {0};
-	while (byte_size > 0) {
-		struct RopeUtf8Counter counter = {0};
+	// assert(rope_node_size(*node, ROPE_BYTE) > 0);
 
-		bool reuse_prev = false;
-		struct RopeNode *prev;
-		if (rope_node_size(node, ROPE_BYTE) == 0) {
-			reuse_prev = true;
-			prev = node;
-		} else if (which == ROPE_RIGHT) {
-			prev = node;
-		} else {
-			prev = rope_node_prev(node);
-		}
+	struct RopeStr *node_str = &(*node)->data.leaf;
+	const size_t seam_right = rope_str_should_stitch(node_str, str, NULL);
+	if (seam_right == 0) {
+		goto out;
+	}
 
-		const uint8_t *prev_char = NULL;
-		size_t prev_char_size = 0;
-		size_t last_char_index = 0;
-		if (prev && tags == rope_node_tags(prev)) {
-			last_char_index = rope_str_last_char_index(&prev->data.leaf);
-			prev_char = rope_node_value(prev, &prev_char_size);
-			prev_char += last_char_index;
-			prev_char_size -= last_char_index;
+	const size_t seam_left = rope_str_last_char_index(node_str);
+	struct RopeStr seam = {0};
+	rv = rope_str_stitch(&seam, node_str, seam_left, str, seam_right);
+	if (rv < 0) {
+		goto out;
+	}
+	rope_node_propagate_sizes(*node);
 
-			rope_utf8_char_break(&counter, prev_char, prev_char_size);
-		}
-
-		size_t first_break = rope_utf8_char_break(&counter, data, byte_size);
-
-		if (!reuse_prev && prev == node && prev_char_size > 0 &&
-			last_char_index == 0 && first_break > 0) {
-			rope_str_move(&prev_char_tmp, &prev->data.leaf);
-			prev_char = rope_str_data(&prev_char_tmp, NULL);
-			reuse_prev = true;
-		}
-
-		struct RopeNode *new_node;
-		if (reuse_prev) {
-			rope_node_cleanup(prev);
-			new_node = prev;
-		} else {
-			new_node = rope_node_new(pool);
-		}
+	struct RopeNode *new_node = *node;
+	if (rope_node_size(*node, ROPE_BYTE) > 0) {
+		new_node = rope_node_new(pool);
 		if (new_node == NULL) {
 			rv = -1;
 			goto out;
 		}
-
-		size_t chunk_size;
-		if (first_break == 0) {
-			prev_char_size = 0;
-			chunk_size = CX_MIN(byte_size, ROPE_STR_FAST_SIZE);
-		} else {
-			chunk_size = CX_MIN(byte_size + prev_char_size, ROPE_STR_FAST_SIZE);
-			chunk_size = CX_MAX(chunk_size, first_break + prev_char_size);
-		}
-
-		uint8_t *buffer = NULL;
-		rv = rope_str_alloc(&new_node->data.leaf, chunk_size, &buffer);
+	}
+	rope_str_move(&new_node->data.leaf, &seam);
+	rope_node_set_tags(new_node, rope_node_tags(*node));
+	if (new_node != *node) {
+		rv = node_insert(*node, new_node, pool, ROPE_RIGHT);
 		if (rv < 0) {
 			goto out;
 		}
-		if (prev_char_size > 0) {
-			memcpy(buffer, prev_char, prev_char_size);
-			buffer += prev_char_size;
-			chunk_size -= prev_char_size;
-			if (prev_char_tmp.dim == 0) {
-				if (last_char_index > 0) {
-					rv = rope_node_truncate(prev, ROPE_BYTE, last_char_index);
-					if (rv < 0) {
-						goto out;
-					}
-				} else {
-					rope_node_delete(prev, pool);
-				}
+	}
+
+	*node = new_node;
+out:
+	if (rv < 0) {
+		rope_str_cleanup(&seam);
+		if (new_node != *node) {
+			rope_node_free(new_node, pool);
+		}
+	}
+	return rv;
+}
+
+static int
+node_insert_str(
+		struct RopeNode *node, struct RopeStr *str, uint64_t tags,
+		struct RopePool *pool, enum RopeDirection which) {
+	int rv = 0;
+	struct RopeNode *new_node = NULL;
+	if (rope_node_size(node, ROPE_BYTE) > 0 && which == ROPE_LEFT) {
+		struct RopeNode *prev = rope_node_prev(node);
+		if (prev != NULL) {
+			node = rope_node_prev(node);
+			which = ROPE_RIGHT;
+		}
+	}
+
+	if (rope_node_tags(node) == tags) {
+		rv = node_try_stitch(&node, str, pool);
+	}
+
+	while (rope_str_size(str, ROPE_BYTE) > 0) {
+		new_node = node;
+		if (rope_node_size(node, ROPE_BYTE) > 0) {
+			new_node = rope_node_new(pool);
+			rope_node_set_tags(new_node, tags);
+			if (new_node == NULL) {
+				rv = -1;
+				goto out;
 			}
 		}
-		memcpy(buffer, data, chunk_size);
-		rope_str_alloc_commit(&new_node->data.leaf, SIZE_MAX);
-		rope_node_set_tags(new_node, tags);
-
-		if (!reuse_prev) {
+		struct RopeStr *new_str = &new_node->data.leaf;
+		rope_str_move(new_str, str);
+		rv = rope_str_split_fast(new_str, str);
+		if (rv < 0) {
+			goto out;
+		}
+		if (new_node != node) {
 			rv = node_insert(node, new_node, pool, which);
 			if (rv < 0) {
 				goto out;
 			}
 		}
-		data += chunk_size;
-		byte_size -= chunk_size;
-		node = new_node;
 		which = ROPE_RIGHT;
-
-		rope_str_cleanup(&prev_char_tmp);
+		node = new_node;
+		new_node = NULL;
 	}
 
-	rope_node_propagate_sizes(node);
-
-	struct RopeNode *prev = rope_node_prev(node);
-	if (prev) {
-		rv = merge_next_char_bytes(prev, pool);
-		if (rv < 0) {
-			goto out;
-		}
-	}
-	new_node = NULL;
-
+	rv = merge_next_char_bytes(node, pool);
 out:
-	rope_str_cleanup(&prev_char_tmp);
-	rope_node_free(new_node, pool);
+	if (new_node != node) {
+		rope_node_free(new_node, pool);
+	}
 	return rv;
+}
+
+static int
+node_insert_data(
+		struct RopeNode *node, const uint8_t *data, size_t byte_size,
+		uint64_t tags, struct RopePool *pool, enum RopeDirection which) {
+	struct RopeStr str = {0};
+	int rv = rope_str_init(&str, data, byte_size);
+	if (rv < 0) {
+		return rv;
+	}
+	return node_insert_str(node, &str, tags, pool, which);
 }
 
 int
@@ -230,7 +191,8 @@ rope_node_insert(
 
 	if (rope_node_tags(node) == tags) {
 		size_t position = which == ROPE_LEFT ? 0 : SIZE_MAX;
-		int rv = rope_str_inline_insert(&node->data.leaf, ROPE_BYTE, position, data, byte_size);
+		int rv = rope_str_inline_insert(
+				&node->data.leaf, ROPE_BYTE, position, data, byte_size);
 		if (rv == 0) {
 			rope_node_propagate_sizes(node);
 			return merge_next_char_bytes(node, pool);

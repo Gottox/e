@@ -3,7 +3,7 @@
 #include <string.h>
 #include <testlib.h>
 
-#define FEMALE_ASTRONAUT "\360\237\221\251\342\200\215\360\237\232\200"
+#define FEMALE_ASTRONAUT "👩‍🚀"
 #define SMILING_FACE "\360\237\230\203"
 #define LONG_GRAPHEME \
 	"\xf0\x9f\x91\xa9\xf0\x9f\x8f\xbb\xe2\x80\x8d\xf0\x9f\xa4\x9d\xe2\x80\x8d" \
@@ -165,7 +165,8 @@ test_str_inline_append(void) {
 	rv = rope_str_init(&str, (const uint8_t *)"Hello", 5);
 	ASSERT_EQ(rv, 0);
 
-	rv = rope_str_inline_insert(&str, ROPE_BYTE, 5, (const uint8_t *)"World", 5);
+	rv = rope_str_inline_insert(
+			&str, ROPE_BYTE, 5, (const uint8_t *)"World", 5);
 	ASSERT_EQ(rv, 0);
 	size_t byte_size = 0;
 	const uint8_t *data = rope_str_data(&str, &byte_size);
@@ -181,7 +182,8 @@ test_str_inline_prepend(void) {
 	rv = rope_str_init(&str, (const uint8_t *)"World", 5);
 	ASSERT_EQ(rv, 0);
 
-	rv = rope_str_inline_insert(&str, ROPE_BYTE, 0, (const uint8_t *)"Hello", 5);
+	rv = rope_str_inline_insert(
+			&str, ROPE_BYTE, 0, (const uint8_t *)"Hello", 5);
 	ASSERT_EQ(rv, 0);
 	size_t byte_size = 0;
 	const uint8_t *data = rope_str_data(&str, &byte_size);
@@ -410,10 +412,12 @@ test_str_inline_append_overflow(void) {
 	rv = rope_str_init(&str, buffer, sizeof(buffer));
 	ASSERT_EQ(rv, 0);
 
-	rv = rope_str_inline_insert(&str, ROPE_BYTE, SIZE_MAX, (const uint8_t *)"BB", 2);
+	rv = rope_str_inline_insert(
+			&str, ROPE_BYTE, SIZE_MAX, (const uint8_t *)"BB", 2);
 	ASSERT_EQ(rv, 0);
 
-	rv = rope_str_inline_insert(&str, ROPE_BYTE, SIZE_MAX, (const uint8_t *)"C", 1);
+	rv = rope_str_inline_insert(
+			&str, ROPE_BYTE, SIZE_MAX, (const uint8_t *)"C", 1);
 	ASSERT_EQ(rv, -ROPE_ERROR_OOB);
 
 	rope_str_cleanup(&str);
@@ -431,10 +435,61 @@ test_str_slow_str(void) {
 	ASSERT_EQ(sizeof(buffer), rope_str_size(&str, ROPE_BYTE));
 	ASSERT_EQ(sizeof(buffer), rope_str_size(&str, ROPE_CHAR));
 	ASSERT_EQ(sizeof(buffer), rope_str_size(&str, ROPE_UTF16));
-	ASSERT_EQ(sizeof(buffer)-1, rope_str_last_char_index(&str));
+	ASSERT_EQ(sizeof(buffer) - 1, rope_str_last_char_index(&str));
 
 	rope_str_cleanup(&str);
 }
+
+static void
+test_str_should_stitch_utf8_break(void) {
+	const size_t split = 6;
+	int rv = 0;
+	uint8_t buffer[] = "Hello" SMILING_FACE "World";
+	struct RopeStr left = {0};
+	struct RopeStr right = {0};
+
+	rv = rope_str_init(&left, buffer, split);
+	ASSERT_EQ(rv, 0);
+	rv = rope_str_init(&right, &buffer[split], sizeof(buffer) - split - 1);
+	ASSERT_EQ(rv, 0);
+
+	ASSERT_EQ(3, rope_str_should_stitch(&left, &right, NULL));
+	ASSERT_STREQ("World" , (const char *)rope_str_data(&right, NULL) + 3);
+}
+
+static void
+test_str_should_stitch_grapheme_break(void) {
+	const size_t split = 9;
+	int rv = 0;
+	uint8_t buffer[] = "Hello" FEMALE_ASTRONAUT "World";
+	struct RopeStr left = {0};
+	struct RopeStr right = {0};
+
+	rv = rope_str_init(&left, buffer, split);
+	ASSERT_EQ(rv, 0);
+	rv = rope_str_init(&right, &buffer[split], sizeof(buffer) - split - 1);
+	ASSERT_EQ(rv, 0);
+
+	ASSERT_EQ(7, rope_str_should_stitch(&left, &right, NULL));
+}
+
+static void
+test_str_should_stitch_utf8_grapheme_break(void) {
+	const size_t split = 10;
+	int rv = 0;
+	uint8_t buffer[] = "Hello" FEMALE_ASTRONAUT "World";
+	struct RopeStr left = {0};
+	struct RopeStr right = {0};
+
+	rv = rope_str_init(&left, buffer, split);
+	ASSERT_EQ(rv, 0);
+	rv = rope_str_init(&right, &buffer[split], sizeof(buffer) - split - 1);
+	ASSERT_EQ(rv, 0);
+
+	ASSERT_EQ(6, rope_str_should_stitch(&left, &right, NULL));
+	ASSERT_STREQ("World" , (const char *)rope_str_data(&right, NULL) + 6);
+}
+
 
 DECLARE_TESTS
 TEST(test_str_init)
@@ -457,4 +512,7 @@ TEST(test_str_move_heap)
 TEST(test_str_freeable_inline)
 TEST(test_str_inline_append_overflow)
 TEST(test_str_slow_str)
+TEST(test_str_should_stitch_utf8_break)
+TEST(test_str_should_stitch_grapheme_break)
+TEST(test_str_should_stitch_utf8_grapheme_break)
 END_TESTS

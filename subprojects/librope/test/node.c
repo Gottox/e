@@ -4,12 +4,11 @@
 #include <rope.h>
 #include <rope_node.h>
 #include <rope_str.h>
-#include <rope_util.h>
 #include <stdbool.h>
 #include <testlib.h>
 
 static void
-chechk_valid_utf8(struct RopeNode *node) {
+check_valid_utf8(struct RopeNode *node) {
 	node = rope_node_first(node);
 	do {
 		size_t byte_size = 0;
@@ -192,7 +191,7 @@ test_node_insert_incomplete_utf8(void) {
 	rv = rope_node_insert_right(
 			root, &women_emoji[2], ROPE_STR_INLINE_SIZE + 2, 0, &pool);
 
-	chechk_valid_utf8(root);
+	check_valid_utf8(root);
 
 	rope_node_free(root, &pool);
 	rope_pool_cleanup(&pool);
@@ -316,19 +315,6 @@ test_insert_large_grapheme(void) {
 }
 
 static void
-test_utf8_counter(void) {
-	struct RopeUtf8Counter counter = {0};
-	const char *str = "e\xCC\x8A\xCC\x8A"; // e with two ring above
-	size_t first_break;
-	first_break =
-			rope_utf8_char_break(&counter, (const uint8_t *)str, strlen(str));
-	ASSERT_EQ(first_break, 0);
-	first_break =
-			rope_utf8_char_break(&counter, (const uint8_t *)str, strlen(str));
-	ASSERT_EQ(first_break, 0);
-}
-
-static void
 test_unbreak_utf8_sequence(void) {
 	const char *str = "e\xCC\x8A\xCC\x8A";
 	int rv = 0;
@@ -355,6 +341,67 @@ test_unbreak_utf8_sequence(void) {
 	rope_node_free(root, &pool);
 	rope_pool_cleanup(&pool);
 }
+
+static void
+test_test_utf8_sequence_sliding_right(void) {
+	int rv = 0;
+	struct RopePool pool = {0};
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+
+	const uint8_t women_emoji[] =
+			"\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6"
+			"\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6"
+			"\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6"
+			"\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6"
+			"\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6"
+			"\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6"
+			"\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6";
+	for (size_t i = 0; i < sizeof(women_emoji); i++) {
+		struct RopeNode *root = rope_node_new(&pool);
+
+		rv = rope_node_insert_right(root, women_emoji, i, 0, &pool);
+		ASSERT_EQ(0, rv);
+
+		rv = rope_node_insert_right(
+				root, &women_emoji[i], sizeof(women_emoji) - i, 0, &pool);
+		ASSERT_EQ(0, rv);
+
+		rope_node_free(root, &pool);
+	}
+	rope_pool_cleanup(&pool);
+}
+
+static void
+test_test_utf8_sequence_sliding_left(void) {
+	int rv = 0;
+	struct RopePool pool = {0};
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+
+	const uint8_t women_emoji[] =
+			"\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6"
+			"\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6"
+			"\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6"
+			"\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6"
+			"\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6"
+			"\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6"
+			"\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6\xF0\x9F\x91\xA6";
+	for (size_t i = 0; i < sizeof(women_emoji); i++) {
+		struct RopeNode *root = rope_node_new(&pool);
+
+		rv = rope_node_insert_left(
+				root, &women_emoji[i], sizeof(women_emoji) - i, 0, &pool);
+		ASSERT_EQ(0, rv);
+
+		rv = rope_node_insert_left(root, women_emoji, i, 0, &pool);
+		ASSERT_EQ(0, rv);
+
+		rope_node_free(root, &pool);
+	}
+	rope_pool_cleanup(&pool);
+}
+
 DECLARE_TESTS
 TEST(test_node_split_inline_middle)
 TEST(test_node_insert_right)
@@ -369,6 +416,7 @@ TEST(test_node_insert_big)
 TEST(test_node_stitch_overflow_leaf_size)
 TEST(test_insert_grapheme)
 TEST(test_insert_large_grapheme)
-TEST(test_utf8_counter)
 TEST(test_unbreak_utf8_sequence)
+TEST(test_test_utf8_sequence_sliding_right)
+TEST(test_test_utf8_sequence_sliding_left)
 END_TESTS

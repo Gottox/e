@@ -9,6 +9,10 @@
 #define ROPE_STR_FAST_SIZE (1023 - sizeof(struct RopeStrHeap))
 #define ROPE_STR_INLINE_SIZE 48
 
+/**********************************
+ * str.c
+ */
+
 struct RopeStrHeap {
 	uint32_t ref_count;
 	// uint8_t data[];
@@ -62,11 +66,18 @@ ROPE_NO_UNUSED int rope_str_inline_insert(
 		struct RopeStr *str, enum RopeUnit unit, size_t index,
 		const uint8_t *data, size_t byte_size);
 
+ROPE_NO_UNUSED int rope_str_inline_insert_str(
+		struct RopeStr *str, enum RopeUnit unit, size_t index,
+		struct RopeStr *insert_str);
+
 ROPE_NO_UNUSED int rope_str_trim(
 		struct RopeStr *str, enum RopeUnit unit, size_t offset, size_t size);
 
 ROPE_NO_UNUSED const uint8_t *
 rope_str_data(const struct RopeStr *str, size_t *byte_size);
+
+ROPE_NO_UNUSED int
+rope_str_split_fast(struct RopeStr *str, struct RopeStr *new_str);
 
 ROPE_NO_UNUSED int rope_str_split(
 		struct RopeStr *str, struct RopeStr *new_str, enum RopeUnit unit,
@@ -90,5 +101,22 @@ void rope_str_cleanup(struct RopeStr *str);
 
 ROPE_NO_UNUSED int
 rope_str_clone(struct RopeStr *dest, const struct RopeStr *src);
+
+ROPE_NO_UNUSED size_t rope_str_should_stitch(
+		const struct RopeStr *left, const struct RopeStr *right,
+		uint_least16_t *state);
+
+ROPE_NO_UNUSED int rope_str_stitch(
+		struct RopeStr *seam, struct RopeStr *left, size_t left_index,
+		struct RopeStr *right, size_t right_index);
+
+/**********************************
+ * str_iter.c
+ */
+
+struct RopeStrIter {
+	struct RopeStr *prev;
+	struct RopeStr *str;
+};
 
 #endif /* ROPE_STR_H */
