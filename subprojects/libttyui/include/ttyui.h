@@ -17,7 +17,6 @@ enum TtyUiError {
 struct TtyUi;
 struct TtyUiEvent;
 
-
 enum TtyUiCursorKey {
 	TTYUI_CURSOR_UP = 'A',
 	TTYUI_CURSOR_DOWN = 'B',

@@ -12,7 +12,9 @@ struct EventCapture {
 };
 
 static int
-capture_handler(struct TtyUi *ui, struct TtyUiEvent *event, struct EventCapture *capture) {
+capture_handler(
+		struct TtyUi *ui, struct TtyUiEvent *event,
+		struct EventCapture *capture) {
 	(void)ui;
 
 	ASSERT_TRUE(
@@ -78,8 +80,7 @@ test_ttyui_csi_sequences() {
 	init_ttyui(&ui, &master_fd, &slave_fd, &capture);
 
 	const char seq[] = "\x1b[A\x1b[<0;5;10M\x1b[I\x1b[O";
-	write_and_process(
-			master_fd, &ui, &capture, seq, sizeof(seq) - 1, 4);
+	write_and_process(master_fd, &ui, &capture, seq, sizeof(seq) - 1, 4);
 
 	ASSERT_EQ((size_t)4, capture.count);
 

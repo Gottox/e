@@ -1,8 +1,8 @@
+#include <poll.h>
 #include <pty.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
-#include <poll.h>
 #include <testlib.h>
 #include <ttyui.h>
 #include <unistd.h>
