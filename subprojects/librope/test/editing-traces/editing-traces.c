@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/wait.h>
+#include <time.h>
 #include <unistd.h>
 
 static const char *opts = "i";
@@ -187,9 +188,11 @@ run_trace(json_object *trace) {
 	rv = rope_cursor_insert_str(&cursor, start_content, 0);
 	naive_content = strdup(start_content);
 
+	clock_t time = clock();
+
 	size_t len = json_object_array_length(txns_obj);
 	for (size_t i = 0; i < len; i++) {
-		if (i % 10000 == 0) {
+		if (i % 50000 == 0) {
 			printf("Applying transaction %zu / %zu\n", i, len);
 		}
 		json_object *txn_obj = json_object_array_get_idx(txns_obj, i);
@@ -198,6 +201,10 @@ run_trace(json_object *trace) {
 			goto out;
 		}
 	}
+
+	fprintf(stderr, "finished in %.3lfms\n",
+			(double)(clock() - time) * 1000.0 / (double)CLOCKS_PER_SEC);
+
 	const char *end_content = json_object_get_string(end_content_obj);
 	actual_content = rope_to_str(&rope, 0);
 	compare(end_content, actual_content, NULL, NULL);
