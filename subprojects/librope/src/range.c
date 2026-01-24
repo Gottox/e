@@ -16,7 +16,7 @@ dummy_callback(
 
 static bool
 is_collapsed(struct RopeRange *range) {
-	return range->cursor_start.index == range->cursor_end.index;
+	return range->cursor_start.byte_index == range->cursor_end.byte_index;
 }
 
 static void
@@ -25,7 +25,7 @@ range_ensure_order(struct RopeRange *range) {
 	struct RopeCursor *end = rope_range_end(range);
 
 	if (!rope_cursor_is_order(start, end)) {
-		size_t start_index = rope_cursor_index(start, ROPE_BYTE);
+		size_t start_index = rope_cursor_index(start, ROPE_BYTE, 0);
 		rope_cursor_move_to(end, ROPE_BYTE, start_index, 0);
 	}
 }
@@ -38,9 +38,9 @@ handle_change(struct Rope *rope, struct RopeCursor *cursor, void *userdata) {
 		rope_cursor_is_order(cursor, &range->cursor_start)) {
 		// Moves the end pointer after the start pointer if they aren't in
 		// order. As the cursors are updated back to front.
-		rope_char_index_t char_index =
-				rope_cursor_char_index(&range->cursor_start);
-		rope_cursor_move_to_index(&range->cursor_end, char_index, 0);
+		size_t byte_index =
+				rope_cursor_index(&range->cursor_start, ROPE_BYTE, 0);
+		rope_cursor_move_to(&range->cursor_end, ROPE_BYTE, byte_index, 0);
 		range->callback(rope, range, true, range->callback_userdata);
 	} else if (cursor == &range->cursor_start) {
 		range->callback(rope, range, false, range->callback_userdata);
@@ -105,8 +105,7 @@ rope_range_insert(
 		goto out;
 	}
 
-
-	rv = rope_cursor_insert(end, data, byte_size, tags);
+	rv = rope_cursor_insert_data(end, data, byte_size, tags);
 	if (rv < 0) {
 		goto out;
 	}
@@ -130,7 +129,7 @@ rope_range_delete(struct RopeRange *range) {
 
 	range_ensure_order(range);
 
-	size_t byte_count = end->index - start->index;
+	size_t byte_count = end->byte_index - start->byte_index;
 
 	int rv = rope_cursor_delete(start, ROPE_BYTE, byte_count);
 	if (rv < 0) {
@@ -140,38 +139,63 @@ rope_range_delete(struct RopeRange *range) {
 	return 0;
 }
 
-char *
-rope_range_to_str(struct RopeRange *range, uint64_t tags) {
+int
+rope_range_to_str(struct RopeRange *range, struct RopeStr *str, uint64_t tags) {
 	struct RopeIterator it = {0};
-	const uint8_t *data = NULL;
-	size_t size = 0;
 	size_t total = 0;
 	int rv = rope_iterator_init(&it, range, tags);
 	if (rv < 0) {
-		return NULL;
+		goto out;
 	}
-	while (rope_iterator_next(&it, &data, &size)) {
-		total += size;
+	struct RopeStr it_str = {0};
+	while (rope_iterator_next(&it, &it_str)) {
+		total += rope_str_size(&it_str, ROPE_BYTE);
 	}
 	rope_iterator_cleanup(&it);
 
-	char *res = calloc(total + 1, sizeof(char));
+	uint8_t *res = NULL;
+	rv = rope_str_alloc(str, total, &res);
 	if (res == NULL) {
-		return NULL;
+		goto out;
 	}
 
 	rv = rope_iterator_init(&it, range, tags);
 	if (rv < 0) {
-		free(res);
-		return NULL;
+		goto out;
 	}
 	size_t off = 0;
-	while (rope_iterator_next(&it, &data, &size)) {
+	while (rope_iterator_next(&it, &it_str)) {
+		size_t size = 0;
+		const uint8_t *data = rope_str_data(&it_str, &size);
 		memcpy(res + off, data, size);
 		off += size;
 	}
 	rope_iterator_cleanup(&it);
 
+	str = NULL;
+out:
+	rope_str_cleanup(str);
+	return rv;
+}
+
+char *
+rope_range_to_cstr(struct RopeRange *range, uint64_t tags) {
+	struct RopeStr str = {0};
+	char *res = NULL;
+	int rv = rope_range_to_str(range, &str, tags);
+	if (rv < 0) {
+		goto out;
+	}
+	size_t size = 0;
+	const uint8_t *data = rope_str_data(&str, &size);
+	res = malloc(size + 1);
+	if (res == NULL) {
+		goto out;
+	}
+	memcpy(res, data, size);
+	res[size] = '\0';
+out:
+	rope_str_cleanup(&str);
 	return res;
 }
 

@@ -7,20 +7,20 @@
 
 int
 rope_cursor_insert(
-		struct RopeCursor *cursor, const uint8_t *data, size_t byte_size,
-		uint64_t tags) {
+		struct RopeCursor *cursor, struct RopeStr *str, uint64_t tags) {
 	int rv = 0;
 	struct Rope *rope = cursor->rope;
 	struct RopeNode *left = NULL;
 	struct RopeNode *right = NULL;
 
+	size_t byte_size = rope_str_size(str, ROPE_BYTE);
 	if (byte_size == 0) {
 		return 0;
 	}
 
-	rope_byte_index_t cursor_byte_index = cursor->index;
+	size_t cursor_byte_index = cursor->byte_index;
 
-	rope_byte_index_t insert_at_byte = 0;
+	size_t insert_at_byte = 0;
 	struct RopeNode *insert_at = rope_cursor_find_node(
 			cursor, NULL, ROPE_BYTE, cursor_byte_index, 0, NULL,
 			&insert_at_byte);
@@ -29,9 +29,9 @@ rope_cursor_insert(
 			insert_at, rope->pool, insert_at_byte, ROPE_BYTE, &left, &right);
 
 	if (left) {
-		rv = rope_node_insert_right(left, data, byte_size, tags, rope->pool);
+		rv = rope_node_insert(left, str, tags, rope->pool, ROPE_RIGHT);
 	} else {
-		rv = rope_node_insert_left(right, data, byte_size, tags, rope->pool);
+		rv = rope_node_insert(right, str, tags, rope->pool, ROPE_LEFT);
 	}
 	if (rv < 0) {
 		goto out;
@@ -46,9 +46,22 @@ out:
 }
 
 int
+rope_cursor_insert_data(
+		struct RopeCursor *cursor, const uint8_t *data, size_t byte_size,
+		uint64_t tags) {
+	struct RopeStr str = {0};
+	int rv = rope_str_init(&str, data, byte_size);
+	if (rv < 0) {
+		return rv;
+	}
+	return rope_cursor_insert(cursor, &str, tags);
+}
+
+int
 rope_cursor_insert_str(
 		struct RopeCursor *cursor, const char *str, uint64_t tags) {
-	return rope_cursor_insert(cursor, (const uint8_t *)str, strlen(str), tags);
+	return rope_cursor_insert_data(
+			cursor, (const uint8_t *)str, strlen(str), tags);
 }
 
 int
@@ -56,8 +69,8 @@ rope_cursor_delete(
 		struct RopeCursor *cursor, enum RopeUnit unit, size_t count) {
 	int rv = 0;
 
-	rope_byte_index_t cursor_byte_index = cursor->index;
-	rope_byte_index_t local_byte_index = 0;
+	size_t cursor_byte_index = cursor->byte_index;
+	size_t local_byte_index = 0;
 	struct Rope *rope = cursor->rope;
 	struct RopeNode *node = rope_cursor_find_node(
 			cursor, NULL, ROPE_BYTE, cursor_byte_index, 0, NULL,
@@ -108,7 +121,7 @@ rope_cursor_delete(
 	}
 	assert(remaining == 0);
 	cursor_bubble_up(cursor);
-	cursor_damaged(cursor, cursor->index, -(off_t)bytes_deleted);
+	cursor_damaged(cursor, cursor->byte_index, -(off_t)bytes_deleted);
 
 	rv = rope_chores(rope);
 out:

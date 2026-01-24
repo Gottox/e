@@ -78,7 +78,7 @@ rope_insert(
 		goto out;
 	}
 
-	rv = rope_cursor_insert(&cursor, data, byte_size, 0);
+	rv = rope_cursor_insert_data(&cursor, data, byte_size, 0);
 	if (rv < 0) {
 		goto out;
 	}
@@ -119,7 +119,7 @@ rope_to_str(struct Rope *rope, uint64_t tags) {
 	char *str = NULL;
 	int rv = 0;
 	struct RopeRange range = {0};
-	rope_char_index_t byte_size = rope_size(rope, ROPE_BYTE);
+	size_t byte_size = rope_size(rope, ROPE_BYTE);
 
 	rv = rope_range_init(&range, rope);
 	if (rv < 0) {
@@ -131,7 +131,7 @@ rope_to_str(struct Rope *rope, uint64_t tags) {
 	}
 	rv = rope_cursor_move_to(rope_range_end(&range), ROPE_BYTE, byte_size, 0);
 
-	str = rope_range_to_str(&range, tags);
+	str = rope_range_to_cstr(&range, tags);
 out:
 	rope_range_cleanup(&range);
 	return str;

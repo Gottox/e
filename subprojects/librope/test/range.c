@@ -88,7 +88,7 @@ range_to_str(void) {
 	rv = rope_cursor_move_to(rope_range_end(&range), ROPE_CHAR, 11, 0);
 	ASSERT_EQ(0, rv);
 
-	char *str = rope_range_to_str(&range, 0);
+	char *str = rope_range_to_cstr(&range, 0);
 	ASSERT_TRUE(str != NULL);
 	ASSERT_STREQ("World", str);
 	free(str);
@@ -98,7 +98,7 @@ range_to_str(void) {
 	rv = rope_cursor_move_to(rope_range_end(&range), ROPE_CHAR, 11, 0);
 	ASSERT_EQ(0, rv);
 
-	str = rope_range_to_str(&range, 0);
+	str = rope_range_to_cstr(&range, 0);
 	ASSERT_TRUE(str != NULL);
 	ASSERT_STREQ("Hello World", str);
 	free(str);
@@ -108,7 +108,7 @@ range_to_str(void) {
 	rv = rope_cursor_move_to(rope_range_end(&range), ROPE_CHAR, 5, 0);
 	ASSERT_EQ(0, rv);
 
-	str = rope_range_to_str(&range, 0);
+	str = rope_range_to_cstr(&range, 0);
 	ASSERT_TRUE(str != NULL);
 	ASSERT_STREQ("", str);
 	free(str);
@@ -140,7 +140,7 @@ range_select_portion(void) {
 	rv = rope_cursor_move_to(rope_range_end(&range), ROPE_CHAR, 11, 0);
 	ASSERT_EQ(0, rv);
 
-	char *str = rope_range_to_str(&range, 0);
+	char *str = rope_range_to_cstr(&range, 0);
 	ASSERT_TRUE(str != NULL);
 	ASSERT_STREQ("World", str);
 	free(str);
@@ -150,7 +150,7 @@ range_select_portion(void) {
 	rv = rope_cursor_move_to(rope_range_end(&range), ROPE_CHAR, 19, 0);
 	ASSERT_EQ(0, rv);
 
-	str = rope_range_to_str(&range, 0);
+	str = rope_range_to_cstr(&range, 0);
 	ASSERT_TRUE(str != NULL);
 	ASSERT_STREQ("This is", str);
 	free(str);
@@ -213,7 +213,7 @@ range_callback(void) {
 	struct RopeCursor c = {0};
 	rv = rope_cursor_init(&c, &r);
 	ASSERT_EQ(0, rv);
-	rv = rope_cursor_move_to_index(&c, 0, 0);
+	rv = rope_cursor_move_to(&c, ROPE_CHAR, 0, 0);
 	ASSERT_EQ(0, rv);
 
 	rv = rope_cursor_insert_str(&c, "Hi ", 0);
@@ -221,7 +221,7 @@ range_callback(void) {
 
 	ASSERT_TRUE(data.call_count > 0);
 
-	ASSERT_EQ((size_t)9, range.cursor_start.index);
+	ASSERT_EQ((size_t)9, range.cursor_start.byte_index);
 
 	rope_cursor_cleanup(&c);
 	rope_range_cleanup(&range);
@@ -249,8 +249,8 @@ range_ordering(void) {
 
 	rv = rope_cursor_move_to(rope_range_end(&range), ROPE_CHAR, 5, 0);
 	ASSERT_EQ(0, rv);
-	ASSERT_EQ((size_t)0, rope_range_start(&range)->index);
-	ASSERT_EQ((size_t)5, rope_range_end(&range)->index);
+	ASSERT_EQ((size_t)0, rope_range_start(&range)->byte_index);
+	ASSERT_EQ((size_t)5, rope_range_end(&range)->byte_index);
 
 	rv = rope_cursor_move_to(rope_range_start(&range), ROPE_CHAR, 8, 0);
 	ASSERT_EQ(0, rv);
@@ -259,21 +259,21 @@ range_ordering(void) {
 	rv = rope_range_delete(&range);
 	ASSERT_EQ(0, rv);
 
-	ASSERT_EQ((size_t)8, rope_range_start(&range)->index);
-	ASSERT_EQ((size_t)8, rope_range_end(&range)->index);
+	ASSERT_EQ((size_t)8, rope_range_start(&range)->byte_index);
+	ASSERT_EQ((size_t)8, rope_range_end(&range)->byte_index);
 
 	rv = rope_cursor_move_to(rope_range_start(&range), ROPE_CHAR, 0, 0);
 	ASSERT_EQ(0, rv);
 	rv = rope_cursor_move_to(rope_range_end(&range), ROPE_CHAR, 5, 0);
 	ASSERT_EQ(0, rv);
-	ASSERT_EQ((size_t)0, rope_range_start(&range)->index);
-	ASSERT_EQ((size_t)5, rope_range_end(&range)->index);
+	ASSERT_EQ((size_t)0, rope_range_start(&range)->byte_index);
+	ASSERT_EQ((size_t)5, rope_range_end(&range)->byte_index);
 
 	rv = rope_cursor_move_to(rope_range_end(&range), ROPE_CHAR, 0, 0);
 	ASSERT_EQ(0, rv);
 
-	ASSERT_EQ((size_t)0, rope_range_start(&range)->index);
-	ASSERT_EQ((size_t)0, rope_range_end(&range)->index);
+	ASSERT_EQ((size_t)0, rope_range_start(&range)->byte_index);
+	ASSERT_EQ((size_t)0, rope_range_end(&range)->byte_index);
 
 	rope_range_cleanup(&range);
 	rope_cleanup(&r);
@@ -345,7 +345,7 @@ range_utf8(void) {
 	rv = rope_cursor_move_to(rope_range_end(&range), ROPE_CHAR, 11, 0);
 	ASSERT_EQ(0, rv);
 
-	char *str = rope_range_to_str(&range, 0);
+	char *str = rope_range_to_cstr(&range, 0);
 	ASSERT_TRUE(str != NULL);
 	ASSERT_STREQ(u8"Wörld", str);
 	free(str);
@@ -377,7 +377,7 @@ range_multinode(void) {
 	rv = rope_cursor_move_to(rope_range_end(&range), ROPE_CHAR, 9, 0);
 	ASSERT_EQ(0, rv);
 
-	char *str = rope_range_to_str(&range, 0);
+	char *str = rope_range_to_cstr(&range, 0);
 	ASSERT_TRUE(str != NULL);
 	ASSERT_STREQ("o Wor", str);
 	free(str);

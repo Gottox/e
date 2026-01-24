@@ -117,9 +117,6 @@ struct RopeNode *rope_node_delete_and_neighbour(
 		struct RopeNode *node, struct RopePool *pool, enum RopeDirection which);
 
 ROPE_NO_UNUSED int
-rope_node_truncate(struct RopeNode *node, enum RopeUnit unit, size_t size);
-
-ROPE_NO_UNUSED int
 rope_node_skip(struct RopeNode *node, enum RopeUnit unit, size_t offset);
 
 ROPE_NO_UNUSED int
@@ -155,6 +152,10 @@ rope_node_compact(struct RopeNode *node, struct RopePool *pool);
 /**********************************
  * node/insert.c
  */
+
+int rope_node_insert(
+		struct RopeNode *node, struct RopeStr *str, uint64_t tags,
+		struct RopePool *pool, enum RopeDirection which);
 
 ROPE_NO_UNUSED int rope_node_insert_left(
 		struct RopeNode *node, const uint8_t *data, size_t byte_size,

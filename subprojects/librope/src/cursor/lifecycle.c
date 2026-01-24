@@ -14,7 +14,7 @@ rope_cursor_init(struct RopeCursor *cursor, struct Rope *rope) {
 	cursor->callback = dummy_callback;
 	cursor->userdata = NULL;
 	cursor->rope = rope;
-	cursor->index = 0;
+	cursor->byte_index = 0;
 	cursor->prev = NULL;
 	cursor_attach(cursor);
 	return 0;

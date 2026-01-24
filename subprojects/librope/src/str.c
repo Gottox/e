@@ -263,6 +263,24 @@ rope_str_alloc_commit(struct RopeStr *str, size_t byte_size) {
 }
 
 int
+rope_str_clone_trim(
+		struct RopeStr *str, struct RopeStr *src, enum RopeUnit unit,
+		size_t offset, size_t size) {
+	int rv = rope_str_clone(str, src);
+	if (rv != 0) {
+		goto out;
+	}
+	rv = rope_str_trim(str, unit, offset, size);
+	if (rv != 0) {
+		goto out;
+	}
+	str = NULL;
+out:
+	rope_str_cleanup(str);
+	return rv;
+}
+
+int
 rope_str_trim(
 		struct RopeStr *str, enum RopeUnit unit, size_t offset, size_t size) {
 	size_t byte_end;
@@ -429,11 +447,7 @@ rope_str_split(
 			goto out;
 		}
 	} else {
-		rv = rope_str_clone(new_str, str);
-		if (rv < 0) {
-			goto out;
-		}
-		rv = rope_str_trim(new_str, unit, index, SIZE_MAX);
+		rv = rope_str_clone_trim(new_str, str, unit, index, SIZE_MAX);
 		if (rv < 0) {
 			goto out;
 		}

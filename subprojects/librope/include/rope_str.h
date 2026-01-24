@@ -73,6 +73,10 @@ ROPE_NO_UNUSED int rope_str_inline_insert_str(
 ROPE_NO_UNUSED int rope_str_trim(
 		struct RopeStr *str, enum RopeUnit unit, size_t offset, size_t size);
 
+ROPE_NO_UNUSED int rope_str_clone_trim(
+		struct RopeStr *str, struct RopeStr *src, enum RopeUnit unit,
+		size_t offset, size_t size);
+
 ROPE_NO_UNUSED const uint8_t *
 rope_str_data(const struct RopeStr *str, size_t *byte_size);
 

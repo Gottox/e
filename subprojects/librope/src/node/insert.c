@@ -10,7 +10,7 @@ merge_next_char_bytes(struct RopeNode *node, struct RopePool *pool) {
 	size_t merge_count = 0;
 	struct RopeNode *current = node;
 	uint64_t tags = rope_node_tags(current);
-	for (uint_least16_t state = 0;;merge_count++) {
+	for (uint_least16_t state = 0;; merge_count++) {
 		struct RopeNode *next = rope_node_next(current);
 		if (next == NULL) {
 			break;

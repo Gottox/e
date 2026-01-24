@@ -102,7 +102,7 @@ cursor_event(void) {
 	rv = rope_cursor_delete(&c2, ROPE_CHAR, 7);
 	ASSERT_EQ(0, rv);
 
-	ASSERT_EQ((size_t)3, c1.index);
+	ASSERT_EQ((size_t)3, c1.byte_index);
 
 	rope_cursor_cleanup(&c1);
 	ASSERT_EQ(0, rv);
@@ -135,8 +135,8 @@ cursor_insert_cursor_move(void) {
 
 	rv = rope_cursor_insert_str(&c1, "c1", 0);
 
-	ASSERT_EQ(0, c2.index);
-	ASSERT_EQ(2, c1.index);
+	ASSERT_EQ(0, c2.byte_index);
+	ASSERT_EQ(2, c1.byte_index);
 
 	rope_cursor_cleanup(&c1);
 	ASSERT_EQ(0, rv);
@@ -166,13 +166,13 @@ cursor_delete_collapses_following(void) {
 	rv = rope_cursor_init(&follower, &r);
 	ASSERT_EQ(0, rv);
 
-	rv = rope_cursor_move_to_index(&follower, rope_size(&r, ROPE_BYTE), 0);
+	rv = rope_cursor_move_to(&follower, ROPE_CHAR, rope_size(&r, ROPE_BYTE), 0);
 	ASSERT_EQ(0, rv);
 
 	rv = rope_cursor_delete(&start, ROPE_CHAR, 5);
 	ASSERT_EQ(0, rv);
 
-	ASSERT_EQ((size_t)0, follower.index);
+	ASSERT_EQ((size_t)0, follower.byte_index);
 	ASSERT_EQ(0, rope_size(&r, ROPE_BYTE));
 
 	rope_cursor_cleanup(&start);
@@ -201,7 +201,7 @@ cursor_delete_updates_tagged_cursors(void) {
 
 	rv = rope_cursor_insert_str(&editor, "red", TAG_RED);
 	ASSERT_EQ(0, rv);
-	rv = rope_cursor_move_to_index(&editor, rope_size(&r, ROPE_BYTE), 0);
+	rv = rope_cursor_move_to(&editor, ROPE_CHAR, rope_size(&r, ROPE_BYTE), 0);
 	ASSERT_EQ(0, rv);
 	rv = rope_cursor_insert_str(&editor, "blue", TAG_BLUE);
 	ASSERT_EQ(0, rv);
@@ -209,16 +209,16 @@ cursor_delete_updates_tagged_cursors(void) {
 	struct RopeCursor tagged = {0};
 	rv = rope_cursor_init(&tagged, &r);
 	ASSERT_EQ(0, rv);
-	rv = rope_cursor_move_to_index(&tagged, 0, TAG_BLUE);
+	rv = rope_cursor_move_to(&tagged, ROPE_CHAR, 0, TAG_BLUE);
 	ASSERT_EQ(0, rv);
-	ASSERT_EQ((size_t)3, tagged.index);
+	ASSERT_EQ((size_t)3, tagged.byte_index);
 
-	rv = rope_cursor_move_to_index(&editor, 0, 0);
+	rv = rope_cursor_move_to(&editor, ROPE_CHAR, 0, 0);
 	ASSERT_EQ(0, rv);
 	rv = rope_cursor_delete(&editor, ROPE_CHAR, 3);
 	ASSERT_EQ(0, rv);
 
-	ASSERT_EQ((size_t)0, tagged.index);
+	ASSERT_EQ((size_t)0, tagged.byte_index);
 	ASSERT_EQ(4, rope_size(&r, ROPE_BYTE));
 
 	struct RopeNode *node = rope_node_first(r.root);
@@ -252,11 +252,12 @@ cursor_delete_at_eof(void) {
 
 	const char *hello_world = "Hello World";
 	for (size_t i = 0; i < strlen(hello_world); i++) {
-		rv = rope_cursor_insert(&c, (const uint8_t *)&hello_world[i], 1, i);
+		rv = rope_cursor_insert_data(
+				&c, (const uint8_t *)&hello_world[i], 1, i);
 		ASSERT_EQ(0, rv);
 		// rope_node_print(r.root, "/tmp/node.dot");
 	}
-	rv = rope_cursor_move_to_index(&c, 10, 0);
+	rv = rope_cursor_move_to(&c, ROPE_CHAR, 10, 0);
 	ASSERT_EQ(0, rv);
 	rv = rope_cursor_delete(&c, ROPE_CHAR, 1);
 	ASSERT_EQ(0, rv);
@@ -354,7 +355,7 @@ cursor_delete_edit_traces_error1(void) {
 
 	rv = rope_cursor_insert_str(&c, before_good, 0);
 	ASSERT_EQ(0, rv);
-	rv = rope_cursor_move_to_index(&c, 326, 0);
+	rv = rope_cursor_move_to(&c, ROPE_CHAR, 326, 0);
 	ASSERT_EQ(0, rv);
 	rv = rope_cursor_delete(&c, ROPE_CHAR, 10);
 	ASSERT_EQ(0, rv);
@@ -387,7 +388,7 @@ test_cursor_delete_multi_node(void) {
 	rv = rope_cursor_init(&c, &r);
 	ASSERT_EQ(0, rv);
 
-	rv = rope_cursor_move_to_index(&c, 1, 0);
+	rv = rope_cursor_move_to(&c, ROPE_CHAR, 1, 0);
 	ASSERT_EQ(0, rv);
 
 	rv = rope_cursor_delete(&c, ROPE_CHAR, 8);
@@ -445,7 +446,7 @@ test_cursor_editing_traces_error1(void) {
 		[ [ "\n\n\n", "When I see peop" ], "le again, they a" ], "lways"
 	]));
 
-	rv = rope_cursor_move_to_index(&c, 0, 0);
+	rv = rope_cursor_move_to(&c, ROPE_CHAR, 0, 0);
 	ASSERT_EQ(0, rv);
 
 	rv = rope_cursor_insert_str(&c, "C", 0);
@@ -533,7 +534,7 @@ test_cursor_editing_traces_error2(void) {
 			"none;\\n\\t\\t}\\n\\t}\",[\" */\",\"\\n</style>\"]]]]]]]]]");
 
 	// [ 742, 18, "u" ]
-	rv = rope_cursor_move_to_index(&c, 742, 0);
+	rv = rope_cursor_move_to(&c, ROPE_CHAR, 742, 0);
 	ASSERT_EQ(0, rv);
 
 	rv = rope_cursor_delete(&c, ROPE_CHAR, 18);
@@ -642,7 +643,7 @@ test_cursor_delete_at_bytes(void) {
 	rv = rope_cursor_init(&c, &r);
 	ASSERT_EQ(0, rv);
 
-	rv = rope_cursor_move_to_index(&c, 0, 0);
+	rv = rope_cursor_move_to(&c, ROPE_CHAR, 0, 0);
 	ASSERT_EQ(0, rv);
 
 	// Delete 5 bytes "Hello"
@@ -676,10 +677,9 @@ test_cursor_delete_at_lines(void) {
 	rv = rope_cursor_init(&c, &r);
 	ASSERT_EQ(0, rv);
 
-	rv = rope_cursor_move_to_index(&c, 0, 0);
+	rv = rope_cursor_move_to(&c, ROPE_CHAR, 0, 0);
 	ASSERT_EQ(0, rv);
 
-	// Delete 2 newlines (2 lines worth)
 	rv = rope_cursor_delete(&c, ROPE_LINE, 2);
 	ASSERT_EQ(0, rv);
 
@@ -715,7 +715,7 @@ test_cursor_move_at_bytes(void) {
 	rv = rope_cursor_move_by(&c, ROPE_BYTE, 4);
 	ASSERT_EQ(0, rv);
 
-	ASSERT_EQ((size_t)4, c.index);
+	ASSERT_EQ((size_t)4, c.byte_index);
 
 	// Insert at current position
 	rv = rope_cursor_insert_str(&c, "!", 0);
@@ -752,7 +752,7 @@ test_cursor_move_at_lines(void) {
 	rv = rope_cursor_move_by(&c, ROPE_LINE, 1);
 	ASSERT_EQ(0, rv);
 
-	ASSERT_EQ((size_t)6, c.index); // "Line1\n" is 6 bytes
+	ASSERT_EQ((size_t)6, c.byte_index); // "Line1\n" is 6 bytes
 
 	rope_cursor_cleanup(&c);
 	ASSERT_EQ(0, rv);
@@ -838,7 +838,7 @@ test_range_move_to_at(void) {
 	rv = rope_cursor_move_to(end, ROPE_BYTE, 9, 0);
 	ASSERT_EQ(0, rv);
 
-	char *result = rope_range_to_str(&range, 0);
+	char *result = rope_range_to_cstr(&range, 0);
 	ASSERT_STREQ("Hello", result);
 	free(result);
 

@@ -10,8 +10,8 @@
 struct RopeNode *
 rope_cursor_find_node(
 		struct RopeCursor *cursor, struct RopeNode *node, enum RopeUnit unit,
-		size_t index, uint64_t tags, rope_byte_index_t *node_byte_index,
-		rope_byte_index_t *local_byte_index) {
+		size_t index, uint64_t tags, size_t *node_byte_index,
+		size_t *local_byte_index) {
 	struct Rope *rope = cursor->rope;
 	if (node == NULL) {
 		node = rope->root;
@@ -57,9 +57,10 @@ rope_cursor_find_node(
 
 size_t
 rope_node_byte_to_index(
-		struct RopeNode *node, rope_byte_index_t byte_idx, enum RopeUnit unit) {
+		struct RopeNode *node, size_t byte_index, enum RopeUnit unit,
+		uint64_t tags) {
 	if (unit == ROPE_BYTE) {
-		return byte_idx;
+		return byte_index;
 	}
 	if (node == NULL) {
 		return 0;
@@ -67,21 +68,38 @@ rope_node_byte_to_index(
 
 	size_t prefix = 0;
 
-	// O(log n) descent: navigate by BYTE, accumulate in target unit
-	while (ROPE_NODE_IS_BRANCH(node)) {
-		struct RopeNode *left = rope_node_left(node);
-		const size_t left_byte_size = rope_node_size(left, ROPE_BYTE);
+	if (tags != 0) {
+		node = rope_node_first(node);
+		do {
+			const size_t left_byte_size = rope_node_size(node, ROPE_BYTE);
+			if (rope_node_match_tags(node, tags)) {
+				if (byte_index < left_byte_size) {
+					break;
+				}
+				prefix += rope_node_size(node, unit);
+				byte_index -= left_byte_size;
+			}
+		} while ((node = rope_node_next(node)));
 
-		if (byte_idx < left_byte_size) {
-			node = left;
-		} else {
-			prefix += rope_node_size(left, unit);
-			byte_idx -= left_byte_size;
-			node = rope_node_right(node);
+		if (node == NULL) {
+			return prefix;
 		}
+	} else {
+		do {
+			struct RopeNode *left = rope_node_left(node);
+			const size_t left_byte_size = rope_node_size(left, ROPE_BYTE);
+
+			if (byte_index < left_byte_size) {
+				node = left;
+			} else {
+				prefix += rope_node_size(left, unit);
+				byte_index -= left_byte_size;
+				node = rope_node_right(node);
+			}
+		} while (ROPE_NODE_IS_BRANCH(node));
 	}
 
-	return prefix + rope_str_unit_from_byte(&node->data.leaf, unit, byte_idx);
+	return prefix + rope_str_unit_from_byte(&node->data.leaf, unit, byte_index);
 }
 
 /*
@@ -89,29 +107,20 @@ rope_node_byte_to_index(
  */
 
 size_t
-byte_index_to_index(
-		struct Rope *rope, rope_byte_index_t byte_idx, enum RopeUnit unit) {
-	return rope_node_byte_to_index(rope->root, byte_idx, unit);
-}
-
-size_t
-rope_cursor_index(struct RopeCursor *cursor, enum RopeUnit unit) {
-	return byte_index_to_index(cursor->rope, cursor->index, unit);
-}
-
-rope_char_index_t
-rope_cursor_char_index(struct RopeCursor *cursor) {
-	return rope_cursor_index(cursor, ROPE_CHAR);
+rope_cursor_index(
+		struct RopeCursor *cursor, enum RopeUnit unit, uint64_t tags) {
+	return rope_node_byte_to_index(
+			cursor->rope->root, cursor->byte_index, unit, tags);
 }
 
 bool
 rope_cursor_is_order(struct RopeCursor *first, struct RopeCursor *second) {
-	if (first->index < second->index) {
+	if (first->byte_index < second->byte_index) {
 		return true;
 	}
 
 	do {
-		if (first->index != second->index) {
+		if (first->byte_index != second->byte_index) {
 			return false;
 		} else if (first == second) {
 			return true;
@@ -122,8 +131,8 @@ rope_cursor_is_order(struct RopeCursor *first, struct RopeCursor *second) {
 }
 
 struct RopeNode *
-rope_cursor_node(struct RopeCursor *cursor, rope_byte_index_t *byte_index) {
-	rope_byte_index_t cursor_byte_index = cursor->index;
+rope_cursor_node(struct RopeCursor *cursor, size_t *byte_index) {
+	size_t cursor_byte_index = cursor->byte_index;
 
 	struct RopeNode *node = rope_cursor_find_node(
 			cursor, NULL, ROPE_BYTE, cursor_byte_index, /*tags=*/0, NULL,

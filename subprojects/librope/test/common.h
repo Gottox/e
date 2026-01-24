@@ -8,7 +8,8 @@
 	do { \
 		char *actual_str = to_str(actual); \
 		json_object *expected_json = json_tokener_parse(expected); \
-		ASSERT_STREQ(json_object_to_json_string_ext(expected_json, 0), actual_str); \
+		ASSERT_STREQ( \
+				json_object_to_json_string_ext(expected_json, 0), actual_str); \
 		json_object_put(expected_json); \
 		free(actual_str); \
 	} while (0)
@@ -16,7 +17,9 @@
 #define STRFY(...) #__VA_ARGS__
 
 struct RopeNode *
-node_from_json(struct json_object *obj, struct RopePool *pool, struct RopeNode *parent) {
+node_from_json(
+		struct json_object *obj, struct RopePool *pool,
+		struct RopeNode *parent) {
 	if (obj == NULL || pool == NULL) {
 		return NULL;
 	}
@@ -49,7 +52,8 @@ node_from_json(struct json_object *obj, struct RopePool *pool, struct RopeNode *
 		const char *str = json_object_get_string(obj);
 
 		node->bits = (uint64_t)ROPE_NODE_LEAF << 63;
-		int rv = rope_str_init(&node->data.leaf, (const uint8_t *)str, (size_t)len);
+		int rv = rope_str_init(
+				&node->data.leaf, (const uint8_t *)str, (size_t)len);
 		assert(rv == 0);
 	}
 
@@ -89,7 +93,8 @@ node_to_json(struct RopeNode *node) {
 static inline char *
 to_str(struct RopeNode *node) {
 	json_object *json = node_to_json(node);
-	const char *str = json_object_to_json_string_ext(json, JSON_C_TO_STRING_PLAIN);
+	const char *str =
+			json_object_to_json_string_ext(json, JSON_C_TO_STRING_PLAIN);
 	char *result = cx_memdup(str, strlen(str) + 1);
 	json_object_put(json);
 	return result;

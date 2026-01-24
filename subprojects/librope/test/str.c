@@ -454,7 +454,7 @@ test_str_should_stitch_utf8_break(void) {
 	ASSERT_EQ(rv, 0);
 
 	ASSERT_EQ(3, rope_str_should_stitch(&left, &right, NULL));
-	ASSERT_STREQ("World" , (const char *)rope_str_data(&right, NULL) + 3);
+	ASSERT_STREQ("World", (const char *)rope_str_data(&right, NULL) + 3);
 }
 
 static void
@@ -487,9 +487,8 @@ test_str_should_stitch_utf8_grapheme_break(void) {
 	ASSERT_EQ(rv, 0);
 
 	ASSERT_EQ(6, rope_str_should_stitch(&left, &right, NULL));
-	ASSERT_STREQ("World" , (const char *)rope_str_data(&right, NULL) + 6);
+	ASSERT_STREQ("World", (const char *)rope_str_data(&right, NULL) + 6);
 }
-
 
 DECLARE_TESTS
 TEST(test_str_init)

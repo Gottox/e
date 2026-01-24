@@ -51,16 +51,17 @@ compare(const char *naive_content, const char *rope_content,
 		puts(patch_str);
 		puts(naive_content);
 	}
-	char naive_path[256] = "/tmp/naive-XXXXXX", rope_path[256] = "/tmp/rope-XXXXXX";
+	char naive_path[256] = "/tmp/naive-XXXXXX",
+		 rope_path[256] = "/tmp/rope-XXXXXX";
 	int naive_fd = mkstemp(naive_path);
 	int rope_fd = mkstemp(rope_path);
 	write_file(naive_content, naive_fd);
 	write_file(rope_content, rope_fd);
 	char *script = "if ! DIFF=$(type -pf difft); then DIFF=\"$(type -pf "
-						 "diff) -u\"; fi; "
-						 "$DIFF $1 $2; "
-						 "rm $1 $2; "
-						 "exit 1;";
+				   "diff) -u\"; fi; "
+				   "$DIFF $1 $2; "
+				   "rm $1 $2; "
+				   "exit 1;";
 	char *args[] = {
 			"/bin/sh", "-c", script, "", naive_path, rope_path, NULL,
 	};
@@ -99,12 +100,13 @@ run_patch(
 	}
 	size_t pos = json_object_get_int(pos_obj);
 	size_t del = json_object_get_int(del_obj);
-	const char *str = json_object_get_string(str_obj);
+	const char *data = json_object_get_string(str_obj);
+	size_t data_len = json_object_get_string_len(str_obj);
 	if (intermediate) {
 		last_good = to_str(cursor->rope->root);
 	}
 
-	rv = rope_cursor_move_to_index(cursor, pos, 0);
+	rv = rope_cursor_move_to(cursor, ROPE_CHAR, pos, 0);
 	if (rv < 0) {
 		goto out;
 	}
@@ -112,12 +114,12 @@ run_patch(
 	if (rv < 0) {
 		goto out;
 	}
-	rv = rope_cursor_insert_str(cursor, str, 0);
+	rv = rope_cursor_insert_data(cursor, (const uint8_t *)data, data_len, 0);
 	if (rv < 0) {
 		goto out;
 	}
 	if (intermediate) {
-		naive_patch(naive_content, pos, del, str);
+		naive_patch(naive_content, pos, del, data);
 
 		rope_content = rope_to_str(cursor->rope, 0);
 		compare(*naive_content, rope_content, last_good, txn_obj);

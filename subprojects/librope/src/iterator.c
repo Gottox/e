@@ -1,3 +1,4 @@
+#include "rope_str.h"
 #include <cextras/unicode.h>
 #include <rope.h>
 #include <stdbool.h>
@@ -22,16 +23,16 @@ rope_iterator_init(
 }
 
 bool
-rope_iterator_next(
-		struct RopeIterator *iter, const uint8_t **value, size_t *size) {
+rope_iterator_next(struct RopeIterator *iter, struct RopeStr *str) {
+	rope_str_cleanup(str);
+
 	if (iter->node == NULL) {
 		return false;
 	}
 
-	size_t node_size = 0;
-	const uint8_t *data = rope_node_value(iter->node, &node_size);
-	rope_byte_index_t start = iter->started ? 0 : iter->start_byte;
-	rope_byte_index_t end = node_size;
+	size_t node_size = rope_str_size(&iter->node->data.leaf, ROPE_BYTE);
+	size_t start = iter->started ? 0 : iter->start_byte;
+	size_t end = node_size;
 
 	if (iter->node == iter->end) {
 		end = iter->end_byte;
@@ -41,8 +42,11 @@ rope_iterator_next(
 		start = end;
 	}
 
-	*value = data + start;
-	*size = (end > start) ? end - start : 0;
+	int rv = rope_str_clone_trim(
+			str, &iter->node->data.leaf, ROPE_BYTE, start, end - start);
+	if (rv != 0) {
+		return false;
+	}
 
 	if (iter->node == iter->end) {
 		iter->node = NULL;

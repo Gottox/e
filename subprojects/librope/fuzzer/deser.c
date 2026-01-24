@@ -2,8 +2,8 @@
 #include <ctype.h>
 #include <inttypes.h>
 #include <rope.h>
-#include <string.h>
 #include <stdio.h>
+#include <string.h>
 
 #define ROPE_DESER_TYPE_SIZE 1
 #define ROPE_DESER_RANGE_COUNT 3
@@ -36,7 +36,7 @@ deser_read_command(
 		command_args_size = sizeof(command->args.insert);
 		break;
 	case ROPE_DESER_DELETE:
-		//command_args_size = sizeof(command->args.delete);
+		// command_args_size = sizeof(command->args.delete);
 		break;
 	case ROPE_DESER_RANGE_START:
 	case ROPE_DESER_RANGE_END:
@@ -83,8 +83,7 @@ print_rv_check(int rv, bool print) {
 }
 
 int
-rope_deserialize(
-		const uint8_t *data, size_t length, bool print) {
+rope_deserialize(const uint8_t *data, size_t length, bool print) {
 	int rv = 0;
 	uint8_t *payload;
 	uint8_t tmp = 0;
@@ -113,7 +112,8 @@ rope_deserialize(
 	while ((rv = deser_read_command(&command, &data, &length)) > 0) {
 		struct RopeRange *range = &ranges[command.range_index];
 
-		// fprintf(stderr, "Processing command on range %u: ", command.range_index);
+		// fprintf(stderr, "Processing command on range %u: ",
+		// command.range_index);
 		switch (command.type) {
 		case ROPE_DESER_INSERT:
 			tmp = command.args.insert.length;
@@ -138,12 +138,13 @@ rope_deserialize(
 
 			if (print) {
 				fprintf(stderr, "// Inserting %u bytes into range %u\n",
-					   command.args.insert.length, command.range_index);
+						command.args.insert.length, command.range_index);
 				fprintf(stderr, "rv = rope_range_insert(&ranges[%u], ",
-					   command.range_index);
+						command.range_index);
 				print_string(payload, command.args.insert.length);
-				fprintf(stderr, ", %u, 0x%" PRIx64 ");\n", command.args.insert.length,
-					   command.args.insert.tags & TAG_MASK);
+				fprintf(stderr, ", %u, 0x%" PRIx64 ");\n",
+						command.args.insert.length,
+						command.args.insert.tags & TAG_MASK);
 			}
 
 			rv = rope_range_insert(
@@ -160,15 +161,17 @@ rope_deserialize(
 		case ROPE_DESER_RANGE_START:
 			if (print) {
 				fprintf(stderr, "// Moving range %u start to index %i\n",
-					   command.range_index, tmp);
-				fprintf(stderr, "rv = rope_range_start_move_to_index(&ranges[%u], "
-					   "%u);\n",
-					   command.range_index, command.args.span_range.position);
+						command.range_index, tmp);
+				fprintf(stderr,
+						"rv = rope_range_start_move_to_index(&ranges[%u], "
+						"%u);\n",
+						command.range_index, command.args.span_range.position);
 			}
 
 			tmp = command.args.span_range.position;
 			rv = rope_cursor_move_to(
-					rope_range_start(range), ROPE_CHAR, command.args.span_range.position,
+					rope_range_start(range), ROPE_CHAR,
+					command.args.span_range.position,
 					command.args.span_range.tags & TAG_MASK);
 
 			print_rv_check(rv, print);
@@ -177,14 +180,16 @@ rope_deserialize(
 			tmp = command.args.span_range.position;
 			if (print) {
 				fprintf(stderr, "// Moving range %u end to index %i\n",
-					   command.range_index, tmp);
-				fprintf(stderr, "rv = rope_range_end_move_to_index(&ranges[%u], %u, "
-					   "0x%" PRIx64 ");\n",
-					   command.range_index, command.args.span_range.position,
-					   command.args.span_range.tags & TAG_MASK);
+						command.range_index, tmp);
+				fprintf(stderr,
+						"rv = rope_range_end_move_to_index(&ranges[%u], %u, "
+						"0x%" PRIx64 ");\n",
+						command.range_index, command.args.span_range.position,
+						command.args.span_range.tags & TAG_MASK);
 			}
 			rv = rope_cursor_move_to(
-					rope_range_end(range), ROPE_CHAR, command.args.span_range.position,
+					rope_range_end(range), ROPE_CHAR,
+					command.args.span_range.position,
 					command.args.span_range.tags & TAG_MASK);
 			print_rv_check(rv, print);
 			break;

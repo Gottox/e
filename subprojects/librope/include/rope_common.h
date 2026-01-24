@@ -27,10 +27,6 @@
 
 #define ROPE_CHORE_RUN_INTERVAL 8192
 
-typedef size_t rope_char_index_t;
-typedef size_t rope_byte_index_t;
-typedef size_t rope_index_t;
-
 enum RopeDirection {
 	ROPE_LEFT,
 	ROPE_RIGHT,

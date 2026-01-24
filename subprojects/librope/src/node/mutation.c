@@ -44,7 +44,8 @@ rope_node_update_sizes(struct RopeNode *node) {
 	struct RopeDim *dim = &node->data.branch.dim;
 
 	for (size_t unit = 0; unit < ROPE_UNIT_COUNT; unit++) {
-		dim->dim[unit] = rope_node_size(left, unit) + rope_node_size(right, unit);
+		dim->dim[unit] =
+				rope_node_size(left, unit) + rope_node_size(right, unit);
 	}
 }
 
@@ -86,7 +87,7 @@ rope_node_set_type(struct RopeNode *node, rope_node_type_t type) {
 
 int
 rope_node_split(
-		struct RopeNode *node, struct RopePool *pool, rope_index_t index,
+		struct RopeNode *node, struct RopePool *pool, size_t index,
 		enum RopeUnit unit, struct RopeNode **left_ptr,
 		struct RopeNode **right_ptr) {
 	int rv = 0;
@@ -215,18 +216,6 @@ rope_node_delete_and_neighbour(
 	node_delete(node, pool);
 	// TODO: balance up.
 	return neighbour;
-}
-
-int
-rope_node_truncate(struct RopeNode *node, enum RopeUnit unit, size_t size) {
-	assert(ROPE_NODE_IS_LEAF(node));
-	struct RopeStr *str = &node->data.leaf;
-	assert(size > 0);
-	assert(rope_str_is_end(str, unit, size) == false);
-
-	int rv = rope_str_trim(&node->data.leaf, unit, 0, size);
-	rope_node_propagate_sizes(node);
-	return rv;
 }
 
 int

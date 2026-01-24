@@ -22,6 +22,7 @@ void rope_command_interpreter_run(
 		struct RopeCommandInterpreter *interpreter, const uint8_t *data,
 		size_t size);
 
-void rope_command_interpreter_cleanup(struct RopeCommandInterpreter *interpreter);
+void
+rope_command_interpreter_cleanup(struct RopeCommandInterpreter *interpreter);
 
 #endif

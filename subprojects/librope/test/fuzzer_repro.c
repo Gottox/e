@@ -110,8 +110,7 @@ crash_2_reduced2(void) {
 			&ranges[0], (const uint8_t *)"a", 1, 0xfffffffffffff00);
 	ASSERT_EQ(0, rv);
 	// Inserting 0 bytes into range 0
-	rv = rope_range_insert(
-			&ranges[0], (const uint8_t *)"", 0, 0x29200ffff0000);
+	rv = rope_range_insert(&ranges[0], (const uint8_t *)"", 0, 0x29200ffff0000);
 
 	rope_range_cleanup(&ranges[1]);
 	rope_range_cleanup(&ranges[0]);
@@ -141,8 +140,7 @@ crash_2_reduced3(void) {
 			96, 0x0);
 	ASSERT_EQ(0, rv);
 	// Inserting 0 bytes into range 2
-	rv = rope_range_insert(
-			&range, (const uint8_t *)"", 0, 0x929200ffff0000ff);
+	rv = rope_range_insert(&range, (const uint8_t *)"", 0, 0x929200ffff0000ff);
 	ASSERT_EQ(0, rv);
 	rope_range_cleanup(&range);
 	rope_cleanup(&rope);
