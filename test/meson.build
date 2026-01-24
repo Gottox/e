@@ -1,15 +1,17 @@
-e_test = []
+e_test = ['list.c']
 
 testlib_dep = dependency('testlib')
 foreach p : e_test
-    sources = [p]
+    sources = [p] + e_src
     t = executable(
         p.underscorify(),
         sources,
         install: false,
+        include_directories: [
+            e_include,
+        ],
         dependencies: [
-            utest_dep,
-            e_parsers_dep,
+            testlib_dep,
             libhighlight_dep,
             librope_dep,
             cextras_dep,

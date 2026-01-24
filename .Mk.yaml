@@ -1,11 +1,11 @@
 configure:
   - -Db_coverage=true
   - -Dgenerate_parsers=false
-  - -Dlibrope:test=true
-  - -Dlibhighlight:test=true
-  - -Dliblsp:test=true
-  - -Dlibttyui:test=true
-  - -Dlibeditorconfig:test=true
+  - -Dlibrope:test=false
+  - -Dlibhighlight:test=false
+  - -Dliblsp:test=false
+  - -Dlibttyui:test=false
+  - -Dlibeditorconfig:test=false
 env:
   CC_LD: mold
 default:

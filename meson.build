@@ -26,7 +26,7 @@ libeditorconfig_dep = subproject(
 
 libhighlight_dep = subproject('libhighlight').get_variable('libhighlight_dep')
 
-subdir('parsers')
+#subdir('parsers')
 
 subdir('include')
 
@@ -44,7 +44,7 @@ dependencies = [
 
 executable(
     'e',
-    e_src,
+    e_src_main + e_src,
     include_directories: [
         e_include,
     ],

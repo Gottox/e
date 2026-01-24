@@ -1,21 +1,8 @@
-#include <quickjs.h>
-#include <rope.h>
+#ifndef E_H
+#define E_H
 
-struct pollfd;
+#include "e_list.h"
+#include "e_struktur.h"
+#include "e_konstrukt.h"
 
-struct EDaemonClient {
-	int fd;
-	struct EDaemonClient *next;
-};
-
-struct EDaemon {
-	int fd;
-	int client_count;
-	struct EDaemonClient *clients;
-	struct pollfd *client_fds;
-	JSRuntime *js_rt;
-	JSContext *js_ctx;
-};
-
-int e_client(int argc, char *argv[]);
-int e_daemon(int argc, char *argv[]);
+#endif /* E_H */
