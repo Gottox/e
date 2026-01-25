@@ -264,8 +264,20 @@ rope_str_alloc_commit(struct RopeStr *str, size_t byte_size) {
 
 int
 rope_str_clone_trim(
-		struct RopeStr *str, struct RopeStr *src, enum RopeUnit unit,
+		struct RopeStr *restrict str, struct RopeStr *restrict src, enum RopeUnit unit,
 		size_t offset, size_t size) {
+	if (str_is_wrapped(src)) {
+		size_t byte_end;
+		if (size == SIZE_MAX) {
+			byte_end = str_bytes(str);
+		} else {
+			byte_end = rope_str_unit_to_byte(str, unit, offset + size);
+		}
+		const size_t byte_offset = rope_str_unit_to_byte(str, unit, offset);
+		const size_t byte_size = byte_end - byte_offset;
+		const uint8_t *data = rope_str_data(src, NULL);
+		return rope_str_init(str, &data[byte_offset], byte_size);
+	}
 	int rv = rope_str_clone(str, src);
 	if (rv != 0) {
 		goto out;
@@ -311,13 +323,13 @@ rope_str_trim(
 }
 
 void
-rope_str_move(struct RopeStr *dest, struct RopeStr *src) {
+rope_str_move(struct RopeStr *restrict dest, struct RopeStr *restrict src) {
 	memcpy(dest, src, sizeof(struct RopeStr));
 	memset(src, 0, sizeof(struct RopeStr));
 }
 
 int
-rope_str_append_str(struct RopeStr *str, struct RopeStr *append_str) {
+rope_str_append_str(struct RopeStr *restrict str, struct RopeStr *restrict append_str) {
 	int rv = 0;
 
 	rv = rope_str_inline_insert_str(str, ROPE_BYTE, SIZE_MAX, append_str);

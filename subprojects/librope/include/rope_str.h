@@ -6,8 +6,9 @@
 
 #define ROPE_STR_MASK ((((uint64_t)1 << 11)) - 1)
 #define ROPE_STR_SLOW_MASK ((((uint64_t)1 << 55)) - 1)
-#define ROPE_STR_FAST_SIZE (1023 - sizeof(struct RopeStrHeap))
+#define ROPE_STR_FAST_SIZE (1024 - sizeof(struct RopeStrHeap))
 #define ROPE_STR_INLINE_SIZE 48
+
 
 /**********************************
  * str.c

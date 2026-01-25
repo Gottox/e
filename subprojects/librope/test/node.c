@@ -402,6 +402,61 @@ test_test_utf8_sequence_sliding_left(void) {
 	rope_pool_cleanup(&pool);
 }
 
+static void
+test_node_balance_preserves_sizes(void) {
+	int rv = 0;
+	struct RopePool pool = {0};
+
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+
+	struct RopeNode *root = from_str(&pool, "['A',['B',['C',['D','E']]]]");
+
+	ASSERT_EQ(5, rope_node_size(root, ROPE_BYTE));
+
+	struct RopeNode *deep_node = rope_node_right(root);
+	deep_node = rope_node_right(deep_node);
+
+	rope_node_balance_up(deep_node);
+
+	ASSERT_EQ(5, rope_node_size(root, ROPE_BYTE));
+
+	struct RopeNode *left = rope_node_left(root);
+	struct RopeNode *right = rope_node_right(root);
+	ASSERT_EQ(5, rope_node_size(left, ROPE_BYTE) + rope_node_size(right, ROPE_BYTE));
+
+	rope_node_free(root, &pool);
+	rope_pool_cleanup(&pool);
+}
+
+static void
+test_node_rotate_preserves_sizes(void) {
+	int rv = 0;
+	struct RopePool pool = {0};
+
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+
+	struct RopeNode *root = from_str(&pool, "['AB',['CD','EF']]");
+
+	// Verify sizes before rotation
+	ASSERT_EQ(6, rope_node_size(root, ROPE_BYTE));
+	struct RopeNode *right = rope_node_right(root);
+	ASSERT_EQ(4, rope_node_size(right, ROPE_BYTE));
+
+	rope_node_rotate(root, ROPE_LEFT);
+	ASSERT_JSONEQ("[['AB','CD'],'EF']", root);
+
+	ASSERT_EQ(6, rope_node_size(root, ROPE_BYTE));
+	struct RopeNode *left = rope_node_left(root);
+	ASSERT_EQ(4, rope_node_size(left, ROPE_BYTE));
+	right = rope_node_right(root);
+	ASSERT_EQ(2, rope_node_size(right, ROPE_BYTE));
+
+	rope_node_free(root, &pool);
+	rope_pool_cleanup(&pool);
+}
+
 DECLARE_TESTS
 TEST(test_node_split_inline_middle)
 TEST(test_node_insert_right)
@@ -419,4 +474,6 @@ TEST(test_insert_large_grapheme)
 TEST(test_unbreak_utf8_sequence)
 TEST(test_test_utf8_sequence_sliding_right)
 TEST(test_test_utf8_sequence_sliding_left)
+TEST(test_node_balance_preserves_sizes)
+TEST(test_node_rotate_preserves_sizes)
 END_TESTS

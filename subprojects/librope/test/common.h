@@ -46,7 +46,12 @@ node_from_json(
 
 		node->data.branch.children[ROPE_LEFT] = left;
 		node->data.branch.children[ROPE_RIGHT] = right;
-		rope_node_update_sizes(node);
+
+		struct RopeDim *dim = &node->data.branch.dim;
+		for (size_t unit = 0; unit < ROPE_UNIT_COUNT; unit++) {
+			dim->dim[unit] =
+					rope_node_size(left, unit) + rope_node_size(right, unit);
+		}
 	} else if (type == json_type_string) {
 		int len = json_object_get_string_len(obj);
 		const char *str = json_object_get_string(obj);

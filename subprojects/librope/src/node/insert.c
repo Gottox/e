@@ -30,21 +30,14 @@ merge_next_char_bytes(struct RopeNode *node, struct RopePool *pool) {
 }
 
 static int
-node_insert(
+node_insert_unbalanced(
 		struct RopeNode *target, struct RopeNode *node, struct RopePool *pool,
 		enum RopeDirection which) {
-	// TODO: allow insertion into branch nodes.
 	assert(ROPE_NODE_IS_LEAF(target));
 	assert(ROPE_NODE_IS_LEAF(node));
 
 	int rv = 0;
 	struct RopeNode *new_node = NULL;
-
-	struct RopeNode *neighbour = rope_node_neighbour(node, which);
-	if (neighbour && rope_node_depth(neighbour) < rope_node_depth(node)) {
-		node = neighbour;
-		which = !which;
-	}
 
 	new_node = rope_node_new(pool);
 	if (new_node == NULL) {
@@ -58,13 +51,33 @@ node_insert(
 	children[which] = node;
 	children[!which] = new_node;
 	rope_node_update_children(target);
-	rope_node_balance_up(new_node);
 	new_node = NULL;
 
 out:
 	rope_node_free(new_node, pool);
 	return rv;
 }
+
+#if 0
+node_insert(
+		struct RopeNode *target, struct RopeNode *node, struct RopePool *pool,
+		enum RopeDirection which) {
+	int rv = 0;
+	struct RopeNode *neighbour = rope_node_neighbour(node, which);
+	if (neighbour && rope_node_depth(neighbour) < rope_node_depth(node)) {
+		node = neighbour;
+		which = !which;
+	}
+
+	rv = node_insert_unbalanced(target, node, pool, which);
+	if (rv < 0) {
+		goto out;
+	}
+	rope_node_balance_up(node);
+out:
+	return rv;
+}
+#endif
 
 static int
 node_insert_or_append(
@@ -80,7 +93,6 @@ node_insert_or_append(
 		size_t position = which == ROPE_LEFT ? 0 : SIZE_MAX;
 		int rv = rope_str_inline_insert_str(node_str, ROPE_BYTE, position, str);
 		if (rv == 0) {
-			rope_node_propagate_sizes(*node);
 			goto out;
 		}
 	}
@@ -88,7 +100,6 @@ node_insert_or_append(
 	if (rope_node_size(*node, ROPE_BYTE) == 0) {
 		rope_node_set_tags(*node, tags);
 		rope_str_move(node_str, str);
-		rope_node_propagate_sizes(*node);
 		goto out;
 	}
 
@@ -104,12 +115,13 @@ node_insert_or_append(
 	if (rv < 0) {
 		goto out;
 	}
-	rv = node_insert(*node, new_node, pool, which);
+	rv = node_insert_unbalanced(*node, new_node, pool, which);
 	if (rv < 0) {
 		goto out;
 	}
 	*node = new_node;
 out:
+	rope_node_propagate_sizes(*node);
 	return rv;
 }
 
@@ -134,6 +146,11 @@ node_try_stitch(
 
 	rv = node_insert_or_append(
 			node, &seam, rope_node_tags(*node), pool, ROPE_RIGHT);
+	if (rv < 0) {
+		goto out;
+	}
+
+	rope_node_balance_up(*node);
 out:
 	if (rv < 0) {
 		rope_str_cleanup(&seam);

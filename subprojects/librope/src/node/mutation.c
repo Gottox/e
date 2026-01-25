@@ -19,8 +19,8 @@ node_set_depth(struct RopeNode *node, size_t depth) {
 	node->bits |= depth;
 }
 
-void
-rope_node_update_depth(struct RopeNode *node) {
+static void
+node_update_depth(struct RopeNode *node) {
 	if (!ROPE_NODE_IS_BRANCH(node)) {
 		return;
 	}
@@ -34,8 +34,8 @@ rope_node_update_depth(struct RopeNode *node) {
 	node_set_depth(node, depth);
 }
 
-void
-rope_node_update_sizes(struct RopeNode *node) {
+static void
+node_update_sizes(struct RopeNode *node) {
 	if (!ROPE_NODE_IS_BRANCH(node)) {
 		return;
 	}
@@ -52,7 +52,7 @@ rope_node_update_sizes(struct RopeNode *node) {
 void
 rope_node_propagate_sizes(struct RopeNode *node) {
 	while ((node = rope_node_parent(node))) {
-		rope_node_update_sizes(node);
+		node_update_sizes(node);
 	}
 }
 
@@ -143,7 +143,7 @@ rope_node_split(
 
 	rope_node_update_children(node);
 	node_set_depth(node, 1);
-	rope_node_update_sizes(node);
+	node_update_sizes(node);
 	rope_node_balance_up(node);
 
 	*left_ptr = left;
@@ -186,8 +186,8 @@ node_delete_child(
 	struct RopeNode *sibling = rope_node_child(node, !which);
 	rope_node_move(node, sibling);
 	rope_node_update_children(node);
-	rope_node_update_depth(node);
-	rope_node_update_sizes(node);
+	node_update_depth(node);
+	node_update_sizes(node);
 	rope_node_free(sibling, pool);
 	rope_node_free(child, pool);
 }
@@ -295,10 +295,10 @@ rope_node_rotate(struct RopeNode *node, enum RopeDirection which) {
 
 	rope_node_update_children(pivot);
 	rope_node_update_children(node);
-	rope_node_update_depth(pivot);
-	rope_node_update_depth(node);
-	rope_node_update_sizes(pivot);
-	rope_node_update_sizes(node);
+	node_update_depth(pivot);
+	node_update_depth(node);
+	node_update_sizes(pivot);
+	node_update_sizes(node);
 }
 
 void
@@ -316,8 +316,8 @@ rope_node_balance_up(struct RopeNode *node) {
 		} else if (right_depth > left_depth + 1) {
 			rope_node_rotate(node, ROPE_LEFT);
 		} else {
-			rope_node_update_depth(node);
-			rope_node_update_sizes(node);
+			node_update_depth(node);
+			node_update_sizes(node);
 		}
 
 		// Recalculate depth

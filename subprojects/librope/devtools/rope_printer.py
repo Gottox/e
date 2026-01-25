@@ -100,7 +100,8 @@ class DumpRopeTree(gdb.Command):
             if node_type == TYPE_BRANCH:
                 branch = node['data']['branch']
                 depth = int(node['bits']) & ROPE_NODE_TYPE_DEPTH_MASK
-                print(f"{idx_prefix}{header} (depth: {depth})")
+                size = int(branch['dim']['dim'][0])
+                print(f"{idx_prefix}{header} (depth: {depth}, size: {size} bytes)")
                 self.walk(branch['children'][0], indent + 1, "L: ")
                 self.walk(branch['children'][1], indent + 1, "R: ")
 

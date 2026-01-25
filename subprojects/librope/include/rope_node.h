@@ -122,10 +122,6 @@ rope_node_skip(struct RopeNode *node, enum RopeUnit unit, size_t offset);
 ROPE_NO_UNUSED int
 rope_node_merge(struct RopeNode *node, size_t count, struct RopePool *pool);
 
-void rope_node_update_depth(struct RopeNode *node);
-
-void rope_node_update_sizes(struct RopeNode *node);
-
 void rope_node_propagate_sizes(struct RopeNode *node);
 
 void rope_node_update_children(struct RopeNode *node);
