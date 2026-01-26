@@ -255,7 +255,6 @@ cursor_delete_at_eof(void) {
 		rv = rope_cursor_insert_data(
 				&c, (const uint8_t *)&hello_world[i], 1, i);
 		ASSERT_EQ(0, rv);
-		// rope_node_print(r.root, "/tmp/node.dot");
 	}
 	rv = rope_cursor_move_to(&c, ROPE_CHAR, 10, 0);
 	ASSERT_EQ(0, rv);
@@ -592,7 +591,6 @@ test_rope_size(void) {
 	rv = rope_init(&r, &pool);
 	ASSERT_EQ(0, rv);
 
-	// "Hello\nWorld" - 11 bytes, 11 chars, 1 newline
 	rv = rope_append_str(&r, "Hello\nWorld");
 	ASSERT_EQ(0, rv);
 
@@ -614,7 +612,6 @@ test_rope_size_utf8(void) {
 	rv = rope_init(&r, &pool);
 	ASSERT_EQ(0, rv);
 
-	// "👋🙂" - 8 bytes, 2 grapheme chars, 2 codepoints
 	rv = rope_append_str(&r, u8"👋🙂");
 	ASSERT_EQ(0, rv);
 
@@ -646,7 +643,6 @@ test_cursor_delete_at_bytes(void) {
 	rv = rope_cursor_move_to(&c, ROPE_CHAR, 0, 0);
 	ASSERT_EQ(0, rv);
 
-	// Delete 5 bytes "Hello"
 	rv = rope_cursor_delete(&c, ROPE_BYTE, 5);
 	ASSERT_EQ(0, rv);
 
@@ -703,7 +699,6 @@ test_cursor_move_at_bytes(void) {
 	rv = rope_init(&r, &pool);
 	ASSERT_EQ(0, rv);
 
-	// "👋" is 4 bytes
 	rv = rope_append_str(&r, u8"👋Hello");
 	ASSERT_EQ(0, rv);
 
@@ -748,11 +743,10 @@ test_cursor_move_at_lines(void) {
 	rv = rope_cursor_init(&c, &r);
 	ASSERT_EQ(0, rv);
 
-	// Move forward 1 line (past the first \n)
 	rv = rope_cursor_move_by(&c, ROPE_LINE, 1);
 	ASSERT_EQ(0, rv);
 
-	ASSERT_EQ((size_t)6, c.byte_index); // "Line1\n" is 6 bytes
+	ASSERT_EQ((size_t)6, c.byte_index);
 
 	rope_cursor_cleanup(&c);
 	ASSERT_EQ(0, rv);
@@ -770,11 +764,9 @@ test_rope_insert_at_bytes(void) {
 	rv = rope_init(&r, &pool);
 	ASSERT_EQ(0, rv);
 
-	// "👋" is 4 bytes
 	rv = rope_append_str(&r, u8"👋World");
 	ASSERT_EQ(0, rv);
 
-	// Insert at byte 4 (after emoji)
 	rv = rope_insert(&r, ROPE_BYTE, 4, (const uint8_t *)"Hello ", 6);
 	ASSERT_EQ(0, rv);
 
@@ -799,7 +791,6 @@ test_rope_delete_at_bytes(void) {
 	rv = rope_append_str(&r, "Hello World");
 	ASSERT_EQ(0, rv);
 
-	// Delete 6 bytes "Hello " from start
 	rv = rope_delete(&r, ROPE_BYTE, 0, 6);
 	ASSERT_EQ(0, rv);
 
@@ -828,12 +819,10 @@ test_range_move_to_at(void) {
 	rv = rope_range_init(&range, &r);
 	ASSERT_EQ(0, rv);
 
-	// Move start to byte 4 (after emoji)
 	struct RopeCursor *start = rope_range_start(&range);
 	rv = rope_cursor_move_to(start, ROPE_BYTE, 4, 0);
 	ASSERT_EQ(0, rv);
 
-	// Move end to byte 9 (after "Hello")
 	struct RopeCursor *end = rope_range_end(&range);
 	rv = rope_cursor_move_to(end, ROPE_BYTE, 9, 0);
 	ASSERT_EQ(0, rv);
@@ -844,6 +833,81 @@ test_range_move_to_at(void) {
 
 	rope_range_cleanup(&range);
 	ASSERT_EQ(0, rv);
+	rope_cleanup(&r);
+	rope_pool_cleanup(&pool);
+}
+
+static void
+test_cursor_move_by_oob_forward(void) {
+	int rv = 0;
+	struct RopePool pool = {0};
+	struct Rope r = {0};
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&r, &pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_append_str(&r, "hello");
+	ASSERT_EQ(0, rv);
+
+	struct RopeCursor c = {0};
+	rv = rope_cursor_init(&c, &r);
+	ASSERT_EQ(0, rv);
+
+	rv = rope_cursor_move_by(&c, ROPE_BYTE, 5);
+	ASSERT_EQ(0, rv);
+
+	rv = rope_cursor_move_by(&c, ROPE_BYTE, 1);
+	ASSERT_EQ(-ROPE_ERROR_OOB, rv);
+
+	rope_cursor_cleanup(&c);
+	rope_cleanup(&r);
+	rope_pool_cleanup(&pool);
+}
+
+static void
+test_cursor_move_by_oob_backward(void) {
+	int rv = 0;
+	struct RopePool pool = {0};
+	struct Rope r = {0};
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&r, &pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_append_str(&r, "hello");
+	ASSERT_EQ(0, rv);
+
+	struct RopeCursor c = {0};
+	rv = rope_cursor_init(&c, &r);
+	ASSERT_EQ(0, rv);
+
+	rv = rope_cursor_move_by(&c, ROPE_BYTE, -1);
+	ASSERT_EQ(-ROPE_ERROR_OOB, rv);
+
+	rope_cursor_cleanup(&c);
+	rope_cleanup(&r);
+	rope_pool_cleanup(&pool);
+}
+
+static void
+test_cursor_move_to_oob(void) {
+	int rv = 0;
+	struct RopePool pool = {0};
+	struct Rope r = {0};
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_init(&r, &pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_append_str(&r, "hello");
+	ASSERT_EQ(0, rv);
+
+	struct RopeCursor c = {0};
+	rv = rope_cursor_init(&c, &r);
+	ASSERT_EQ(0, rv);
+
+	rv = rope_cursor_move_to(&c, ROPE_BYTE, 6, 0);
+	ASSERT_EQ(-ROPE_ERROR_OOB, rv);
+
+	rope_cursor_cleanup(&c);
 	rope_cleanup(&r);
 	rope_pool_cleanup(&pool);
 }
@@ -870,4 +934,7 @@ TEST(test_cursor_move_at_lines)
 TEST(test_rope_insert_at_bytes)
 TEST(test_rope_delete_at_bytes)
 TEST(test_range_move_to_at)
+TEST(test_cursor_move_by_oob_forward)
+TEST(test_cursor_move_by_oob_backward)
+TEST(test_cursor_move_to_oob)
 END_TESTS

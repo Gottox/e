@@ -1,3 +1,5 @@
+#include <stdbool.h>
+#include <stdint.h>
 #define _GNU_SOURCE
 
 #include "cursor_internal.h"
@@ -6,6 +8,7 @@
 #include <cextras/unicode.h>
 #include <rope.h>
 #include <string.h>
+#include <grapheme.h>
 
 struct RopeNode *
 rope_cursor_find_node(
@@ -45,6 +48,11 @@ rope_cursor_find_node(
 	}
 
 	if (node) {
+		size_t leaf_size = rope_node_size(node, unit);
+		if (index > leaf_size) {
+			return NULL;
+		}
+
 		if (node_byte_index) {
 			*node_byte_index = byte_index;
 		}
@@ -142,4 +150,30 @@ rope_cursor_node(struct RopeCursor *cursor, size_t *byte_index) {
 	}
 
 	return node;
+}
+
+uint_least32_t
+rope_cursor_cp(struct RopeCursor *cursor) {
+	struct RopeNode *node;
+	size_t local_byte_index;
+
+	node = rope_cursor_find_node(
+			cursor, NULL, ROPE_BYTE, cursor->byte_index, /*tags=*/0, NULL,
+			&local_byte_index);
+	if (node == NULL) {
+		return 0;
+	}
+
+	size_t byte_size = 0;
+	const uint8_t *data = rope_node_value(node, &byte_size);
+	data += local_byte_index;
+	byte_size -= local_byte_index;
+	uint32_t cp;
+	grapheme_decode_utf8((const char *)data, byte_size, &cp);
+	return cp;
+}
+
+bool
+rope_cursor_is_eof(struct RopeCursor *cursor) {
+	return cursor->byte_index >= rope_size(cursor->rope, ROPE_BYTE);
 }

@@ -5,8 +5,9 @@ libgrapheme_dep = dependency(
     'libgrapheme',
     default_options: ['test=false', 'benchmark=false', 'werror=false', 'buildtype=release', 'b_lto=true'],
 )
+libpcre2_dep = dependency('libpcre2-8')
 
-librope_dependencies = [cextras_dep, libgrapheme_dep]
+librope_dependencies = [cextras_dep, libgrapheme_dep, libpcre2_dep]
 
 subdir('src')
 

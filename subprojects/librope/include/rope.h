@@ -61,6 +61,8 @@ int rope_to_range(struct Rope *rope, struct RopeRange *range);
 
 char *rope_to_str(struct Rope *rope, uint64_t tags);
 
+void rope_clear(struct Rope *rope);
+
 void rope_cleanup(struct Rope *rope);
 
 /**********************************
@@ -82,7 +84,9 @@ struct RopeCursor {
 
 int rope_cursor_init(struct RopeCursor *cursor, struct Rope *rope);
 
-int rope_cursor_set_callback(
+int rope_cursor_clone(struct RopeCursor *cursor, struct RopeCursor *from);
+
+void rope_cursor_set_callback(
 		struct RopeCursor *cursor, rope_cursor_callback_t callback,
 		void *userdata);
 
@@ -91,6 +95,9 @@ bool rope_cursor_is_order(struct RopeCursor *first, struct RopeCursor *second);
 int rope_cursor_move_to(
 		struct RopeCursor *cursor, enum RopeUnit unit, size_t index,
 		uint64_t tags);
+
+int rope_cursor_insert(
+		struct RopeCursor *cursor, struct RopeStr *str, uint64_t tags);
 
 int rope_cursor_insert_data(
 		struct RopeCursor *cursor, const uint8_t *data, size_t byte_size,
@@ -107,8 +114,15 @@ int rope_cursor_insert_str(
 int
 rope_cursor_delete(struct RopeCursor *cursor, enum RopeUnit unit, size_t count);
 
+int
+rope_cursor_insert_cp(struct RopeCursor *cursor, uint32_t cp, uint64_t tags);
+
 struct RopeNode *
 rope_cursor_node(struct RopeCursor *cursor, size_t *byte_index);
+
+uint_least32_t rope_cursor_cp(struct RopeCursor *cursor);
+
+bool rope_cursor_is_eof(struct RopeCursor *cursor);
 
 size_t
 rope_cursor_index(struct RopeCursor *cursor, enum RopeUnit unit, uint64_t tags);
@@ -137,7 +151,7 @@ struct RopeRange {
 
 int rope_range_init(struct RopeRange *range, struct Rope *rope);
 
-int rope_range_set_callback(
+void rope_range_set_callback(
 		struct RopeRange *range, rope_range_callback_t callback,
 		void *userdata);
 
@@ -157,7 +171,16 @@ int rope_range_delete(struct RopeRange *range);
 int
 rope_range_to_str(struct RopeRange *range, struct RopeStr *str, uint64_t tags);
 
+int rope_range_copy_to(
+		struct RopeRange *range, struct RopeCursor *target, uint64_t tags);
+
 char *rope_range_to_cstr(struct RopeRange *range, uint64_t tags);
+
+void rope_range_collapse(struct RopeRange *range, enum RopeDirection dir);
+
+size_t rope_range_size(struct RopeRange *range, enum RopeUnit unit);
+
+void rope_range_clone(struct RopeRange *range, struct RopeRange *from);
 
 void rope_range_cleanup(struct RopeRange *range);
 

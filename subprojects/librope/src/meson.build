@@ -11,6 +11,7 @@ librope_sources = files(
     'node/navigation.c',
     'node/node.c',
     'node/tags.c',
+    'pcre.c',
     'pool.c',
     'range.c',
     'rope.c',

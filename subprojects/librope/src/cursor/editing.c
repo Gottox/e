@@ -1,8 +1,10 @@
 #include "cursor_internal.h"
 
-#include "rope_node.h"
 #include <assert.h>
+#include <grapheme.h>
 #include <rope.h>
+#include <rope_common.h>
+#include <rope_node.h>
 #include <string.h>
 
 int
@@ -126,4 +128,12 @@ rope_cursor_delete(
 	rv = rope_chores(rope);
 out:
 	return rv;
+}
+
+int
+rope_cursor_insert_cp(struct RopeCursor *cursor, uint32_t cp, uint64_t tags) {
+	uint8_t buffer[4];
+	size_t byte_size = grapheme_encode_utf8(cp, (char *)buffer, sizeof(buffer));
+
+	return rope_cursor_insert_data(cursor, buffer, byte_size, tags);
 }

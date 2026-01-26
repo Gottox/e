@@ -3,10 +3,10 @@ configure:
   - -Dtest=true
   #- -Dwarning_level=everything
   #- -Dfuzzer=true
-  - -Db_sanitize=address,undefined
-  #- -Db_lto=true
-  #- -Dbuildtype=release
-  #- -Dwerror=true
+  #- -Db_sanitize=address,undefined
+  - -Db_lto=true
+  - -Dbuildtype=release
+  - -Dwerror=true
 env:
   #CC: clang
   #CC_LD: mold

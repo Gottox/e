@@ -138,6 +138,16 @@ out:
 }
 
 void
+rope_clear(struct Rope *rope) {
+	while (rope->last_cursor != NULL &&
+		   rope_cursor_index(rope->last_cursor, ROPE_BYTE, 0) != 0) {
+		rope_cursor_move_to(rope->last_cursor, ROPE_BYTE, 0, 0);
+	}
+	rope_node_free(rope->root, rope->pool);
+	rope->root = rope_pool_get(rope->pool);
+}
+
+void
 rope_cleanup(struct Rope *rope) {
 	rope_node_free(rope->root, rope->pool);
 }

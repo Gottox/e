@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <rope.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -29,6 +30,7 @@ range_ensure_order(struct RopeRange *range) {
 		rope_cursor_move_to(end, ROPE_BYTE, start_index, 0);
 	}
 }
+
 static void
 handle_change(struct Rope *rope, struct RopeCursor *cursor, void *userdata) {
 	(void)rope;
@@ -68,30 +70,24 @@ rope_range_init(struct RopeRange *range, struct Rope *rope) {
 	if (rv < 0) {
 		goto out;
 	}
-	rv = rope_cursor_set_callback(&range->cursor_start, handle_change, range);
-	if (rv < 0) {
-		goto out;
-	}
+	rope_cursor_set_callback(&range->cursor_start, handle_change, range);
+
 	rv = rope_cursor_init(&range->cursor_end, rope);
 	if (rv < 0) {
 		goto out;
 	}
-	rv = rope_cursor_set_callback(&range->cursor_end, handle_change, range);
-	if (rv < 0) {
-		goto out;
-	}
+	rope_cursor_set_callback(&range->cursor_end, handle_change, range);
 
 out:
 	return rv;
 }
 
-int
+void
 rope_range_set_callback(
 		struct RopeRange *range, rope_range_callback_t callback,
 		void *userdata) {
 	range->callback = callback;
 	range->callback_userdata = userdata;
-	return 0;
 }
 
 int
@@ -178,6 +174,25 @@ out:
 	return rv;
 }
 
+int
+rope_range_copy_to(
+		struct RopeRange *range, struct RopeCursor *target, uint64_t tags) {
+	int rv = 0;
+	struct RopeIterator it = {0};
+	struct RopeStr str = {0};
+	rv = rope_iterator_init(&it, range, 0);
+	while (rope_iterator_next(&it, &str)) {
+		rv = rope_cursor_insert(target, &str, tags);
+		if (rv < 0) {
+			goto out;
+		}
+	}
+out:
+	rope_str_cleanup(&str);
+	rope_iterator_cleanup(&it);
+	return rv;
+}
+
 char *
 rope_range_to_cstr(struct RopeRange *range, uint64_t tags) {
 	struct RopeStr str = {0};
@@ -197,6 +212,42 @@ rope_range_to_cstr(struct RopeRange *range, uint64_t tags) {
 out:
 	rope_str_cleanup(&str);
 	return res;
+}
+
+void
+rope_range_collapse(struct RopeRange *range, enum RopeDirection dir) {
+	struct RopeCursor *start = rope_range_start(range);
+	size_t start_index = rope_cursor_index(start, ROPE_BYTE, 0);
+	struct RopeCursor *end = rope_range_end(range);
+	size_t end_index = rope_cursor_index(end, ROPE_BYTE, 0);
+
+	if (dir == ROPE_LEFT) {
+		rope_cursor_move_to(end, ROPE_BYTE, start_index, 0);
+	} else {
+		rope_cursor_move_to(start, ROPE_BYTE, end_index, 0);
+	}
+	range_ensure_order(range);
+}
+
+size_t
+rope_range_size(struct RopeRange *range, enum RopeUnit unit) {
+	struct RopeCursor *start = rope_range_start(range);
+	struct RopeCursor *end = rope_range_end(range);
+
+	range_ensure_order(range);
+
+	size_t start_index = rope_cursor_index(start, unit, 0);
+	size_t end_index = rope_cursor_index(end, unit, 0);
+
+	return end_index - start_index;
+}
+
+void
+rope_range_clone(struct RopeRange *range, struct RopeRange *from) {
+	rope_cursor_clone(&range->cursor_start, &from->cursor_start);
+	rope_cursor_clone(&range->cursor_end, &from->cursor_end);
+	rope_range_set_callback(range, from->callback, from->callback_userdata);
+	range->rope = from->rope;
 }
 
 void

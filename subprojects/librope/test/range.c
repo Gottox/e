@@ -207,8 +207,7 @@ range_callback(void) {
 	ASSERT_EQ(0, rv);
 
 	struct callback_data data = {0};
-	rv = rope_range_set_callback(&range, test_callback, &data);
-	ASSERT_EQ(0, rv);
+	rope_range_set_callback(&range, test_callback, &data);
 
 	struct RopeCursor c = {0};
 	rv = rope_cursor_init(&c, &r);

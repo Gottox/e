@@ -13,11 +13,10 @@ rope_cursor_move_to(
 			cursor, NULL, unit, index, tags, &node_byte_index,
 			&local_byte_index);
 	if (node == NULL) {
-		return -1;
+		return -ROPE_ERROR_OOB;
 	}
 	cursor->byte_index = node_byte_index + local_byte_index;
 	cursor_update(cursor);
-	// TODO: Make void
 	return 0;
 }
 
@@ -33,12 +32,14 @@ rope_cursor_move_by(
 
 	if (unit == ROPE_BYTE) {
 		if (offset < 0 && (size_t)-offset > cursor->byte_index) {
-			cursor->byte_index = 0;
-		} else {
-			size_t new_index = cursor->byte_index + offset;
-			size_t max_byte = rope_node_size(rope->root, ROPE_BYTE);
-			cursor->byte_index = new_index > max_byte ? max_byte : new_index;
+			return -ROPE_ERROR_OOB;
 		}
+		size_t new_index = cursor->byte_index + offset;
+		size_t max_byte = rope_node_size(rope->root, ROPE_BYTE);
+		if (new_index > max_byte) {
+			return -ROPE_ERROR_OOB;
+		}
+		cursor->byte_index = new_index;
 		cursor_update(cursor);
 		return 0;
 	}
@@ -109,14 +110,7 @@ rope_cursor_move_by(
 		node = parent;
 	}
 
-	// Reached root without finding target - clamp
-	if (direction == ROPE_RIGHT) {
-		cursor->byte_index = rope_node_size(rope->root, ROPE_BYTE);
-	} else {
-		cursor->byte_index = 0;
-	}
-	cursor_update(cursor);
-	return 0;
+	return -ROPE_ERROR_OOB;
 }
 
 int
