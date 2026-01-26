@@ -1,8 +1,5 @@
 #include <e.h>
 #include <e_command.h>
-#include <getopt.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 static struct EKonstrukt e = {
 		.commands =

@@ -6,6 +6,7 @@ configure:
   - -Dliblsp:test=false
   - -Dlibttyui:test=false
   - -Dlibeditorconfig:test=false
+  - -Db_sanitize=address,undefined
 env:
   CC_LD: mold
 default:

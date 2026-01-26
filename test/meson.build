@@ -1,4 +1,4 @@
-e_test = ['list.c']
+e_test = ['list.c', 'message.c']
 
 testlib_dep = dependency('testlib')
 foreach p : e_test

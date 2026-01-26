@@ -13,17 +13,22 @@ struct EStrukturType {
 };
 
 union EStrukturStorage {
-#define STRUCT(type, name, ...) struct type __VA_ARGS__ name
+#define STRUCT(type, name, ...) struct type __VA_ARGS__ name;
 #include "e_struktur.struct.h"
 #undef STRUCT
 };
 
 union EStruktur {
 	union EStrukturStorage *any;
-#define STRUCT(type, name, ...) struct type *name
+#define STRUCT(type, name, ...) struct type *name;
 #include "e_struktur.struct.h"
 #undef STRUCT
 };
+
+#define STRUCT(type, name, ...) \
+	extern const struct EStrukturType e_struktur_type_##name;
+#include "e_struktur.struct.h"
+#undef STRUCT
 
 #define E_TYPE_BEGIN(type) \
 	const struct EStrukturType e_struktur_type_##type; \

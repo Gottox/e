@@ -2,7 +2,7 @@ STRUCT(EBase, base, {
 	const struct EStrukturType *type;
 	uint64_t id;
 	struct EKonstrukt *konstrukt;
-});
+})
 
 STRUCT(EDokument, dokument, {
 	uint64_t mode;
@@ -12,7 +12,7 @@ STRUCT(EDokument, dokument, {
 	struct EList klients;
 
 	struct Rope content;
-});
+})
 
 STRUCT(ECursor, cursor, {
 	struct EBase base;
@@ -21,7 +21,7 @@ STRUCT(ECursor, cursor, {
 	struct EKlient *klient;
 
 	struct RopeRange range;
-});
+})
 
 STRUCT(EKlient, klient, {
 	struct EBase base;
@@ -37,7 +37,7 @@ STRUCT(EKlient, klient, {
 
 	int writer_fd;
 	int reader_fd;
-});
+})
 
 STRUCT(EEndpunkt, endpunkt, {
 	struct EBase base;
@@ -54,11 +54,11 @@ STRUCT(EEndpunkt, endpunkt, {
 		E_TERMINATION_SIZED,
 		E_TERMINATION_SEQUENCE,
 	} termination_mode;
-});
+})
 
 STRUCT(ERequest, request, {
 	struct EBase base;
 
 	struct timespec timeout;
 	uint64_t sender_klient_id;
-});
+})
