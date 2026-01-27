@@ -99,7 +99,7 @@ rope_node_size(const struct RopeNode *node, enum RopeUnit unit) ROPE_NO_UNUSED;
 ROPE_NO_UNUSED enum RopeNodeType
 rope_node_type(const struct RopeNode *node) ROPE_NO_UNUSED;
 
-ROPE_NO_UNUSED size_t rope_node_depth(struct RopeNode *node);
+ROPE_NO_UNUSED size_t rope_node_depth(const struct RopeNode *node);
 
 ROPE_NO_UNUSED const uint8_t *
 rope_node_value(const struct RopeNode *node, size_t *size);

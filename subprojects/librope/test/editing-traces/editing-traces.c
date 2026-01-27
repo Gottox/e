@@ -12,8 +12,9 @@
 #include <time.h>
 #include <unistd.h>
 
-static const char *opts = "i";
+static const char *opts = "ic";
 static bool intermediate = false;
+static bool integrity_check = false;
 
 static void
 write_file(const char *content, int fd) {
@@ -125,6 +126,9 @@ run_patch(
 		rope_content = rope_to_str(cursor->rope, 0);
 		compare(*naive_content, rope_content, last_good, txn_obj);
 	}
+	if (integrity_check) {
+		check_integrity(cursor->rope->root);
+	}
 out:
 	free(last_good);
 	free(rope_content);
@@ -226,6 +230,9 @@ main(int argc, char *argv[]) {
 
 	while ((opt = getopt(argc, argv, opts)) != -1) {
 		switch (opt) {
+		case 'c':
+			integrity_check = true;
+			break;
 		case 'i':
 			intermediate = true;
 			break;

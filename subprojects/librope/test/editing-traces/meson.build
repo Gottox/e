@@ -9,6 +9,8 @@ editing_traces = executable(
     dependencies: [testlib_dep, librope_dep, cjson_dep],
 )
 foreach trace : sequential_traces
+    # Currently integrity checks let the test fail.
+    #args = ['-c']
     args = []
     test_name = trace.full_path().split('/')[-1].replace('.json', '')
     args += trace.full_path()

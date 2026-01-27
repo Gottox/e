@@ -112,3 +112,38 @@ from_str(struct RopePool *pool, const char *str) {
 	json_object_put(json);
 	return node;
 }
+
+static inline void
+check_integrity(const struct RopeNode *node) {
+	if (ROPE_NODE_IS_LEAF(node)) {
+		size_t size = 0;
+		const uint8_t *val = rope_node_value(node, 0);
+		ASSERT_NOT_NULL(val);
+		ASSERT_LT(0u, size);
+	} else {
+		const struct RopeNode *left = rope_node_left(node);
+		const struct RopeNode *right = rope_node_right(node);
+		ASSERT_NOT_NULL(left);
+		ASSERT_NOT_NULL(right);
+
+		for (size_t unit = 0; unit < ROPE_UNIT_COUNT; unit++) {
+			const size_t left_size = rope_node_size(left, unit);
+			const size_t right_size = rope_node_size(right, unit);
+			const size_t total_size = rope_node_size(node, unit);
+			ASSERT_EQ(left_size + right_size, total_size);
+		}
+
+		const size_t left_depth = rope_node_depth(left);
+		const size_t right_depth = rope_node_depth(right);
+		const size_t depth = rope_node_depth(node);
+		if (left_depth >= right_depth) {
+			ASSERT_EQ(left_depth + 1, depth);
+		} else {
+			ASSERT_EQ(right_depth + 1, depth);
+		}
+		ASSERT_LE(1u, left_depth - right_depth);
+
+		check_integrity(left);
+		check_integrity(right);
+	}
+}

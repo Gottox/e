@@ -12,7 +12,7 @@ rope_node_size(const struct RopeNode *node, enum RopeUnit unit) {
 }
 
 size_t
-rope_node_depth(struct RopeNode *node) {
+rope_node_depth(const struct RopeNode *node) {
 	if (ROPE_NODE_IS_BRANCH(node)) {
 		return node->bits & ~ROPE_NODE_TYPE_MASK;
 	} else {
