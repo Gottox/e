@@ -46,6 +46,7 @@ node_insert_unbalanced(
 
 	rope_node_move(new_node, target);
 
+	rope_node_cleanup(target);
 	rope_node_set_type(target, ROPE_NODE_BRANCH);
 	struct RopeNode **children = target->data.branch.children;
 	children[which] = node;
@@ -119,6 +120,7 @@ node_insert_or_append(
 	if (rv < 0) {
 		goto out;
 	}
+	rope_node_balance_up(new_node);
 	*node = new_node;
 out:
 	rope_node_propagate_sizes(*node);

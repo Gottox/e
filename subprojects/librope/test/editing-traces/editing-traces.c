@@ -12,9 +12,10 @@
 #include <time.h>
 #include <unistd.h>
 
-static const char *opts = "ic";
+static const char *opts = "icv";
 static bool intermediate = false;
 static bool integrity_check = false;
+static int verbose = 0;
 
 static void
 write_file(const char *content, int fd) {
@@ -126,6 +127,16 @@ run_patch(
 		rope_content = rope_to_str(cursor->rope, 0);
 		compare(*naive_content, rope_content, last_good, txn_obj);
 	}
+	if (verbose) {
+		printf("Applied patch at pos %zu: delete %zu, insert \"%s\"\n", pos,
+			   del, data);
+	}
+	if (verbose >= 2) {
+		char *str = to_str(cursor->rope->root);
+		fputs(str, stderr);
+		fputc('\n', stderr);
+		free(str);
+	}
 	if (integrity_check) {
 		check_integrity(cursor->rope->root);
 	}
@@ -235,6 +246,9 @@ main(int argc, char *argv[]) {
 			break;
 		case 'i':
 			intermediate = true;
+			break;
+		case 'v':
+			verbose++;
 			break;
 		default:
 			fprintf(stderr, "Unknown option: %c\n", opt);

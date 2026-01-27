@@ -156,28 +156,8 @@ out:
 	return rv;
 }
 
-static struct RopeNode *
-node_delete(struct RopeNode *node, struct RopePool *pool) {
-	if (ROPE_NODE_IS_ROOT(node)) {
-		rope_node_cleanup(node);
-		memset(node, 0, sizeof(*node));
-		return node;
-	} else {
-		struct RopeNode *parent = rope_node_parent(node);
-		enum RopeDirection which = rope_node_which(node);
-
-		rope_node_delete_child(parent, pool, which);
-		return parent;
-	}
-}
-
-void
-rope_node_delete(struct RopeNode *node, struct RopePool *pool) {
-	rope_node_balance_up(node_delete(node, pool));
-}
-
 static void
-node_delete_child(
+node_delete_child_unbalanced(
 		struct RopeNode *node, struct RopePool *pool,
 		enum RopeDirection which) {
 	assert(ROPE_NODE_IS_BRANCH(node));
@@ -193,11 +173,17 @@ node_delete_child(
 }
 
 void
-rope_node_delete_child(
-		struct RopeNode *node, struct RopePool *pool,
-		enum RopeDirection which) {
-	node_delete_child(node, pool, which);
-	rope_node_balance_up(node);
+rope_node_delete(struct RopeNode *node, struct RopePool *pool) {
+	if (ROPE_NODE_IS_ROOT(node)) {
+		rope_node_cleanup(node);
+		memset(node, 0, sizeof(*node));
+	} else {
+		struct RopeNode *parent = rope_node_parent(node);
+		enum RopeDirection which = rope_node_which(node);
+
+		node_delete_child_unbalanced(parent, pool, which);
+		rope_node_balance_up(parent);
+	}
 }
 
 struct RopeNode *
@@ -208,13 +194,12 @@ rope_node_delete_and_neighbour(
 	if (neighbour != NULL) {
 		struct RopeNode *parent = rope_node_parent(neighbour);
 		if (rope_node_child(parent, !which) == node) {
-			// If next and node are siblings, node will be collapsed into parent
-			// on deletion of next. So we need to continue from parent
+			// If next/prev and node are siblings, node will be collapsed into
+			// parent on deletion of next. So we need to continue from parent
 			neighbour = parent;
 		}
 	}
-	node_delete(node, pool);
-	// TODO: balance up.
+	rope_node_delete(node, pool);
 	return neighbour;
 }
 
@@ -312,8 +297,22 @@ rope_node_balance_up(struct RopeNode *node) {
 		size_t right_depth = rope_node_depth(right);
 
 		if (left_depth > right_depth + 1) {
+			if (ROPE_NODE_IS_BRANCH(left)) {
+				size_t ll_depth = rope_node_depth(rope_node_left(left));
+				size_t lr_depth = rope_node_depth(rope_node_right(left));
+				if (lr_depth > ll_depth) {
+					rope_node_rotate(left, ROPE_LEFT);
+				}
+			}
 			rope_node_rotate(node, ROPE_RIGHT);
 		} else if (right_depth > left_depth + 1) {
+			if (ROPE_NODE_IS_BRANCH(right)) {
+				size_t rl_depth = rope_node_depth(rope_node_left(right));
+				size_t rr_depth = rope_node_depth(rope_node_right(right));
+				if (rl_depth > rr_depth) {
+					rope_node_rotate(right, ROPE_RIGHT);
+				}
+			}
 			rope_node_rotate(node, ROPE_LEFT);
 		} else {
 			node_update_depth(node);

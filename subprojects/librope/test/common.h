@@ -117,9 +117,11 @@ static inline void
 check_integrity(const struct RopeNode *node) {
 	if (ROPE_NODE_IS_LEAF(node)) {
 		size_t size = 0;
-		const uint8_t *val = rope_node_value(node, 0);
+		const uint8_t *val = rope_node_value(node, &size);
 		ASSERT_NOT_NULL(val);
-		ASSERT_LT(0u, size);
+		if (!ROPE_NODE_IS_ROOT(node)) {
+			ASSERT_LT(0u, size);
+		}
 	} else {
 		const struct RopeNode *left = rope_node_left(node);
 		const struct RopeNode *right = rope_node_right(node);
@@ -141,7 +143,10 @@ check_integrity(const struct RopeNode *node) {
 		} else {
 			ASSERT_EQ(right_depth + 1, depth);
 		}
-		ASSERT_LE(1u, left_depth - right_depth);
+		size_t depth_difference = (left_depth > right_depth)
+				? left_depth - right_depth
+				: right_depth - left_depth;
+		ASSERT_GE(1u, depth_difference);
 
 		check_integrity(left);
 		check_integrity(right);

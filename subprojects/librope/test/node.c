@@ -40,6 +40,7 @@ test_node_split_inline_middle(void) {
 
 	ASSERT_JSONEQ("['HE','LO']", root);
 
+	check_integrity(root);
 	rope_node_free(root, &pool);
 	rope_pool_cleanup(&pool);
 }
@@ -65,6 +66,7 @@ test_node_insert_right(void) {
 
 	ASSERT_JSONEQ("['HE','LO']", root);
 
+	check_integrity(root);
 	rope_node_free(root, &pool);
 	rope_pool_cleanup(&pool);
 }
@@ -83,6 +85,7 @@ test_node_delete(void) {
 
 	ASSERT_JSONEQ("'LO'", root);
 
+	check_integrity(root);
 	rope_node_free(root, &pool);
 	rope_pool_cleanup(&pool);
 }
@@ -101,6 +104,7 @@ test_node_rotate_right(void) {
 
 	ASSERT_JSONEQ("[['HE','LL'],'O']", root);
 
+	check_integrity(root);
 	rope_node_free(root, &pool);
 	rope_pool_cleanup(&pool);
 }
@@ -122,6 +126,7 @@ test_node_balance_left(void) {
 
 	ASSERT_JSONEQ("[['H','E'],[['L','L'],'O']]", root);
 
+	check_integrity(root);
 	rope_node_free(root, &pool);
 	rope_pool_cleanup(&pool);
 }
@@ -143,6 +148,7 @@ test_node_balance_right(void) {
 
 	ASSERT_JSONEQ("[['H',['E','L']],['L','O']]", root);
 
+	check_integrity(root);
 	rope_node_free(root, &pool);
 	rope_pool_cleanup(&pool);
 }
@@ -164,6 +170,7 @@ test_node_merge(void) {
 
 	ASSERT_JSONEQ("['123','4']", root);
 
+	check_integrity(root);
 	rope_node_free(root, &pool);
 	rope_pool_cleanup(&pool);
 }
@@ -193,6 +200,7 @@ test_node_insert_incomplete_utf8(void) {
 
 	check_valid_utf8(root);
 
+	check_integrity(root);
 	rope_node_free(root, &pool);
 	rope_pool_cleanup(&pool);
 }
@@ -217,6 +225,7 @@ test_node_insert_right_malloc(void) {
 	const uint8_t *data = rope_node_value(root, &byte_size);
 	ASSERT_EQ(byte_size, ROPE_STR_INLINE_SIZE * 2);
 	ASSERT_EQ((uintptr_t)buffer, (uintptr_t)data);
+	check_integrity(root);
 	rope_node_free(root, &pool);
 	rope_pool_cleanup(&pool);
 }
@@ -235,6 +244,7 @@ test_node_insert_big(void) {
 	rv = rope_node_insert_right(root, buffer, sizeof(buffer), 0, &pool);
 	ASSERT_EQ(rv, 0);
 
+	check_integrity(root);
 	rope_node_free(root, &pool);
 	rope_pool_cleanup(&pool);
 }
@@ -262,6 +272,7 @@ test_node_stitch_overflow_leaf_size(void) {
 			root, (const uint8_t *)buffer2, sizeof(buffer2), 0, &pool);
 	ASSERT_EQ(rv, 0);
 
+	check_integrity(root);
 	rope_node_free(root, &pool);
 	rope_pool_cleanup(&pool);
 }
@@ -283,6 +294,7 @@ test_insert_grapheme(void) {
 	ASSERT_EQ(size, 5);
 	ASSERT_STREQ("e\xCC\x8A\xCC\x8A", (const char *)data);
 
+	check_integrity(root);
 	rope_node_free(root, &pool);
 	rope_pool_cleanup(&pool);
 }
@@ -310,6 +322,7 @@ test_insert_large_grapheme(void) {
 	rv = rope_node_insert_right(root, (const uint8_t *)buffer, size, 0, &pool);
 	ASSERT_EQ(0, rv);
 
+	check_integrity(root);
 	rope_node_free(root, &pool);
 	rope_pool_cleanup(&pool);
 }
@@ -338,6 +351,7 @@ test_unbreak_utf8_sequence(void) {
 	const uint8_t *data = rope_node_value(root, &size);
 	ASSERT_EQ(size, 5);
 	ASSERT_STREQ("e\xCC\x8A\xCC\x8A", (const char *)data);
+	check_integrity(root);
 	rope_node_free(root, &pool);
 	rope_pool_cleanup(&pool);
 }
@@ -367,6 +381,7 @@ test_test_utf8_sequence_sliding_right(void) {
 				root, &women_emoji[i], sizeof(women_emoji) - i, 0, &pool);
 		ASSERT_EQ(0, rv);
 
+		check_integrity(root);
 		rope_node_free(root, &pool);
 	}
 	rope_pool_cleanup(&pool);
@@ -397,6 +412,7 @@ test_test_utf8_sequence_sliding_left(void) {
 		rv = rope_node_insert_left(root, women_emoji, i, 0, &pool);
 		ASSERT_EQ(0, rv);
 
+		check_integrity(root);
 		rope_node_free(root, &pool);
 	}
 	rope_pool_cleanup(&pool);
@@ -423,8 +439,11 @@ test_node_balance_preserves_sizes(void) {
 
 	struct RopeNode *left = rope_node_left(root);
 	struct RopeNode *right = rope_node_right(root);
-	ASSERT_EQ(5, rope_node_size(left, ROPE_BYTE) + rope_node_size(right, ROPE_BYTE));
+	ASSERT_EQ(
+			5,
+			rope_node_size(left, ROPE_BYTE) + rope_node_size(right, ROPE_BYTE));
 
+	check_integrity(root);
 	rope_node_free(root, &pool);
 	rope_pool_cleanup(&pool);
 }
@@ -453,6 +472,24 @@ test_node_rotate_preserves_sizes(void) {
 	right = rope_node_right(root);
 	ASSERT_EQ(2, rope_node_size(right, ROPE_BYTE));
 
+	check_integrity(root);
+	rope_node_free(root, &pool);
+	rope_pool_cleanup(&pool);
+}
+
+static void
+test_node_integrity_fail1(void) {
+	int rv = 0;
+	struct RopePool pool = {0};
+
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+
+	struct RopeNode *root = from_str(&pool, "''");
+
+	// Corrupt the tree by removing a child pointer
+
+	check_integrity(root);
 	rope_node_free(root, &pool);
 	rope_pool_cleanup(&pool);
 }
@@ -476,4 +513,5 @@ TEST(test_test_utf8_sequence_sliding_right)
 TEST(test_test_utf8_sequence_sliding_left)
 TEST(test_node_balance_preserves_sizes)
 TEST(test_node_rotate_preserves_sizes)
+TEST(test_node_integrity_fail1)
 END_TESTS

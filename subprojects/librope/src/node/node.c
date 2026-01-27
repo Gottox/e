@@ -20,6 +20,10 @@ rope_node_cleanup(struct RopeNode *node) {
 	if (rope_node_type(node) == ROPE_NODE_LEAF) {
 		rope_str_cleanup(&node->data.leaf);
 	}
+	// Preserve the parent pointer before clearing
+	struct RopeNode *parent = rope_node_parent(node);
+	memset(node, 0, sizeof(struct RopeNode));
+	node->parent = parent;
 }
 
 void

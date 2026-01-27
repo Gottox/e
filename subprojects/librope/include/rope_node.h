@@ -110,9 +110,6 @@ rope_node_value(const struct RopeNode *node, size_t *size);
 
 void rope_node_delete(struct RopeNode *node, struct RopePool *pool);
 
-void rope_node_delete_child(
-		struct RopeNode *node, struct RopePool *pool, enum RopeDirection which);
-
 struct RopeNode *rope_node_delete_and_neighbour(
 		struct RopeNode *node, struct RopePool *pool, enum RopeDirection which);
 
