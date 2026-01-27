@@ -61,6 +61,8 @@ int rope_to_range(struct Rope *rope, struct RopeRange *range);
 
 char *rope_to_str(struct Rope *rope, uint64_t tags);
 
+int rope_to_end_cursor(struct Rope *rope, struct RopeCursor *cursor);
+
 void rope_clear(struct Rope *rope);
 
 void rope_cleanup(struct Rope *rope);

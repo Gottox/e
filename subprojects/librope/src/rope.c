@@ -137,6 +137,23 @@ out:
 	return str;
 }
 
+int
+rope_to_end_cursor(struct Rope *rope, struct RopeCursor *cursor) {
+	int rv = 0;
+	size_t byte_size = rope_size(rope, ROPE_BYTE);
+	rv = rope_cursor_init(cursor, rope);
+	if (rv < 0) {
+		goto out;
+	}
+	rv = rope_cursor_move_to(cursor, ROPE_BYTE, byte_size, 0);
+	if (rv < 0) {
+		goto out;
+	}
+out:
+	rope_cursor_cleanup(cursor);
+	return rv;
+}
+
 void
 rope_clear(struct Rope *rope) {
 	while (rope->last_cursor != NULL &&
