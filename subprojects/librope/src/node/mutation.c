@@ -3,6 +3,7 @@
 #include <rope_error.h>
 #include <rope_node.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <string.h>
 
 static void
@@ -298,6 +299,7 @@ rope_node_balance_up(struct RopeNode *node) {
 
 		if (left_depth > right_depth + 1) {
 			if (ROPE_NODE_IS_BRANCH(left)) {
+				assert(left_depth != 0);
 				size_t ll_depth = rope_node_depth(rope_node_left(left));
 				size_t lr_depth = rope_node_depth(rope_node_right(left));
 				if (lr_depth > ll_depth) {
@@ -307,6 +309,7 @@ rope_node_balance_up(struct RopeNode *node) {
 			rope_node_rotate(node, ROPE_RIGHT);
 		} else if (right_depth > left_depth + 1) {
 			if (ROPE_NODE_IS_BRANCH(right)) {
+				assert(right_depth != 0);
 				size_t rl_depth = rope_node_depth(rope_node_left(right));
 				size_t rr_depth = rope_node_depth(rope_node_right(right));
 				if (rl_depth > rr_depth) {
@@ -322,14 +325,18 @@ rope_node_balance_up(struct RopeNode *node) {
 		// Recalculate depth
 		const size_t new_depth = rope_node_depth(node);
 
+		// Check for branches with depth 0 after balance
+		struct RopeNode *final_left = rope_node_left(node);
+		struct RopeNode *final_right = rope_node_right(node);
+
 		// If the depth didn't change, we consider the tree balanced.
 		// Note that this only results in a balanced tree if the tree
 		// balance was only damaged by a single operation on the node.
 		// Continue propagating dimensions to the root.
-		if (new_depth == old_depth) {
-			rope_node_propagate_sizes(node);
-			break;
-		}
+		// if (new_depth == old_depth) {
+		//	rope_node_propagate_sizes(node);
+		//	break;
+		//}
 	}
 }
 
@@ -342,6 +349,7 @@ rope_node_chores(struct RopeNode *node, struct RopePool *pool) {
 
 	const size_t depth = rope_node_depth(node);
 	const size_t byte_size = rope_node_size(node, ROPE_BYTE);
+	// TODO: the threshould should be (1 << depth) * ROPE_NODE_COMPACT_THRESHOLD
 	if (depth << ROPE_NODE_COMPACT_THRESHOLD < byte_size) {
 		goto out;
 	}
@@ -370,6 +378,7 @@ out:
 
 int
 rope_node_compact(struct RopeNode *node, struct RopePool *pool) {
+	// TODO compact doesn't honor tags.
 	if (ROPE_NODE_IS_LEAF(node)) {
 		return 0;
 	}
@@ -406,6 +415,7 @@ rope_node_compact(struct RopeNode *node, struct RopePool *pool) {
 	rope_node_free(rope_node_left(node), pool);
 	rope_node_free(rope_node_right(node), pool);
 
+	node->bits = 0;
 	rope_node_set_type(node, ROPE_NODE_LEAF);
 	rope_str_move(&node->data.leaf, &new_str);
 

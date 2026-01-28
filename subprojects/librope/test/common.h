@@ -14,6 +14,16 @@
 		free(actual_str); \
 	} while (0)
 
+#define ASSERT_JSONEQ2(expected, actual) \
+	do { \
+		char *actual_str = to_str2(actual); \
+		json_object *expected_json = json_tokener_parse(expected); \
+		ASSERT_STREQ( \
+				json_object_to_json_string_ext(expected_json, 0), actual_str); \
+		json_object_put(expected_json); \
+		free(actual_str); \
+	} while (0)
+
 #define STRFY(...) #__VA_ARGS__
 
 struct RopeNode *
@@ -31,18 +41,31 @@ node_from_json(
 	enum json_type type = json_object_get_type(obj);
 
 	if (type == json_type_array) {
+		bool has_bits = false;
+		uint64_t bits = 0;
 		int length = json_object_array_length(obj);
-		assert(length == 2);
+		assert(length == 2 || length == 3);
 
 		struct json_object *left_json = json_object_array_get_idx(obj, 0);
 		struct json_object *right_json = json_object_array_get_idx(obj, 1);
 
+		if (length == 3) {
+			has_bits = true;
+			struct json_object *depth_json = json_object_array_get_idx(obj, 2);
+			bits = json_object_get_uint64(depth_json);
+		}
+
 		struct RopeNode *left = node_from_json(left_json, pool, node);
 		struct RopeNode *right = node_from_json(right_json, pool, node);
-		size_t depth =
-				CX_MAX(rope_node_depth(left), rope_node_depth(right)) + 1;
-		node->bits = (uint64_t)ROPE_NODE_BRANCH << 63;
-		node->bits |= depth;
+		// Compute depth if not provided
+		if (has_bits == false) {
+			size_t depth =
+					CX_MAX(rope_node_depth(left), rope_node_depth(right)) + 1;
+			node->bits = (uint64_t)ROPE_NODE_BRANCH << 63;
+			node->bits |= depth;
+		} else {
+			node->bits = bits;
+		}
 
 		node->data.branch.children[ROPE_LEFT] = left;
 		node->data.branch.children[ROPE_RIGHT] = right;
@@ -66,7 +89,7 @@ node_from_json(
 }
 
 struct json_object *
-node_to_json(struct RopeNode *node) {
+node_to_json(struct RopeNode *node, bool dump_bits) {
 	if (node == NULL) {
 		return NULL;
 	}
@@ -80,8 +103,11 @@ node_to_json(struct RopeNode *node) {
 		struct RopeNode *left = rope_node_left(node);
 		struct RopeNode *right = rope_node_right(node);
 
-		json_object_array_add(jarray, node_to_json(left));
-		json_object_array_add(jarray, node_to_json(right));
+		json_object_array_add(jarray, node_to_json(left, dump_bits));
+		json_object_array_add(jarray, node_to_json(right, dump_bits));
+		if (dump_bits) {
+			json_object_array_add(jarray, json_object_new_uint64(node->bits));
+		}
 
 		return jarray;
 	} else {
@@ -97,7 +123,17 @@ node_to_json(struct RopeNode *node) {
 
 static inline char *
 to_str(struct RopeNode *node) {
-	json_object *json = node_to_json(node);
+	json_object *json = node_to_json(node, false);
+	const char *str =
+			json_object_to_json_string_ext(json, JSON_C_TO_STRING_PLAIN);
+	char *result = cx_memdup(str, strlen(str) + 1);
+	json_object_put(json);
+	return result;
+}
+
+static inline char *
+to_str2(struct RopeNode *node) {
+	json_object *json = node_to_json(node, true);
 	const char *str =
 			json_object_to_json_string_ext(json, JSON_C_TO_STRING_PLAIN);
 	char *result = cx_memdup(str, strlen(str) + 1);

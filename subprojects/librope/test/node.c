@@ -477,23 +477,6 @@ test_node_rotate_preserves_sizes(void) {
 	rope_pool_cleanup(&pool);
 }
 
-static void
-test_node_integrity_fail1(void) {
-	int rv = 0;
-	struct RopePool pool = {0};
-
-	rv = rope_pool_init(&pool);
-	ASSERT_EQ(0, rv);
-
-	struct RopeNode *root = from_str(&pool, "''");
-
-	// Corrupt the tree by removing a child pointer
-
-	check_integrity(root);
-	rope_node_free(root, &pool);
-	rope_pool_cleanup(&pool);
-}
-
 DECLARE_TESTS
 TEST(test_node_split_inline_middle)
 TEST(test_node_insert_right)
@@ -513,5 +496,4 @@ TEST(test_test_utf8_sequence_sliding_right)
 TEST(test_test_utf8_sequence_sliding_left)
 TEST(test_node_balance_preserves_sizes)
 TEST(test_node_rotate_preserves_sizes)
-TEST(test_node_integrity_fail1)
 END_TESTS

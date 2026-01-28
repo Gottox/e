@@ -52,6 +52,12 @@ node_insert_unbalanced(
 	children[which] = node;
 	children[!which] = new_node;
 	rope_node_update_children(target);
+	
+	// Immediately set depth to 1 (both children are leaves with depth 0)
+	// This ensures the node can be safely used in rotations
+	target->bits &= ROPE_NODE_TYPE_MASK;
+	target->bits |= 1;  // depth = 1
+	
 	new_node = NULL;
 
 out:

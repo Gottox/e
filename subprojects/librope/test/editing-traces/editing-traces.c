@@ -132,7 +132,7 @@ run_patch(
 			   del, data);
 	}
 	if (verbose >= 2) {
-		char *str = to_str(cursor->rope->root);
+		char *str = to_str2(cursor->rope->root);
 		fputs(str, stderr);
 		fputc('\n', stderr);
 		free(str);
