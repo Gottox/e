@@ -244,18 +244,35 @@ rope_range_size(struct RopeRange *range, enum RopeUnit unit) {
 
 void
 rope_range_clone(struct RopeRange *range, struct RopeRange *from) {
-	rope_cursor_clone(&range->cursor_start, &from->cursor_start);
-	rope_cursor_clone(&range->cursor_end, &from->cursor_end);
-	rope_range_set_callback(range, from->callback, from->callback_userdata);
-	range->rope = from->rope;
+	int rv = 0;
+	rv = rope_range_init(range, from->rope);
+	assert(rv == 0);
+
+	struct RopeCursor *from_start = rope_range_start(from);
+	struct RopeCursor *from_end = rope_range_end(from);
+	struct RopeCursor *start = rope_range_start(range);
+	struct RopeCursor *end = rope_range_end(range);
+	size_t start_index = rope_cursor_index(from_start, ROPE_BYTE, 0);
+	size_t end_index = rope_cursor_index(from_end, ROPE_BYTE, 0);
+	rv = rope_cursor_move_to(start, ROPE_BYTE, start_index, 0);
+	assert(rv == 0);
+	rv = rope_cursor_move_to(end, ROPE_BYTE, end_index, 0);
+	assert(rv == 0);
 }
 
-bool rope_range_equals_data(struct RopeRange *range, const uint8_t *data, size_t byte_size) {
+bool
+rope_range_equals_data(
+		struct RopeRange *range, const uint8_t *data, size_t byte_size) {
 	if (byte_size != rope_range_size(range, ROPE_BYTE)) {
 		return false;
 	}
 	struct RopeCursor *start = rope_range_start(range);
 	return rope_cursor_starts_with_data(start, data, byte_size);
+}
+
+bool
+rope_range_equals_str(struct RopeRange *range, const char *str) {
+	return rope_range_equals_data(range, (const uint8_t *)str, strlen(str));
 }
 
 void

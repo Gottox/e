@@ -1,10 +1,12 @@
 #include <e_klient.h>
 #include <e_konstrukt.h>
+#include <e_command.h>
 #include <e_list.h>
 #include <e_struktur.h>
 #include <fcntl.h>
 #include <rope.h>
 #include <stdio.h>
+#include <string.h>
 #include <sys/poll.h>
 #include <unistd.h>
 
@@ -68,10 +70,12 @@ out:
 
 int
 e_klient_handle_input(union EStruktur *e, struct pollfd *pfd) {
+	E_TYPE_ASSERT(e);
 	int rv = 0;
+	struct EKonstrukt *k = e->base->konstrukt;
 	uint8_t buffer[ROPE_STR_FAST_SIZE];
 	struct RopeCursor cursor = {0};
-	E_TYPE_ASSERT(e);
+	char *command_name = NULL;
 
 	if ((pfd->revents & POLLIN) == 0) {
 		return 0;
@@ -102,19 +106,28 @@ e_klient_handle_input(union EStruktur *e, struct pollfd *pfd) {
 		if (rv < 0) {
 			break;
 		}
-		char *field_str = rope_range_to_cstr(&field, 0);
-		puts(field_str);
-		free(field_str);
+		if (command_name == NULL) {
+			command_name = rope_range_to_cstr(&field, 0);
+		}
 	}
 	if (rv == -ROPE_ERROR_OOB) {
 		// Incomplete message, wait for more data.
 		rv = 0;
 	} else if (rv < 0) {
-		fprintf(stderr, "Error parsing message: %d %d\n", rv, -ROPE_ERROR_OOB);
-		rope_append_str(&e->klient->output_buffer, "Error parsing message\n");
+		rope_append_str(&e->klient->output_buffer, "error \"parse error\"\n");
 		rv = e_message_parse_consume(&parser);
 	} else {
-		rope_append_str(&e->klient->output_buffer, "Ok\n");
+		bool found = false;
+		for (size_t i = 0; k->commands[i].function; i++) {
+			if (strcmp(command_name, k->commands[i].name) == 0) {
+				rv = k->commands[i].function(e->base->konstrukt, e);
+				found = true;
+				break;
+			}
+		}
+		if (!found) {
+			rope_append_str(&e->klient->output_buffer, "error \"unknown command\"\n");
+		}
 		rv = e_message_parse_consume(&parser);
 	}
 
@@ -123,6 +136,7 @@ e_klient_handle_input(union EStruktur *e, struct pollfd *pfd) {
 	}
 
 out:
+	free(command_name);
 	rope_range_cleanup(&field);
 	e_message_parser_cleanup(&parser);
 	rope_cursor_cleanup(&cursor);

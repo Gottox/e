@@ -1,3 +1,5 @@
+DEF(ping)
+
 // document commands
 //DEF(new)
 //DEF(open)

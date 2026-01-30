@@ -28,7 +28,7 @@ rope_cursor_clone(struct RopeCursor *cursor, struct RopeCursor *from) {
 		return rv;
 	}
 	size_t byte_index = rope_cursor_index(from, ROPE_BYTE, 0);
-	rope_cursor_set_callback(cursor, from->callback, from->userdata);
+	//rope_cursor_set_callback(cursor, from->callback, from->userdata);
 
 	return rope_cursor_move_to(cursor, ROPE_BYTE, byte_index, 0);
 }

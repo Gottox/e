@@ -187,6 +187,11 @@ size_t rope_range_size(struct RopeRange *range, enum RopeUnit unit);
 
 void rope_range_clone(struct RopeRange *range, struct RopeRange *from);
 
+bool rope_range_equals_data(
+		struct RopeRange *range, const uint8_t *data, size_t byte_size);
+
+bool rope_range_equals_str(struct RopeRange *range, const char *str);
+
 void rope_range_cleanup(struct RopeRange *range);
 
 /**********************************
