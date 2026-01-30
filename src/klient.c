@@ -1,10 +1,11 @@
-#include "rope.h"
-#include "rope_str.h"
 #include <e_klient.h>
-#include <e_struktur.h>
 #include <e_konstrukt.h>
 #include <e_list.h>
+#include <e_struktur.h>
+#include <fcntl.h>
+#include <rope.h>
 #include <stdio.h>
+#include <sys/poll.h>
 #include <unistd.h>
 
 E_TYPE_BEGIN(klient);
@@ -31,51 +32,54 @@ e_klient_new(
 		goto out;
 	}
 
-	rope_append_str(&e->klient->output_buffer, "Hello World!\n");
-
 out:
 	return rv;
 }
 
 static int
-e_klient_notify(union EStruktur *e, struct EMessage *message) {
-	int rv = 0;
-	char *msg_data;
+e_klient_notify(union EStruktur *e, struct Rope *message) {
 	E_TYPE_ASSERT(e);
-	struct EKonstrukt *k = e->base->konstrukt;
+	int rv = 0;
+	struct EKlient *klient = e->klient;
 
-	struct Rope *rope = &message->content;
+	struct RopeRange source = {0};
+	struct RopeCursor output = {0};
 
-	// TODO: this currently copies the entire message into the output buffer.
-	// instead librope should add an API to get the RopeStr from the iterator
-	// and a way to insert RopeStr directly into the output buffer rope.
-	size_t size = rope_size(rope, ROPE_BYTE);
-	msg_data = rope_to_str(rope, 0);
-	if (msg_data == NULL) {
-		rv = -ENOMEM;
+	rv = rope_to_range(message, &source);
+	if (rv < 0) {
 		goto out;
 	}
 
-	rv = rope_append(&e->klient->output_buffer, (uint8_t *)msg_data, size);
+	rv = rope_to_end_cursor(&klient->output_buffer, &output);
+	if (rv < 0) {
+		goto out;
+	}
+
+	rv = rope_range_copy_to(&source, &output, 0);
 	if (rv < 0) {
 		goto out;
 	}
 
 out:
-	free(msg_data);
+	rope_range_cleanup(&source);
+	rope_cursor_cleanup(&output);
 	return rv;
 }
 
 int
-e_klient_read_input(union EStruktur *e) {
+e_klient_handle_input(union EStruktur *e, struct pollfd *pfd) {
 	int rv = 0;
 	uint8_t buffer[ROPE_STR_FAST_SIZE];
 	struct RopeCursor cursor = {0};
 	E_TYPE_ASSERT(e);
 
+	if ((pfd->revents & POLLIN) == 0) {
+		return 0;
+	}
+
 	struct Rope *rope = &e->klient->input_buffer;
 
-	rv = read(e->klient->writer_fd, buffer, sizeof(buffer));
+	rv = read(e->klient->reader_fd, buffer, sizeof(buffer));
 	if (rv < 0) {
 		rv = -errno;
 		goto out;
@@ -87,7 +91,40 @@ e_klient_read_input(union EStruktur *e) {
 		goto out;
 	}
 
+	struct EMessageParser parser = {0};
+	rv = e_message_parser_init(&parser, &e->klient->input_buffer);
+	if (rv < 0) {
+		goto out;
+	}
+
+	struct RopeRange field = {0};
+	while (e_message_parser_next(&parser, &field, &rv)) {
+		if (rv < 0) {
+			break;
+		}
+		char *field_str = rope_range_to_cstr(&field, 0);
+		puts(field_str);
+		free(field_str);
+	}
+	if (rv == -ROPE_ERROR_OOB) {
+		// Incomplete message, wait for more data.
+		rv = 0;
+	} else if (rv < 0) {
+		fprintf(stderr, "Error parsing message: %d %d\n", rv, -ROPE_ERROR_OOB);
+		rope_append_str(&e->klient->output_buffer, "Error parsing message\n");
+		rv = e_message_parse_consume(&parser);
+	} else {
+		rope_append_str(&e->klient->output_buffer, "Ok\n");
+		rv = e_message_parse_consume(&parser);
+	}
+
+	if (rv < 0) {
+		goto out;
+	}
+
 out:
+	rope_range_cleanup(&field);
+	e_message_parser_cleanup(&parser);
 	rope_cursor_cleanup(&cursor);
 	return rv;
 }
@@ -120,10 +157,6 @@ e_klient_flush_output(union EStruktur *e) {
 	if (rv < 0) {
 		goto out;
 	}
-	rv = rope_cursor_move_to(&cursor, ROPE_BYTE, 0, 0);
-	if (rv < 0) {
-		goto out;
-	}
 	rv = rope_cursor_delete(&cursor, ROPE_BYTE, bytes_written);
 	if (rv < 0) {
 		goto out;
@@ -138,6 +171,10 @@ out:
 static void
 e_klient_cleanup(union EStruktur *e) {
 	E_TYPE_ASSERT(e);
+	close(e->klient->reader_fd);
+	close(e->klient->writer_fd);
+	rope_cleanup(&e->klient->output_buffer);
+	rope_cleanup(&e->klient->input_buffer);
 }
 
 E_TYPE_END(klient);

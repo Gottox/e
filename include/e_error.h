@@ -1,0 +1,10 @@
+#ifndef E_LIST_H
+#define E_LIST_H
+
+enum EError {
+	E_ERROR_SUCCES = 0,
+	E_ERROR_MESSAGE_INCOMPLETE,
+	E_ERROR_MESSAGE_ERROR,
+};
+
+#endif

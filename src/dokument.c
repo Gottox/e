@@ -10,7 +10,7 @@ e_dokument_new(union EStruktur *e, struct EKonstrukt *k) {
 }
 
 static int
-e_dokument_notify(union EStruktur *e, struct EMessage *message) {
+e_dokument_notify(union EStruktur *e, struct Rope *message) {
 	E_TYPE_ASSERT(e);
 	int rv = 0;
 	struct EKonstrukt *k = e->base->konstrukt;

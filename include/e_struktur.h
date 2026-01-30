@@ -8,7 +8,7 @@
 union EStruktur;
 
 struct EStrukturType {
-	int (*notify)(union EStruktur *, struct EMessage *);
+	int (*notify)(union EStruktur *, struct Rope *);
 	void (*cleanup)(union EStruktur *);
 };
 
@@ -55,5 +55,8 @@ union EStruktur {
 int e_struktur_alloc(
 		union EStruktur *e, struct EKonstrukt *k,
 		const struct EStrukturType *type);
+
+void
+e_struktur_release(union EStruktur *e);
 
 #endif /* E_STRUKTUR_H */

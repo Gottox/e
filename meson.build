@@ -12,19 +12,19 @@ project(
 
 # system dependencies
 cextras_dep = dependency('cextras')
-tree_sitter_dep = dependency('tree-sitter')
+#tree_sitter_dep = dependency('tree-sitter', default_options: ['werror=false'])
 termbox2_dep = dependency('termbox2')
 quickjs_dep = dependency('quickjs-ng')
 
 # project dependencies
-liblsp_dep = subproject('liblsp').get_variable('liblsp_dep')
+#liblsp_dep = subproject('liblsp').get_variable('liblsp_dep')
 librope_dep = subproject('librope').get_variable('librope_dep')
 libttyui_dep = subproject('libttyui').get_variable('libttyui_dep')
 libeditorconfig_dep = subproject(
     'libeditorconfig',
 ).get_variable('libeditorconfig_dep')
 
-libhighlight_dep = subproject('libhighlight').get_variable('libhighlight_dep')
+#libhighlight_dep = subproject('libhighlight').get_variable('libhighlight_dep')
 
 #subdir('parsers')
 

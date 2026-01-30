@@ -1,7 +1,7 @@
 project('liblsp', 'c')
 
 quickjs_dep = dependency('quickjs-ng')
-libjsonwrap_dep = subproject('libjsonwrap').get_variable('libjsonwrap_dep')
+#libjsonwrap_dep = subproject('libjsonwrap').get_variable('libjsonwrap_dep')
 cextras_dep = subproject('cextras').get_variable('cextras_dep')
 
 subdir('src')
@@ -10,7 +10,8 @@ subdir('include')
 
 subdir('gen')
 
-liblsp_dependencies = [quickjs_dep, libjsonwrap_dep]
+#liblsp_dependencies = [quickjs_dep, libjsonwrap_dep]
+liblsp_dependencies = [quickjs_dep]
 
 c_args = []
 

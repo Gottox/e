@@ -1,15 +1,14 @@
 #include <e.h>
 #include <e_command.h>
 
-static struct EKonstrukt e = {
-		.commands =
-				(const struct ECommand[]){
+const struct ECommand commands[] = {
 #define DEF(cmd) {.name = #cmd, .function = e_command_##cmd},
 #include <e_command.def.h>
 #undef DEF
-						{0},
-				},
+		{.name = "", .function = NULL},
 };
+
+static struct EKonstrukt e = {.commands = commands};
 
 int
 main(int argc, char *argv[]) {

@@ -12,8 +12,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-int
-e_handle_event(struct EKonstrukt *k) {
+static int
+handle_io(struct EKonstrukt *k) {
 	size_t poll_list_cap = k->klients.cap * 2;
 
 	// TODO: rather exitting directly, wait for new connections for a certain
@@ -41,7 +41,7 @@ e_handle_event(struct EKonstrukt *k) {
 			continue;
 		}
 		poll_list[idx].fd = e.klient->writer_fd;
-		poll_list[idx].events = POLLOUT;
+		poll_list[idx].events = POLLOUT | POLLHUP;
 		idx++;
 	}
 	size_t timeout_ms = -1;
@@ -55,9 +55,7 @@ e_handle_event(struct EKonstrukt *k) {
 
 	idx = 0;
 	for (uint64_t it = 0; e_list_it(&e, k, &k->klients, &it);) {
-		if (poll_list[idx].revents & POLLIN) {
-			rv = e_klient_read_input(&e);
-		}
+		rv = e_klient_handle_input(&e, &poll_list[idx]);
 		idx++;
 		if (rope_size(&e.klient->output_buffer, ROPE_BYTE) == 0) {
 			continue;
@@ -68,8 +66,27 @@ e_handle_event(struct EKonstrukt *k) {
 				goto out;
 			}
 		}
+		if (poll_list[idx].revents & POLLHUP) {
+			e_struktur_release(&e);
+		}
 		idx++;
 	}
+out:
+	return rv;
+}
+
+int
+e_handle_event(struct EKonstrukt *k) {
+	int rv = 0;
+	rv = handle_io(k);
+	if (rv < 0) {
+		goto out;
+	}
+
+	union EStruktur e;
+	for (uint64_t it = 0; e_list_it(&e, k, &k->klients, &it);) {
+	}
+
 out:
 	return rv;
 }
@@ -105,8 +122,7 @@ e_main(struct EKonstrukt *konstrukt, int argc, char **argv) {
 	union EStruktur e = {0};
 	rv = e_klient_new(&e, konstrukt, STDIN_FILENO, STDOUT_FILENO);
 	if (rv < 0) {
-		e_print_error(
-				konstrukt, "Error creating initial klient: %d", rv);
+		e_print_error(konstrukt, "Error creating initial klient: %d", rv);
 		goto out;
 	}
 
@@ -132,6 +148,8 @@ struktur_cleanup(void *data) {
 
 int
 e_init(struct EKonstrukt *konstrukt, int argc, char **argv) {
+	(void)argc;
+	(void)argv;
 	int rv = 0;
 
 	rv = cx_rc_hash_map_init(

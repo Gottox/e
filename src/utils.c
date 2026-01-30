@@ -45,7 +45,9 @@ e_parse_unsigned_dec(struct RopeCursor *cursor, uint64_t *number) {
 }
 
 int
-e_parse_unsigned_hex(struct RopeCursor *cursor, uint64_t *number, size_t digits) {
+e_parse_unsigned_hex(
+		struct RopeCursor *cursor, uint64_t *number, size_t digits) {
+	(void)digits;
 	*number = 0;
 	int rv = -1;
 	int val;

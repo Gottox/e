@@ -3,14 +3,15 @@
 
 #include "e.h"
 
-typedef int (*e_command_function_t)(struct EKonstrukt *konstrukt);
+typedef int (*e_command_function_t)(struct EKonstrukt *konstrukt, union EStruktur *e);
 
 struct ECommand {
 	char name[16];
 	e_command_function_t function;
 };
 
-#define DEF(cmd) int e_command_##cmd (struct EKonstrukt *konstrukt);
+#define DEF(cmd) \
+	int e_command_##cmd(struct EKonstrukt *konstrukt, union EStruktur *e);
 #include "e_command.def.h"
 #undef DEF
 

@@ -7,79 +7,6 @@
 #include <string.h>
 
 int
-e_message_init(struct EMessage *message, struct EKonstrukt *k) {
-	int rv = 0;
-
-	rv = rope_init(&message->content, &k->rope_pool);
-	if (rv < 0) {
-		goto out;
-	}
-
-	message->sender_id = 0;
-out:
-	return rv;
-}
-
-int
-e_message_from_klient(struct EMessage *message, struct EKlient *klient) {
-	assert(klient->base.type == &e_struktur_type_klient);
-	int rv = 0;
-	struct RopeRange range = {0};
-	struct RopeCursor message_cursor = {0};
-
-	rv = rope_range_init(&range, &klient->input_buffer);
-	if (rv < 0) {
-		goto out;
-	}
-
-	struct RopeCursor *start = rope_range_start(&range);
-	struct RopeCursor *end = rope_range_end(&range);
-
-	rv = rope_cursor_move_to(start, ROPE_BYTE, 0, 0);
-	if (rv < 0) {
-		goto out;
-	}
-	rv = rope_cursor_move_to(end, ROPE_LINE, 1, 0);
-	if (rv < 0) {
-		goto out;
-	}
-
-	rv = rope_cursor_init(&message_cursor, &message->content);
-	if (rv < 0) {
-		goto out;
-	}
-	rv = rope_range_copy_to(&range, &message_cursor, 0);
-	if (rv < 0) {
-		goto out;
-	}
-out:
-	rope_cursor_cleanup(&message_cursor);
-	rope_range_cleanup(&range);
-	return rv;
-}
-
-int
-e_message_add(struct EMessage *message, struct RopeStr *str) {
-	(void)message;
-	(void)str;
-	return 0;
-}
-
-int
-e_message_add_data(struct EMessage *message, const uint8_t *data, size_t size) {
-	int rv = 0;
-	struct RopeStr str = {0};
-
-	rv = rope_str_init(&str, data, size);
-	if (rv < 0) {
-		goto out;
-	}
-	rv = e_message_add(message, &str);
-out:
-	return rv;
-}
-
-int
 e_message_parser_init(struct EMessageParser *parser, struct Rope *message) {
 	int rv = 0;
 
@@ -93,11 +20,24 @@ e_message_parser_init(struct EMessageParser *parser, struct Rope *message) {
 	}
 	rv = rope_init(&parser->unescape_buffer, message->pool);
 
+	struct RopeCursor *end = rope_range_end(&parser->post);
+
+	rv = rope_cursor_move_to(end, ROPE_LINE, 1, 0);
+	if (rv == -ROPE_ERROR_OOB) {
+		// Ignore this error and move the cursor to the end.
+		size_t size = rope_size(message, ROPE_BYTE);
+		rv = rope_cursor_move_to(end, ROPE_BYTE, size, 0);
+	}
+	if (rv < 0) {
+		goto out;
+	}
+	rope_range_collapse(&parser->post, ROPE_RIGHT);
+
 out:
 	if (rv < 0) {
-		e_message_parse_cleanup(parser);
+		e_message_parser_cleanup(parser);
 	}
-	return 0;
+	return rv;
 }
 
 static int
@@ -119,12 +59,6 @@ parse_sized_message(struct EMessageParser *parser, struct RopeRange *tgt) {
 
 	// On first sized field, advance post.end to after the header newline
 	struct RopeCursor *end = rope_range_end(&parser->post);
-	if (rope_cursor_index(end, ROPE_BYTE, 0) == 0) {
-		rv = rope_cursor_move_to(end, ROPE_LINE, 1, 0);
-		if (rv < 0) {
-			goto out;
-		}
-	}
 
 	rope_range_collapse(&parser->post, ROPE_RIGHT);
 	rv = rope_cursor_move_by(end, ROPE_BYTE, byte_size);
@@ -136,6 +70,7 @@ parse_sized_message(struct EMessageParser *parser, struct RopeRange *tgt) {
 
 	uint32_t cp = rope_cursor_cp(end);
 	if (cp != '\n') {
+		// TODO: better error code.
 		rv = -1;
 		goto out;
 	}
@@ -172,6 +107,11 @@ parse_quoted_message(struct EMessageParser *parser, struct RopeRange *tgt) {
 	}
 
 	for (;;) {
+		if (rope_cursor_is_eof(line) && terminator[0] != ' ') {
+			// TODO: better error code.
+			rv = -1;
+			goto out;
+		}
 		if (cp == '\\') {
 			rv = rope_cursor_move_by(line, ROPE_BYTE, 1);
 			if (rv < 0) {
@@ -179,6 +119,7 @@ parse_quoted_message(struct EMessageParser *parser, struct RopeRange *tgt) {
 			}
 			cp = rope_cursor_cp(line);
 			if (cp == '\n') {
+				// TODO: better error code.
 				rv = -1;
 				goto out;
 			}
@@ -199,6 +140,7 @@ parse_quoted_message(struct EMessageParser *parser, struct RopeRange *tgt) {
 		} else if (strchr(terminator, cp)) {
 			break;
 		} else if (cp == '\n') {
+			// TODO: better error code.
 			rv = -1;
 			goto out;
 		}
@@ -230,7 +172,7 @@ out:
 }
 
 bool
-e_message_parse_next(
+e_message_parser_next(
 		struct EMessageParser *parser, struct RopeRange *tgt, int *err) {
 	bool has_next = false;
 	int rv = 0;
@@ -264,8 +206,25 @@ out:
 	return has_next;
 }
 
+int
+e_message_parse_consume(struct EMessageParser *parser) {
+	int rv = 0;
+	struct RopeCursor *start = rope_range_start(&parser->post);
+
+	rv = rope_cursor_move_to(start, ROPE_BYTE, 0, 0);
+	if (rv < 0) {
+		goto out;
+	}
+	rv = rope_range_delete(&parser->post);
+	if (rv < 0) {
+		goto out;
+	}
+out:
+	return rv;
+}
+
 void
-e_message_parse_cleanup(struct EMessageParser *parser) {
+e_message_parser_cleanup(struct EMessageParser *parser) {
 	rope_cursor_cleanup(&parser->line);
 	rope_range_cleanup(&parser->post);
 	rope_cleanup(&parser->unescape_buffer);

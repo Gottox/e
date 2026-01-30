@@ -15,6 +15,6 @@ int e_klient_new(
 
 int e_klient_flush_output(union EStruktur *e);
 
-int e_klient_read_input(union EStruktur *e);
+int e_klient_handle_input(union EStruktur *e, struct pollfd *pfd);
 
 #endif /* E_KLIENT_H */

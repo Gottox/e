@@ -1,3 +1,5 @@
+#subdir('integration')
+
 e_test = ['list.c', 'message.c']
 
 testlib_dep = dependency('testlib')
@@ -12,7 +14,7 @@ foreach p : e_test
         ],
         dependencies: [
             testlib_dep,
-            libhighlight_dep,
+            #libhighlight_dep,
             librope_dep,
             cextras_dep,
         ],

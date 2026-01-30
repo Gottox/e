@@ -25,35 +25,35 @@ test_message_parse_field(void) {
 	bool has_next = false;
 	struct RopeRange field = {0};
 
-	has_next = e_message_parse_next(&parser, &field, &rv);
+	has_next = e_message_parser_next(&parser, &field, &rv);
 	ASSERT_TRUE(has_next);
 	ASSERT_EQ(0, rv);
 	char *buf = rope_range_to_cstr(&field, 0);
 	ASSERT_STREQ("field1", buf);
 	free(buf);
 
-	has_next = e_message_parse_next(&parser, &field, &rv);
+	has_next = e_message_parser_next(&parser, &field, &rv);
 	ASSERT_TRUE(has_next);
 	ASSERT_EQ(0, rv);
 	buf = rope_range_to_cstr(&field, 0);
 	ASSERT_STREQ("field2", buf);
 	free(buf);
 
-	has_next = e_message_parse_next(&parser, &field, &rv);
+	has_next = e_message_parser_next(&parser, &field, &rv);
 	ASSERT_TRUE(has_next);
 	ASSERT_EQ(0, rv);
 	buf = rope_range_to_cstr(&field, 0);
 	ASSERT_STREQ("field3", buf);
 	free(buf);
 
-	has_next = e_message_parse_next(&parser, &field, &rv);
+	has_next = e_message_parser_next(&parser, &field, &rv);
 	ASSERT_FALSE(has_next);
 	ASSERT_EQ(0, rv);
 	rope_range_cleanup(&field);
 
 
 
-	e_message_parse_cleanup(&parser);
+	e_message_parser_cleanup(&parser);
 	rope_cleanup(&message);
 	rope_pool_cleanup(&pool);
 }
@@ -80,26 +80,26 @@ test_message_parse_double_quoted(void) {
 	bool has_next = false;
 	struct RopeRange field = {0};
 
-	has_next = e_message_parse_next(&parser, &field, &rv);
+	has_next = e_message_parser_next(&parser, &field, &rv);
 	ASSERT_TRUE(has_next);
 	ASSERT_EQ(0, rv);
 	char *buf = rope_range_to_cstr(&field, 0);
 	ASSERT_STREQ("hello world", buf);
 	free(buf);
 
-	has_next = e_message_parse_next(&parser, &field, &rv);
+	has_next = e_message_parser_next(&parser, &field, &rv);
 	ASSERT_TRUE(has_next);
 	ASSERT_EQ(0, rv);
 	buf = rope_range_to_cstr(&field, 0);
 	ASSERT_STREQ("second field", buf);
 	free(buf);
 
-	has_next = e_message_parse_next(&parser, &field, &rv);
+	has_next = e_message_parser_next(&parser, &field, &rv);
 	ASSERT_FALSE(has_next);
 	ASSERT_EQ(0, rv);
 	rope_range_cleanup(&field);
 
-	e_message_parse_cleanup(&parser);
+	e_message_parser_cleanup(&parser);
 	rope_cleanup(&message);
 	rope_pool_cleanup(&pool);
 }
@@ -126,26 +126,26 @@ test_message_parse_single_quoted(void) {
 	bool has_next = false;
 	struct RopeRange field = {0};
 
-	has_next = e_message_parse_next(&parser, &field, &rv);
+	has_next = e_message_parser_next(&parser, &field, &rv);
 	ASSERT_TRUE(has_next);
 	ASSERT_EQ(0, rv);
 	char *buf = rope_range_to_cstr(&field, 0);
 	ASSERT_STREQ("hello world", buf);
 	free(buf);
 
-	has_next = e_message_parse_next(&parser, &field, &rv);
+	has_next = e_message_parser_next(&parser, &field, &rv);
 	ASSERT_TRUE(has_next);
 	ASSERT_EQ(0, rv);
 	buf = rope_range_to_cstr(&field, 0);
 	ASSERT_STREQ("second field", buf);
 	free(buf);
 
-	has_next = e_message_parse_next(&parser, &field, &rv);
+	has_next = e_message_parser_next(&parser, &field, &rv);
 	ASSERT_FALSE(has_next);
 	ASSERT_EQ(0, rv);
 	rope_range_cleanup(&field);
 
-	e_message_parse_cleanup(&parser);
+	e_message_parser_cleanup(&parser);
 	rope_cleanup(&message);
 	rope_pool_cleanup(&pool);
 }
@@ -172,26 +172,26 @@ test_message_parse_escape_unquoted(void) {
 	bool has_next = false;
 	struct RopeRange field = {0};
 
-	has_next = e_message_parse_next(&parser, &field, &rv);
+	has_next = e_message_parser_next(&parser, &field, &rv);
 	ASSERT_TRUE(has_next);
 	ASSERT_EQ(0, rv);
 	char *buf = rope_range_to_cstr(&field, 0);
 	ASSERT_STREQ("hello world", buf);
 	free(buf);
 
-	has_next = e_message_parse_next(&parser, &field, &rv);
+	has_next = e_message_parser_next(&parser, &field, &rv);
 	ASSERT_TRUE(has_next);
 	ASSERT_EQ(0, rv);
 	buf = rope_range_to_cstr(&field, 0);
 	ASSERT_STREQ("field2", buf);
 	free(buf);
 
-	has_next = e_message_parse_next(&parser, &field, &rv);
+	has_next = e_message_parser_next(&parser, &field, &rv);
 	ASSERT_FALSE(has_next);
 	ASSERT_EQ(0, rv);
 	rope_range_cleanup(&field);
 
-	e_message_parse_cleanup(&parser);
+	e_message_parser_cleanup(&parser);
 	rope_cleanup(&message);
 	rope_pool_cleanup(&pool);
 }
@@ -218,26 +218,26 @@ test_message_parse_escape_quoted(void) {
 	bool has_next = false;
 	struct RopeRange field = {0};
 
-	has_next = e_message_parse_next(&parser, &field, &rv);
+	has_next = e_message_parser_next(&parser, &field, &rv);
 	ASSERT_TRUE(has_next);
 	ASSERT_EQ(0, rv);
 	char *buf = rope_range_to_cstr(&field, 0);
 	ASSERT_STREQ("hello \"world\"", buf);
 	free(buf);
 
-	has_next = e_message_parse_next(&parser, &field, &rv);
+	has_next = e_message_parser_next(&parser, &field, &rv);
 	ASSERT_TRUE(has_next);
 	ASSERT_EQ(0, rv);
 	buf = rope_range_to_cstr(&field, 0);
 	ASSERT_STREQ("field2", buf);
 	free(buf);
 
-	has_next = e_message_parse_next(&parser, &field, &rv);
+	has_next = e_message_parser_next(&parser, &field, &rv);
 	ASSERT_FALSE(has_next);
 	ASSERT_EQ(0, rv);
 	rope_range_cleanup(&field);
 
-	e_message_parse_cleanup(&parser);
+	e_message_parser_cleanup(&parser);
 	rope_cleanup(&message);
 	rope_pool_cleanup(&pool);
 }
@@ -264,33 +264,33 @@ test_message_parse_sized(void) {
 	bool has_next = false;
 	struct RopeRange field = {0};
 
-	has_next = e_message_parse_next(&parser, &field, &rv);
+	has_next = e_message_parser_next(&parser, &field, &rv);
 	ASSERT_TRUE(has_next);
 	ASSERT_EQ(0, rv);
 	char *buf = rope_range_to_cstr(&field, 0);
 	ASSERT_STREQ("abc", buf);
 	free(buf);
 
-	has_next = e_message_parse_next(&parser, &field, &rv);
+	has_next = e_message_parser_next(&parser, &field, &rv);
 	ASSERT_TRUE(has_next);
 	ASSERT_EQ(0, rv);
 	buf = rope_range_to_cstr(&field, 0);
 	ASSERT_STREQ("abcde", buf);
 	free(buf);
 
-	has_next = e_message_parse_next(&parser, &field, &rv);
+	has_next = e_message_parser_next(&parser, &field, &rv);
 	ASSERT_TRUE(has_next);
 	ASSERT_EQ(0, rv);
 	buf = rope_range_to_cstr(&field, 0);
 	ASSERT_STREQ("123", buf);
 	free(buf);
 
-	has_next = e_message_parse_next(&parser, &field, &rv);
+	has_next = e_message_parser_next(&parser, &field, &rv);
 	ASSERT_FALSE(has_next);
 	ASSERT_EQ(0, rv);
 	rope_range_cleanup(&field);
 
-	e_message_parse_cleanup(&parser);
+	e_message_parser_cleanup(&parser);
 	rope_cleanup(&message);
 	rope_pool_cleanup(&pool);
 }
@@ -317,40 +317,40 @@ test_message_parse_mixed(void) {
 	bool has_next = false;
 	struct RopeRange field = {0};
 
-	has_next = e_message_parse_next(&parser, &field, &rv);
+	has_next = e_message_parser_next(&parser, &field, &rv);
 	ASSERT_TRUE(has_next);
 	ASSERT_EQ(0, rv);
 	char *buf = rope_range_to_cstr(&field, 0);
 	ASSERT_STREQ("field1", buf);
 	free(buf);
 
-	has_next = e_message_parse_next(&parser, &field, &rv);
+	has_next = e_message_parser_next(&parser, &field, &rv);
 	ASSERT_TRUE(has_next);
 	ASSERT_EQ(0, rv);
 	buf = rope_range_to_cstr(&field, 0);
 	ASSERT_STREQ("quoted field", buf);
 	free(buf);
 
-	has_next = e_message_parse_next(&parser, &field, &rv);
+	has_next = e_message_parser_next(&parser, &field, &rv);
 	ASSERT_TRUE(has_next);
 	ASSERT_EQ(0, rv);
 	buf = rope_range_to_cstr(&field, 0);
 	ASSERT_STREQ("12345", buf);
 	free(buf);
 
-	has_next = e_message_parse_next(&parser, &field, &rv);
+	has_next = e_message_parser_next(&parser, &field, &rv);
 	ASSERT_TRUE(has_next);
 	ASSERT_EQ(0, rv);
 	buf = rope_range_to_cstr(&field, 0);
 	ASSERT_STREQ("single", buf);
 	free(buf);
 
-	has_next = e_message_parse_next(&parser, &field, &rv);
+	has_next = e_message_parser_next(&parser, &field, &rv);
 	ASSERT_FALSE(has_next);
 	ASSERT_EQ(0, rv);
 	rope_range_cleanup(&field);
 
-	e_message_parse_cleanup(&parser);
+	e_message_parser_cleanup(&parser);
 	rope_cleanup(&message);
 	rope_pool_cleanup(&pool);
 }
@@ -377,12 +377,12 @@ test_message_parse_empty(void) {
 	bool has_next = false;
 	struct RopeRange field = {0};
 
-	has_next = e_message_parse_next(&parser, &field, &rv);
+	has_next = e_message_parser_next(&parser, &field, &rv);
 	ASSERT_FALSE(has_next);
 	ASSERT_EQ(0, rv);
 	rope_range_cleanup(&field);
 
-	e_message_parse_cleanup(&parser);
+	e_message_parser_cleanup(&parser);
 	rope_cleanup(&message);
 	rope_pool_cleanup(&pool);
 }
@@ -409,26 +409,26 @@ test_message_parse_multiple_spaces(void) {
 	bool has_next = false;
 	struct RopeRange field = {0};
 
-	has_next = e_message_parse_next(&parser, &field, &rv);
+	has_next = e_message_parser_next(&parser, &field, &rv);
 	ASSERT_TRUE(has_next);
 	ASSERT_EQ(0, rv);
 	char *buf = rope_range_to_cstr(&field, 0);
 	ASSERT_STREQ("field1", buf);
 	free(buf);
 
-	has_next = e_message_parse_next(&parser, &field, &rv);
+	has_next = e_message_parser_next(&parser, &field, &rv);
 	ASSERT_TRUE(has_next);
 	ASSERT_EQ(0, rv);
 	buf = rope_range_to_cstr(&field, 0);
 	ASSERT_STREQ("field2", buf);
 	free(buf);
 
-	has_next = e_message_parse_next(&parser, &field, &rv);
+	has_next = e_message_parser_next(&parser, &field, &rv);
 	ASSERT_FALSE(has_next);
 	ASSERT_EQ(0, rv);
 	rope_range_cleanup(&field);
 
-	e_message_parse_cleanup(&parser);
+	e_message_parser_cleanup(&parser);
 	rope_cleanup(&message);
 	rope_pool_cleanup(&pool);
 }
@@ -455,19 +455,19 @@ test_message_parse_missing_newline(void) {
 	bool has_next = false;
 	struct RopeRange field = {0};
 
-	has_next = e_message_parse_next(&parser, &field, &rv);
+	has_next = e_message_parser_next(&parser, &field, &rv);
 	ASSERT_TRUE(has_next);
 	ASSERT_EQ(0, rv);
 	char *buf = rope_range_to_cstr(&field, 0);
 	ASSERT_STREQ("field1", buf);
 	free(buf);
 
-	has_next = e_message_parse_next(&parser, &field, &rv);
+	has_next = e_message_parser_next(&parser, &field, &rv);
 	ASSERT_TRUE(has_next);
 	ASSERT_LT(rv, 0);
 	rope_range_cleanup(&field);
 
-	e_message_parse_cleanup(&parser);
+	e_message_parser_cleanup(&parser);
 	rope_cleanup(&message);
 	rope_pool_cleanup(&pool);
 }
@@ -494,19 +494,19 @@ test_message_parse_sized_missing_newline(void) {
 	bool has_next = false;
 	struct RopeRange field = {0};
 
-	has_next = e_message_parse_next(&parser, &field, &rv);
+	has_next = e_message_parser_next(&parser, &field, &rv);
 	ASSERT_TRUE(has_next);
 	ASSERT_EQ(0, rv);
 	char *buf = rope_range_to_cstr(&field, 0);
 	ASSERT_STREQ("abc", buf);
 	free(buf);
 
-	has_next = e_message_parse_next(&parser, &field, &rv);
+	has_next = e_message_parser_next(&parser, &field, &rv);
 	ASSERT_TRUE(has_next);
 	ASSERT_LT(rv, 0);
 	rope_range_cleanup(&field);
 
-	e_message_parse_cleanup(&parser);
+	e_message_parser_cleanup(&parser);
 	rope_cleanup(&message);
 	rope_pool_cleanup(&pool);
 }

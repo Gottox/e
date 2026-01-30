@@ -1,9 +1,43 @@
 #include <e.h>
 
-#define DEF(cmd) \
-	int e_command_##cmd(struct EKonstrukt *konstrukt) { \
-		(void)konstrukt; \
-		return 0; \
-	}
-#include "e_command.def.h"
-#undef DEF
+int
+e_command_endpoint(struct EKonstrukt *konstrukt, union EStruktur *e) {
+	(void)konstrukt;
+	(void)e;
+	return 0;
+}
+
+int
+e_command_subscribe(struct EKonstrukt *konstrukt, union EStruktur *e) {
+	(void)konstrukt;
+	(void)e;
+	return 0;
+}
+
+int
+e_command_request(struct EKonstrukt *konstrukt, union EStruktur *e) {
+	(void)konstrukt;
+	(void)e;
+	return 0;
+}
+
+int
+e_command_notify(struct EKonstrukt *konstrukt, union EStruktur *e) {
+	(void)konstrukt;
+	(void)e;
+	return 0;
+}
+
+int
+e_command_send(struct EKonstrukt *konstrukt, union EStruktur *e) {
+	(void)konstrukt;
+	(void)e;
+	return 0;
+}
+
+int
+e_command_respond(struct EKonstrukt *konstrukt, union EStruktur *e) {
+	(void)konstrukt;
+	(void)e;
+	return 0;
+}
