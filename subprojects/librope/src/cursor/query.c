@@ -1,14 +1,11 @@
+#include "cursor_internal.h"
+#include <rope_node.h>
+#include <cextras/unicode.h>
+#include <grapheme.h>
+#include <rope.h>
 #include <stdbool.h>
 #include <stdint.h>
-#define _GNU_SOURCE
-
-#include "cursor_internal.h"
-
-#include "rope_node.h"
-#include <cextras/unicode.h>
-#include <rope.h>
 #include <string.h>
-#include <grapheme.h>
 
 struct RopeNode *
 rope_cursor_find_node(

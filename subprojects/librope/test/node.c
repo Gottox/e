@@ -122,7 +122,7 @@ test_node_balance_left(void) {
 	struct RopeNode *hel_node = rope_node_left(root);
 	hel_node = rope_node_left(hel_node);
 
-	rope_node_balance_up(hel_node);
+	rope_node_balance_up2(hel_node);
 
 	ASSERT_JSONEQ("[['H','E'],[['L','L'],'O']]", root);
 
@@ -144,7 +144,7 @@ test_node_balance_right(void) {
 	struct RopeNode *lo_node = rope_node_right(root);
 	lo_node = rope_node_right(lo_node);
 
-	rope_node_balance_up(lo_node);
+	rope_node_balance_up2(lo_node);
 
 	ASSERT_JSONEQ("[['H',['E','L']],['L','O']]", root);
 
@@ -433,7 +433,7 @@ test_node_balance_preserves_sizes(void) {
 	struct RopeNode *deep_node = rope_node_right(root);
 	deep_node = rope_node_right(deep_node);
 
-	rope_node_balance_up(deep_node);
+	rope_node_balance_up2(deep_node);
 
 	ASSERT_EQ(5, rope_node_size(root, ROPE_BYTE));
 
@@ -477,6 +477,235 @@ test_node_rotate_preserves_sizes(void) {
 	rope_pool_cleanup(&pool);
 }
 
+static void
+test_compact_simple_branch(void) {
+	int rv = 0;
+	struct RopePool pool = {0};
+
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+
+	struct RopeNode *root = from_str(&pool, "['Hello','World']");
+	ASSERT_EQ(ROPE_NODE_BRANCH, rope_node_type(root));
+
+	rv = rope_node_compact(root, &pool);
+	ASSERT_EQ(0, rv);
+
+	// After compact, should be a single leaf with concatenated content
+	ASSERT_EQ(ROPE_NODE_LEAF, rope_node_type(root));
+
+	size_t size = 0;
+	const uint8_t *data = rope_node_value(root, &size);
+	ASSERT_EQ(10, size);
+	ASSERT_STREQ("HelloWorld", (const char *)data);
+
+	check_integrity(root);
+	rope_node_free(root, &pool);
+	rope_pool_cleanup(&pool);
+}
+
+static void
+test_compact_deeply_nested_tree(void) {
+	int rv = 0;
+	struct RopePool pool = {0};
+
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+
+	// Create deeply nested tree: [[[['A','B'],'C'],'D'],'E']
+	struct RopeNode *root = from_str(&pool, "[[[['A','B'],'C'],'D'],'E']");
+	ASSERT_EQ(ROPE_NODE_BRANCH, rope_node_type(root));
+
+	rv = rope_node_compact(root, &pool);
+	ASSERT_EQ(0, rv);
+
+	// After compact, should be a single leaf
+	ASSERT_EQ(ROPE_NODE_LEAF, rope_node_type(root));
+
+	size_t size = 0;
+	const uint8_t *data = rope_node_value(root, &size);
+	ASSERT_EQ(5, size);
+	ASSERT_STREQ("ABCDE", (const char *)data);
+
+	check_integrity(root);
+	rope_node_free(root, &pool);
+	rope_pool_cleanup(&pool);
+}
+
+// Test: compact is a no-op when total size exceeds ROPE_STR_FAST_SIZE
+static void
+test_compact_size_boundary_exceeds_limit(void) {
+	int rv = 0;
+	struct RopePool pool = {0};
+
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+
+	// Create buffers that together exceed ROPE_STR_FAST_SIZE (~1020 bytes)
+	char buffer1[600] = {0};
+	char buffer2[600] = {0};
+	memset(buffer1, 'A', sizeof(buffer1) - 1);
+	memset(buffer2, 'B', sizeof(buffer2) - 1);
+
+	struct RopeNode *root = rope_node_new(&pool);
+	rv = rope_node_insert_right(
+			root, (const uint8_t *)buffer1, sizeof(buffer1) - 1, 0, &pool);
+	ASSERT_EQ(0, rv);
+	rv = rope_node_insert_right(
+			root, (const uint8_t *)buffer2, sizeof(buffer2) - 1, 0, &pool);
+	ASSERT_EQ(0, rv);
+
+	// Verify it's a branch before compact
+	ASSERT_EQ(ROPE_NODE_BRANCH, rope_node_type(root));
+
+	// Total size is 1198 bytes > ROPE_STR_FAST_SIZE (~1020)
+	size_t total = rope_node_size(root, ROPE_BYTE);
+	ASSERT_GT(total, ROPE_STR_FAST_SIZE);
+
+	rv = rope_node_compact(root, &pool);
+	ASSERT_EQ(0, rv);
+
+	// Should still be a branch (compact is no-op for large trees)
+	ASSERT_EQ(ROPE_NODE_BRANCH, rope_node_type(root));
+
+	check_integrity(root);
+	rope_node_free(root, &pool);
+	rope_pool_cleanup(&pool);
+}
+
+static void
+test_compact_on_leaf_is_noop(void) {
+	int rv = 0;
+	struct RopePool pool = {0};
+
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+
+	struct RopeNode *root = from_str(&pool, "'Hello'");
+	ASSERT_EQ(ROPE_NODE_LEAF, rope_node_type(root));
+
+	uint64_t original_tags = 0x123;
+	rope_node_add_tags(root, original_tags);
+	ASSERT_EQ(original_tags, rope_node_tags(root));
+
+	rv = rope_node_compact(root, &pool);
+	ASSERT_EQ(0, rv);
+
+	ASSERT_EQ(ROPE_NODE_LEAF, rope_node_type(root));
+
+	size_t size = 0;
+	const uint8_t *data = rope_node_value(root, &size);
+	ASSERT_EQ(5, size);
+	ASSERT_STREQ("Hello", (const char *)data);
+
+	ASSERT_EQ(original_tags, rope_node_tags(root));
+
+	check_integrity(root);
+	rope_node_free(root, &pool);
+	rope_pool_cleanup(&pool);
+}
+
+static void
+test_compact_tags_persist(void) {
+	int rv = 0;
+	struct RopePool pool = {0};
+
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+
+	struct RopeNode *root = from_str(&pool, "['Left','Right']");
+
+	struct RopeNode *left = rope_node_left(root);
+	struct RopeNode *right = rope_node_right(root);
+
+	uint64_t tag_a = 0x01;
+	uint64_t tag_b = 0x02;
+	rope_node_add_tags(left, tag_a);
+	rope_node_add_tags(right, tag_b);
+
+	ASSERT_EQ(tag_a, rope_node_tags(left));
+	ASSERT_EQ(tag_b, rope_node_tags(right));
+
+	rv = rope_node_compact(root, &pool);
+	ASSERT_EQ(0, rv);
+
+	ASSERT_EQ(ROPE_NODE_LEAF, rope_node_type(root));
+
+	uint64_t expected_tags = tag_a | tag_b;
+	uint64_t actual_tags = rope_node_tags(root);
+
+	ASSERT_EQ(expected_tags, actual_tags);
+
+	check_integrity(root);
+	rope_node_free(root, &pool);
+	rope_pool_cleanup(&pool);
+}
+
+static void
+test_compact_subtree_avl_consistency(void) {
+	int rv = 0;
+	struct RopePool pool = {0};
+
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+
+	struct RopeNode *root =
+			from_str(&pool, "[['A','B'],[['D','E'],'C']]");
+
+	struct RopeNode *small = rope_node_left(root);
+
+	rv = rope_node_compact(small, &pool);
+	ASSERT_EQ(0, rv);
+
+	ASSERT_EQ(ROPE_NODE_LEAF, rope_node_type(small));
+
+	size_t size = 0;
+	const uint8_t *data = rope_node_value(small, &size);
+	ASSERT_EQ(2, size);
+	ASSERT_STREQ("AB", (const char *)data);
+
+	check_integrity(root);
+
+	rope_node_free(root, &pool);
+	rope_pool_cleanup(&pool);
+}
+
+static void
+test_compact_subtree_with_deep_sibling(void) {
+	int rv = 0;
+	struct RopePool pool = {0};
+
+	rv = rope_pool_init(&pool);
+	ASSERT_EQ(0, rv);
+
+	struct RopeNode *root =
+			from_str(&pool, "[['A','B'],[[[['C','D'],'E'],'F'],'G']]");
+
+	struct RopeNode *left = rope_node_left(root);
+	struct RopeNode *right = rope_node_right(root);
+
+	ASSERT_EQ(ROPE_NODE_BRANCH, rope_node_type(left));
+	ASSERT_EQ(ROPE_NODE_BRANCH, rope_node_type(right));
+
+	size_t left_depth = rope_node_depth(left);
+	size_t right_depth = rope_node_depth(right);
+
+	// Right subtree should be deeper
+	ASSERT_GT(right_depth, left_depth);
+
+	// Compact the shallow left subtree
+	rv = rope_node_compact(left, &pool);
+	ASSERT_EQ(0, rv);
+
+	ASSERT_EQ(ROPE_NODE_LEAF, rope_node_type(left));
+	ASSERT_EQ(0u, rope_node_depth(left));
+
+	check_integrity(root);
+
+	rope_node_free(root, &pool);
+	rope_pool_cleanup(&pool);
+}
+
 DECLARE_TESTS
 TEST(test_node_split_inline_middle)
 TEST(test_node_insert_right)
@@ -496,4 +725,11 @@ TEST(test_test_utf8_sequence_sliding_right)
 TEST(test_test_utf8_sequence_sliding_left)
 TEST(test_node_balance_preserves_sizes)
 TEST(test_node_rotate_preserves_sizes)
+NO_TEST(test_compact_simple_branch)
+NO_TEST(test_compact_deeply_nested_tree)
+NO_TEST(test_compact_size_boundary_exceeds_limit)
+NO_TEST(test_compact_on_leaf_is_noop)
+NO_TEST(test_compact_tags_persist)
+NO_TEST(test_compact_subtree_avl_consistency)
+NO_TEST(test_compact_subtree_with_deep_sibling)
 END_TESTS

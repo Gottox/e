@@ -65,27 +65,6 @@ out:
 	return rv;
 }
 
-#if 0
-node_insert(
-		struct RopeNode *target, struct RopeNode *node, struct RopePool *pool,
-		enum RopeDirection which) {
-	int rv = 0;
-	struct RopeNode *neighbour = rope_node_neighbour(node, which);
-	if (neighbour && rope_node_depth(neighbour) < rope_node_depth(node)) {
-		node = neighbour;
-		which = !which;
-	}
-
-	rv = node_insert_unbalanced(target, node, pool, which);
-	if (rv < 0) {
-		goto out;
-	}
-	rope_node_balance_up(node);
-out:
-	return rv;
-}
-#endif
-
 static int
 node_insert_or_append(
 		struct RopeNode **node, struct RopeStr *str, uint64_t tags,
@@ -158,7 +137,6 @@ node_try_stitch(
 		goto out;
 	}
 
-	rope_node_balance_up(*node);
 out:
 	if (rv < 0) {
 		rope_str_cleanup(&seam);

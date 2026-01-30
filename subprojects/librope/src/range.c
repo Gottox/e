@@ -250,6 +250,14 @@ rope_range_clone(struct RopeRange *range, struct RopeRange *from) {
 	range->rope = from->rope;
 }
 
+bool rope_range_equals_data(struct RopeRange *range, const uint8_t *data, size_t byte_size) {
+	if (byte_size != rope_range_size(range, ROPE_BYTE)) {
+		return false;
+	}
+	struct RopeCursor *start = rope_range_start(range);
+	return rope_cursor_starts_with_data(start, data, byte_size);
+}
+
 void
 rope_range_cleanup(struct RopeRange *range) {
 	if (range == NULL) {

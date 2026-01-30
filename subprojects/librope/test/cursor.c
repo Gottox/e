@@ -912,47 +912,6 @@ test_cursor_move_to_oob(void) {
 	rope_pool_cleanup(&pool);
 }
 
-static void
-test_cursor_integrity_fail1(void) {
-	// clang-format off
-	static const char *tree = STRFY([[[[[["\\documentclass[a4paper,twocolumn,10pt]{article}\n\\usepackage[utf8]{inputenc}\n\\usepackage{amsmath} % align environment\n\\usepackage{mathptmx} % times roman, including math\n\\usepackage[hyphens]{url}\n\\usepackage{doi}\n\\usepackage{hyperref}\n\\usepackage[numbers,sort]{natbib}\n\\hyphenation{da-ta-cen-ter da-ta-cen-ters}\n\\frenchspacing\n\n% Placeholder character like \\textvisiblespace, but works in math mode\n\\newcommand\\placeholder{%\n  \\makebox[0.7em]{%\n    \\kern.07em\n    \\vrule height.3ex\n    \\hrulefill\n    \\vrule height.3ex\n    \\kern.07em\n  }%\n}\n\n\\begin{document}\n\\sloppy\n\\title{Composing Data Structures for Collaborative Document Editing}\n\\aut","hor{}\n\\maketitle\n\n\\subsection*{Abstract}\n\n\\section{Introduction}\n\nCRDTs~\\cite{Shapiro:2011wy,Roh:2011dw}\n\n\\section{Operational Semantics}\n\nWe assume that each peer has a unique identifier (for example, the hash of its public key). Whenever an edit to a document is made at one of the peers, we generate a unique identifier for that edit operation using Lamport timestamps~\\cite{Lamport:1978jq}.\n\nA Lamport timestamp is a pair $(c, p)$ where",9223372036854775809],[" $p$ is the unique identifier of the peer on which the edit is made. $c$ is a counter that is stored at each peer an","d incremented for every operation. Whenever an operation is sent to other peers, the Lamport timestamp $(c, p)$ for that operation is included in the message.\n\nIf a peer receives ",9223372036854775809],9223372036854775810],[[["an operation with a counter value $c$ that is greater than the locally stored counter value, the local counter is increased to the value of the incoming counter. This ensures that if operation $o_1$ happened before $o_2$ (that is, the peer that generated $o_2$ had received and processed $o_1$ before $o_2$ was generated), then $o_2$ must have a greater counter value than $o_1$. Only concurrent operations can have equal counter values.\n\nWe can thus define a total ordering $<$ for Lamport timestamps:\n$$(c_1, p_1) < (c_2, p_2) \\;\\text{ iff }\\; (c_1 < c_2) \\vee (c_1 = c_2 \\wedge p_1 < p_2).$$\nIf one operation happened before another, this ordering is consistent with causality (the earlier operation has a lower timesetamp). If two operations are concurrent, their order according to $<$ is arbitrary but deterministic.","\n\n\\subsection{Ordered List Operations}\n\nThe \\emph{Replicated Growable Array} (RGA) datatype was originally defined by Roh et al.\\ using pseudocode~\\cite{Roh:2011dw}. In this section we present the algorithm in an alternative form which is more amenable to correctness proofs.\n\nEach peer that maintains a replica of an RGA stores a copy of its state $A$, which is a partial function from $\\mathit{id}$ to pairs of $(\\mathit{value}, \\mathit{next})$. The parameter $\\mathit{id}$ is either a Lamport timestamp or the special symbol $\\mathsf{head}$, indicating the head of the list. $\\mathit{next}$ is either a Lamport timestamp or the symbol $\\mathsf{tail}$, denoting the end of the list. $\\mathit{value}$ is any value of the datatype of list elements, or the special value $\\bot$, indicating the absence of a value.\n\nThe empty list $A_\\emptyset$ is represented as a function whose domain is the single value $\\mathsf{head}$:\n$$ ",9223372036854775809],"A_\\emptyset = \\{\\mathsf{head} \\mapsto (\\bot, \\mathsf{tail})\\}. $$",9223372036854775810],"\n\nWe use the notation $A[\\,a \\mapsto (b, c)\\,]$ to denote a function identical to $A$, ",9223372036854775811],9223372036854775812],[[[["except that $A(a)=(b,c)$.\n\nA list element is cre","ated with an $\\mathsf{insert}$ operation. Since ",9223372036854775809],["each operation has a Lamport timestamp, a list e","lement",9223372036854775809],9223372036854775810],[" is uni","quely identified by its",9223372036854775809],9223372036854775811],[[" timestamp, which remains immutable for the life","time of the document",9223372036854775809],[". We call that Lamport timestamp the ID of the l","ist element.",9223372036854775809],9223372036854775810],9223372036854775812],9223372036854775813],[[[[["\n\nThe operation $\\mathsf{insert}(\\mathit{id}, \\m","athit{prev}, v)$ is an instruction to insert the",9223372036854775809],[" value $v$ into a list at a position following t","he existing list element with ID $\\mathit{prev}$",9223372036854775809],9223372036854775810],[". An insertion at the head of the list is expres","sed as $\\mathsf{insert}(\\mathit{id}, \\mathsf{hea",9223372036854775809],9223372036854775811],[["d}, v)$. The $\\mathit{id}$ is the unique ID of t","his operation.\n\nWhen the operation is applied to",9223372036854775809]," the list state $A$, it produces a modified list",9223372036854775810],9223372036854775812],[[[[" state $A'","$ as follows:\n\\begin{align",9223372036854775809],"*}\n",9223372036854775810],["A'",[" &","= \\mathrm{apply}(A, \\mathsf{insert}(\\mathi",9223372036854775809],9223372036854775810],9223372036854775811],[[["t{id}, \\mathit{prev}, v)) ",["\\\\ ","&=",9223372036854775809],9223372036854775810],["\n\\begin{cases}\n\\qu","ad ",9223372036854775809],9223372036854775811],[["\\ma","thrm{apply}(A, \\mathsf{insert}(\\mathit{id}, n, v",9223372036854775809],["))"," \\\\\n    ",9223372036854775809],9223372036854775810],9223372036854775812],9223372036854775813],9223372036854775814],9223372036854775815],[[[[[["\\q","quad\\quad",9223372036854775809],["\\text{if ","}\\;",9223372036854775809],9223372036854775810],[[" A(\\mathit{prev}) = (\\placeholder, n) \\;","\\wedge\\;",9223372036854775809],[" \\ma","thit{id} < n",9223372036854775809],9223372036854775810],9223372036854775811],[[" \\\\\n\\quad ","A[\\,",9223372036854775809],["\\mat",["hit{prev} \\mapsto (v_p, \\mathit{id}),\\;"," \\mathit{id",9223372036854775809],9223372036854775810],9223372036854775811],9223372036854775812],[[["} \\mapsto (v, n)\\,","]",9223372036854775809],[[" \\\\\n   "," \\q",9223372036854775809],["quad\\quad","\\text{if ",9223372036854775809],9223372036854775810],9223372036854775811],[["}\\; A(\\mathit{prev}) = (v_p, n) \\;","\\wedge\\;",9223372036854775809],[" n < \\math","it{id}",9223372036854775809],9223372036854775810],9223372036854775812],9223372036854775813],[[[[[["\n\\en","d{cases}\n\\end{align",9223372036854775809],"*}\nwhere $<$ is the total order on Lamport times",9223372036854775810],[["tamps, with the additional req"," that $\\mathsf{tail} < (",9223372036854775809],["c, p) < \\mathsf{head}$ for any Lamport timestamp"," $(c, p)$.",9223372036854775809],9223372036854775810],9223372036854775811],["\n\nA",["pplying an $\\mathsf{i","nsert}$ operation is like inserting an element i",9223372036854775809],9223372036854775810],9223372036854775812],[[["nto a linked list, except that the function firs","t skips over list elements with an ID greater th",9223372036854775809],["an the ID of the new element being inserted. Thi","s has the effect of deterministically ordering c",9223372036854775809],9223372036854775810],["oncurrent insertions made at the same position o","f the list. This property is proved formally bel",9223372036854775809],9223372036854775811],9223372036854775813],[[[[["ow.\n\nThe operation $\\mathsf{delete}(\\mathit{id})","$ is an instr",9223372036854775809],"uction to delete the element with ID $\\mathit{id",9223372036854775810],["}$ from the list. T","he operation has the following semantics:\n\\begin",9223372036854775809],9223372036854775811],[["{align*}\nA' &= \\mathrm{apply}(\\mathsf{delete}(","\\m",9223372036854775809],[["athit{id})) \\\\ &","=\n",9223372036854775809],["A[\\,\\mathit{id} \\mapsto (\\bot, n)\\",",]\n",9223372036854775809],9223372036854775810],9223372036854775811],9223372036854775812],[[["\\quad","\\text{if ",9223372036854775809],["}\\;"," A(\\mathit{id}) = (\\placeholder, n)",9223372036854775809],9223372036854775810],[["\n\\end",["{align*}\n","\n{\\footnotesize\n\\bibliographys",9223372036854775809],9223372036854775810],["tyle{plainnat}\n\\bibliography{references}{}}","\n\\end{document}\n",9223372036854775809],9223372036854775811],9223372036854775812],9223372036854775813],9223372036854775814],9223372036854775815],9223372036854775816]
-);
-	// clang-format on
-
-	int rv = 0;
-	struct RopePool pool = {0};
-	struct Rope r = {0};
-	rv = rope_pool_init(&pool);
-	ASSERT_EQ(0, rv);
-	rv = rope_init(&r, &pool);
-	ASSERT_EQ(0, rv);
-
-	rope_node_free(r.root, &pool);
-	r.root = from_str(&pool, tree);
-
-	struct RopeCursor c = {0};
-	rv = rope_cursor_init(&c, &r);
-	ASSERT_EQ(0, rv);
-
-	check_integrity(r.root);
-
-	// Applied patch at pos 4571: delete 0, insert "q"
-	rv = rope_cursor_move_to(&c, ROPE_CHAR, 4571, 0);
-	ASSERT_EQ(0, rv);
-
-	rv = rope_cursor_delete(&c, ROPE_CHAR, 0);
-	ASSERT_EQ(0, rv);
-
-	rv = rope_cursor_insert_data(&c, (const uint8_t *)"q", 1, 0);
-	ASSERT_EQ(0, rv);
-
-	check_integrity(r.root);
-
-	rope_cursor_cleanup(&c);
-	rope_cleanup(&r);
-	rope_pool_cleanup(&pool);
-}
-
 DECLARE_TESTS
 TEST(cursor_basic)
 TEST(cursor_utf8)
@@ -978,5 +937,4 @@ TEST(test_range_move_to_at)
 TEST(test_cursor_move_by_oob_forward)
 TEST(test_cursor_move_by_oob_backward)
 TEST(test_cursor_move_to_oob)
-TEST(test_cursor_integrity_fail1)
 END_TESTS

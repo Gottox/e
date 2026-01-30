@@ -145,7 +145,7 @@ rope_node_split(
 	rope_node_update_children(node);
 	node_set_depth(node, 1);
 	node_update_sizes(node);
-	rope_node_balance_up(node);
+	rope_node_balance_up2(node);
 
 	*left_ptr = left;
 	*right_ptr = right;
@@ -252,7 +252,7 @@ rope_node_merge(struct RopeNode *node, size_t count, struct RopePool *pool) {
 	rope_str_alloc_commit(&new_value, SIZE_MAX);
 	rope_str_cleanup(&node->data.leaf);
 	rope_str_move(&node->data.leaf, &new_value);
-	rope_node_balance_up(node);
+	rope_node_balance_up2(node);
 out:
 	return rv;
 }
@@ -290,6 +290,53 @@ rope_node_rotate(struct RopeNode *node, enum RopeDirection which) {
 void
 rope_node_balance_up(struct RopeNode *node) {
 	while ((node = rope_node_parent(node))) {
+		//const size_t old_depth = rope_node_depth(node);
+		struct RopeNode *left = rope_node_left(node);
+		struct RopeNode *right = rope_node_right(node);
+		size_t left_depth = rope_node_depth(left);
+		size_t right_depth = rope_node_depth(right);
+
+		if (left_depth > right_depth + 1) {
+			if (ROPE_NODE_IS_BRANCH(left)) {
+				assert(left_depth != 0);
+				size_t ll_depth = rope_node_depth(rope_node_left(left));
+				size_t lr_depth = rope_node_depth(rope_node_right(left));
+				if (lr_depth > ll_depth) {
+					rope_node_rotate(left, ROPE_LEFT);
+				}
+			}
+			rope_node_rotate(node, ROPE_RIGHT);
+		} else if (right_depth > left_depth + 1) {
+			if (ROPE_NODE_IS_BRANCH(right)) {
+				assert(right_depth != 0);
+				size_t rl_depth = rope_node_depth(rope_node_left(right));
+				size_t rr_depth = rope_node_depth(rope_node_right(right));
+				if (rl_depth > rr_depth) {
+					rope_node_rotate(right, ROPE_RIGHT);
+				}
+			}
+			rope_node_rotate(node, ROPE_LEFT);
+		} else {
+			node_update_depth(node);
+			node_update_sizes(node);
+		}
+
+		//const size_t new_depth = rope_node_depth(node);
+
+		// If the depth didn't change, we consider the tree balanced.
+		// Note that this only results in a balanced tree if the tree
+		// balance was only damaged by a single operation on the node.
+		// Continue propagating dimensions to the root.
+		// TODO: reenable this optimization.
+		// if (new_depth == old_depth) {
+		//	break;
+		//}
+	}
+}
+
+void
+rope_node_balance_up2(struct RopeNode *node) {
+	while ((node = rope_node_parent(node))) {
 		// Perform rotations as necessary
 		const size_t old_depth = rope_node_depth(node);
 		struct RopeNode *left = rope_node_left(node);
@@ -325,18 +372,13 @@ rope_node_balance_up(struct RopeNode *node) {
 		// Recalculate depth
 		const size_t new_depth = rope_node_depth(node);
 
-		// Check for branches with depth 0 after balance
-		struct RopeNode *final_left = rope_node_left(node);
-		struct RopeNode *final_right = rope_node_right(node);
-
 		// If the depth didn't change, we consider the tree balanced.
 		// Note that this only results in a balanced tree if the tree
 		// balance was only damaged by a single operation on the node.
 		// Continue propagating dimensions to the root.
-		// if (new_depth == old_depth) {
-		//	rope_node_propagate_sizes(node);
-		//	break;
-		//}
+		if (new_depth == old_depth) {
+			break;
+		}
 	}
 }
 
@@ -378,48 +420,8 @@ out:
 
 int
 rope_node_compact(struct RopeNode *node, struct RopePool *pool) {
-	// TODO compact doesn't honor tags.
-	if (ROPE_NODE_IS_LEAF(node)) {
-		return 0;
-	}
-
-	const size_t total_size = rope_node_size(node, ROPE_BYTE);
-	if (total_size > ROPE_STR_FAST_SIZE) {
-		return 0;
-	}
-
-	uint8_t *buffer;
-	struct RopeStr new_str;
-	int rv = rope_str_alloc(&new_str, total_size, &buffer);
-	if (rv < 0) {
-		return rv;
-	}
-
-	uint8_t *target = buffer;
-	struct RopeNode *leaf = rope_node_first(node);
-	struct RopeNode *last = rope_node_last(node);
-
-	while (leaf != NULL) {
-		size_t byte_size;
-		const uint8_t *data = rope_str_data(&leaf->data.leaf, &byte_size);
-		memcpy(target, data, byte_size);
-		target += byte_size;
-		if (leaf == last) {
-			break;
-		}
-		leaf = rope_node_next(leaf);
-	}
-
-	rope_str_alloc_commit(&new_str, SIZE_MAX);
-
-	rope_node_free(rope_node_left(node), pool);
-	rope_node_free(rope_node_right(node), pool);
-
-	node->bits = 0;
-	rope_node_set_type(node, ROPE_NODE_LEAF);
-	rope_str_move(&node->data.leaf, &new_str);
-
-	rope_node_balance_up(node);
-
+	// No compacting for now
+	(void)node;
+	(void)pool;
 	return 0;
 }

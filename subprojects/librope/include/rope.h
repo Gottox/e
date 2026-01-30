@@ -129,6 +129,9 @@ bool rope_cursor_is_eof(struct RopeCursor *cursor);
 size_t
 rope_cursor_index(struct RopeCursor *cursor, enum RopeUnit unit, uint64_t tags);
 
+bool rope_cursor_starts_with_data(
+		struct RopeCursor *cursor, const uint8_t *prefix, size_t prefix_size);
+
 void rope_cursor_cleanup(struct RopeCursor *cursor);
 
 /**********************************

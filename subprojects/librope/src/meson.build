@@ -4,6 +4,7 @@ librope_sources = files(
     'cursor/list.c',
     'cursor/movement.c',
     'cursor/query.c',
+    'cursor/cmp.c',
     'iterator.c',
     'node/info.c',
     'node/insert.c',

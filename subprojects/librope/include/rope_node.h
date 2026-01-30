@@ -138,6 +138,7 @@ ROPE_NO_UNUSED int
 rope_node_chores(struct RopeNode *node, struct RopePool *pool);
 
 void rope_node_balance_up(struct RopeNode *node);
+void rope_node_balance_up2(struct RopeNode *node);
 
 ROPE_NO_UNUSED int
 rope_node_compact(struct RopeNode *node, struct RopePool *pool);
