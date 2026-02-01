@@ -11,7 +11,7 @@ rope_cursor_starts_with_data(
 
 	size_t byte_size;
 	struct RopeNode *node = rope_cursor_find_node(
-			cursor, cursor->rope->root, cursor->byte_index, ROPE_BYTE, 0, NULL,
+			cursor, cursor->rope->root, ROPE_BYTE, cursor->byte_index, 0, NULL,
 			&local_byte_index);
 	while (node && byte_size < prefix_size) {
 		const uint8_t *data = rope_node_value(node, &byte_size);
