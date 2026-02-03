@@ -89,6 +89,10 @@ e_klient_handle_input(union EStruktur *e, struct pollfd *pfd) {
 		goto out;
 	}
 	size_t bytes_read = (size_t)rv;
+	if (bytes_read == 0) {
+		rv = -EPIPE;
+		goto out;
+	}
 
 	rv = rope_append(rope, buffer, bytes_read);
 	if (rv < 0) {
