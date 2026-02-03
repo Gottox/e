@@ -23,6 +23,21 @@ e_list_add(struct EList *list, union EStruktur *e) {
 	return 0;
 }
 
+int
+e_list_get(
+		union EStruktur *e, struct EKonstrukt *k, struct EList *list,
+		size_t index) {
+	if (index >= list->cap || list->ids[index] == 0) {
+		return -1;
+	}
+	e->any = cx_rc_hash_map_retain(&k->struktur, list->ids[index]);
+	if (e->any == NULL) {
+		list->ids[index] = 0;
+		return -1;
+	}
+	return 0;
+}
+
 bool
 e_list_it(
 		union EStruktur *e, struct EKonstrukt *k, struct EList *list,

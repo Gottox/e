@@ -18,6 +18,10 @@ bool e_list_it(
 		union EStruktur *e, struct EKonstrukt *k, struct EList *list,
 		uint64_t *it);
 
+int e_list_get(
+		union EStruktur *e, struct EKonstrukt *k, struct EList *list,
+		size_t index);
+
 void e_list_cleanup(struct EList *list);
 
 #endif
