@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <ctype.h>
 #include <e_konstrukt.h>
 #include <e_message.h>
 #include <e_struktur.h>
@@ -41,17 +42,56 @@ out:
 }
 
 static int
+parse_terminator_message(struct EMessageParser *parser, struct RopeRange *tgt) {
+	int rv = 0;
+	size_t stopword_size;
+	uint8_t stopword[256] = "@";
+	struct RopeCursor *line = &parser->line;
+
+	for (stopword_size = 1;; stopword_size++) {
+		uint_least32_t cp = rope_cursor_cp(line);
+		if (cp == ' ' || cp == '\n') {
+			break;
+		}
+		if (stopword_size >= sizeof(stopword) - 2) {
+			// TODO: better error code.
+			rv = -1;
+			goto out;
+		}
+		stopword[stopword_size] = (char)cp;
+		rv = rope_cursor_move_by(line, ROPE_BYTE, 1);
+		if (rv < 0) {
+			goto out;
+		}
+	}
+	stopword[stopword_size] = '\n';
+	stopword_size++;
+	// We know the stopword search for it.
+	
+	struct RopeCursor *end = rope_range_end(&parser->post);
+	for (;;) {
+		if (rope_cursor_starts_with_data(end, stopword, stopword_size)) {
+			break;
+		}
+		rv = rope_cursor_move_by(end, ROPE_LINE, 1);
+		if (rv < 0) {
+			goto out;
+		}
+	}
+	rope_range_clone(tgt, &parser->post);
+
+	rv = rope_cursor_move_by(end, ROPE_BYTE, stopword_size);
+
+
+out:
+	return rv;
+}
+
+static int
 parse_sized_message(struct EMessageParser *parser, struct RopeRange *tgt) {
 	int rv = 0;
-
-	struct RopeCursor *line = &parser->line;
-	// Skip '@'
-	rv = rope_cursor_move_by(line, ROPE_BYTE, 1);
-	if (rv < 0) {
-		goto out;
-	}
-
 	uint64_t byte_size = 0;
+	struct RopeCursor *line = &parser->line;
 	rv = e_parse_unsigned_dec(line, &byte_size);
 	if (rv < 0) {
 		goto out;
@@ -81,6 +121,28 @@ parse_sized_message(struct EMessageParser *parser, struct RopeRange *tgt) {
 	}
 out:
 	return rv;
+}
+
+static int
+parse_at_message(struct EMessageParser *parser, struct RopeRange *tgt) {
+	int rv = 0;
+
+	struct RopeCursor *line = &parser->line;
+	// Skip '@'
+	rv = rope_cursor_move_by(line, ROPE_BYTE, 1);
+	if (rv < 0) {
+		return rv;
+	}
+
+	uint_least32_t cp = rope_cursor_cp(line);
+	if (isalpha(cp)) {
+		return parse_terminator_message(parser, tgt);
+	} else if (isdigit(cp)) {
+		return parse_sized_message(parser, tgt);
+	} else {
+		// TODO better error code
+		return -1;
+	}
 }
 
 static int
@@ -192,7 +254,7 @@ e_message_parser_next(
 		has_next = false;
 		break;
 	case '@':
-		rv = parse_sized_message(parser, tgt);
+		rv = parse_at_message(parser, tgt);
 		break;
 	default:
 		rv = parse_quoted_message(parser, tgt);
