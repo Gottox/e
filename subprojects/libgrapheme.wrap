@@ -1,6 +1,6 @@
 [wrap-git]
 directory = libgrapheme
-url = https://github.com/Gottox/libgrapheme.git
+url = https://codeberg.org/Gottox/libgrapheme.git
 revision = 5a4aa4bc4912c007cf7394140de35e3bccc44179
 depth = 1
 
