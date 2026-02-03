@@ -13,7 +13,22 @@ e_command_ping(struct EKonstrukt *konstrukt, union EStruktur *e) {
 }
 
 int
+e_command_shutdown(struct EKonstrukt *konstrukt, union EStruktur *e) {
+	assert(e->base->type == &e_struktur_type_klient);
+
+	konstrukt->running = 0;
+	return 0;
+}
+
+int
 e_command_endpoint(struct EKonstrukt *konstrukt, union EStruktur *e) {
+	(void)konstrukt;
+	(void)e;
+	return 0;
+}
+
+int
+e_command_unendpoint(struct EKonstrukt *konstrukt, union EStruktur *e) {
 	(void)konstrukt;
 	(void)e;
 	return 0;
