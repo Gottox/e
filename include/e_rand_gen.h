@@ -4,14 +4,14 @@
 #include "e_common.h"
 
 struct ERandGen {
-	uint32_t counter;
-	uint32_t key;
+	uint64_t counter;
+	uint64_t key;
 };
 
 int
 e_rand_gen_init(struct ERandGen *randgen);
 
-uint32_t
+uint64_t
 e_rand_gen_next(struct ERandGen *randgen);
 
 
