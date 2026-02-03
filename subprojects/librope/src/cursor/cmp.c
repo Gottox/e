@@ -19,7 +19,10 @@ rope_cursor_starts_with_data(
 		data += local_byte_index;
 		byte_size -= local_byte_index;
 
-		rv = memcmp(data, prefix, byte_size);
+		if (byte_size < prefix_size) {
+			return false;
+		}
+		rv = memcmp(data, prefix, prefix_size);
 		if (rv != 0) {
 			return false;
 		}
