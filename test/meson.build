@@ -19,5 +19,5 @@ foreach p : e_test
             cextras_dep,
         ],
     )
-    test(p, t)
+    test(p, t, timeout: 1)
 endforeach
