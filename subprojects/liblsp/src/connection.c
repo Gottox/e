@@ -1,5 +1,5 @@
 #include <errno.h>
-#include <lsp_private.h>
+#include <lsp.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stdlib.h>

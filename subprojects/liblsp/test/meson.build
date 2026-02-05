@@ -1,7 +1,7 @@
 testlib_dep = subproject('cextras').get_variable('testlib_dep')
-test_src = ['lsp_connection.c']
+test_src = ['lsp_connection.c', 'requests.c', 'notifications.c']
 
-subdir('gen')
+#subdir('gen')
 
 foreach src : test_src
     test_exe = executable(

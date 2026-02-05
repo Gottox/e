@@ -1,4 +1,4 @@
-#include <lsp_private.h>
+#include <lsp.h>
 #include <stdlib.h>
 #include <string.h>
 #include <testlib.h>

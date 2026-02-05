@@ -1,26 +1,29 @@
-#ifndef LSPC_H
-#define LSPC_H
+#ifndef LSP_H
+#define LSP_H
 
 #include <spawn.h>
 #include <stdio.h>
 
-struct LSPCConnection {
+struct LSPConnection {
 	FILE *sender;
 	FILE *receiver;
 	pid_t lsp_pid;
 };
 
-int
-lsp_connection_init(struct LSPCConnection *client, const char *lsp_command[]);
+int lsp_connection_client_init(
+		struct LSPConnection *connection, const char *lsp_command[]);
+
+int lsp_connection_server_init(
+		struct LSPConnection *connection, FILE *in, FILE *out);
 
 int lsp_connection_send(
-		struct LSPCConnection *client, const char *json_request,
+		struct LSPConnection *connection, const char *json_request,
 		size_t request_length);
 
 int lsp_connection_receive(
-		struct LSPCConnection *client, char **json_response,
+		struct LSPConnection *connection, char **json_response,
 		size_t *response_length);
 
-void lsp_connection_cleanup(struct LSPCConnection *client);
+void lsp_connection_cleanup(struct LSPConnection *connection);
 
-#endif // LSPC_H
+#endif // LSP_H
