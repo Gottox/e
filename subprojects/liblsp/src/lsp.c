@@ -1,5 +1,6 @@
 #include <errno.h>
 #include <lsp.h>
+#include <lsp_initialization.h>
 #include <lsp_util.h>
 #include <signal.h>
 #include <spawn.h>
@@ -10,11 +11,13 @@
 extern char **environ;
 
 int
-lsp_init(struct Lsp *lsp) {
+lsp_init(struct Lsp *lsp, const char *name, const char *version) {
 	lsp->sender = NULL;
 	lsp->receiver_fd = -1;
 	lsp->pid = -1;
 	lsp->running = true;
+	lsp->name = name;
+	lsp->version = version;
 	rid_gen_init(&lsp->id_gen);
 	lsp_recv_buffer_init(&lsp->recv_buf);
 	return cx_hash_map_init(
@@ -188,16 +191,38 @@ handle_response(struct Lsp *lsp, json_object *msg) {
 	cx_hash_map_delete(&lsp->pending_requests, id);
 }
 
+static json_object *
+auto_handle_initialize(
+		struct Lsp *lsp, json_object *msg,
+		const struct LspServerRequestCallbacks *req_cbs,
+		const struct LspServerNotificationCallbacks *notif_cbs) {
+	json_object *id = json_object_object_get(msg, "id");
+	json_object *result = lsp_build_initialize_result(
+			lsp->name, lsp->version, req_cbs, notif_cbs);
+	return lsp_response_new(id, result);
+}
+
 static int
 handle_c2s_request(
 		struct Lsp *lsp, json_object *msg,
-		const struct LspServerRequestCallbacks *req_cbs, void *userdata) {
+		const struct LspServerRequestCallbacks *req_cbs,
+		const struct LspServerNotificationCallbacks *notif_cbs, void *userdata) {
 	int rv = 0;
 	const char *method =
 			json_object_get_string(json_object_object_get(msg, "method"));
 	enum LspC2SMethod req_type = lsp_c2s_method_lookup(method);
-	json_object *response =
-			lsp_server_dispatch_request(req_cbs, req_type, msg, userdata);
+
+	json_object *response = NULL;
+
+	/* Auto-handle initialize if no callback registered */
+	if (req_type == LSP_C2S_METHOD_INITIALIZE &&
+			(!req_cbs || !req_cbs->initialize)) {
+		response = auto_handle_initialize(lsp, msg, req_cbs, notif_cbs);
+	} else {
+		response = lsp_server_dispatch_request(
+				req_cbs, req_type, msg, userdata);
+	}
+
 	if (response) {
 		rv = lsp_send(lsp, response);
 		json_object_put(response);
@@ -268,7 +293,7 @@ lsp_server_process(
 
 	switch (kind) {
 	case LSP_MESSAGE_REQUEST:
-		rv = handle_c2s_request(lsp, msg, req_cbs, userdata);
+		rv = handle_c2s_request(lsp, msg, req_cbs, notif_cbs, userdata);
 		break;
 	case LSP_MESSAGE_NOTIFICATION:
 		handle_c2s_notification(lsp, msg, notif_cbs, userdata);

@@ -56,10 +56,13 @@ struct Lsp {
 	struct RidGen id_gen;
 	struct LspRecvBuffer recv_buf;
 	struct CxHashMap pending_requests;
+	const char *name;
+	const char *version;
 };
 
 // Initialize state
-LSP_NO_UNUSED int lsp_init(struct Lsp *lsp);
+LSP_NO_UNUSED int lsp_init(
+		struct Lsp *lsp, const char *name, const char *version);
 
 // Setup stdin/stdout for server mode
 void lsp_stdio(struct Lsp *lsp);

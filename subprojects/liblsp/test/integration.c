@@ -163,7 +163,7 @@ test_clangd_integration(void) {
 	ASSERT_EQ(rv, 0);
 
 	/* Initialize LSP */
-	rv = lsp_init(&lsp);
+	rv = lsp_init(&lsp, NULL, NULL);
 	ASSERT_EQ(rv, 0);
 
 	/* Spawn clangd */

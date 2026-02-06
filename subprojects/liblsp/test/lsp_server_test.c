@@ -8,7 +8,8 @@
 static void
 test_init_cleanup(void) {
 	struct Lsp lsp = {0};
-	lsp_init(&lsp);
+	int rv = lsp_init(&lsp, NULL, NULL);
+	ASSERT_EQ(rv, 0);
 
 	ASSERT_EQ(lsp.sender, NULL);
 	ASSERT_EQ(lsp.receiver_fd, -1);
@@ -20,19 +21,21 @@ test_init_cleanup(void) {
 static void
 test_stdio(void) {
 	struct Lsp lsp = {0};
-	lsp_init(&lsp);
+	int rv = lsp_init(&lsp, NULL, NULL);
+	ASSERT_EQ(rv, 0);
 	lsp_stdio(&lsp);
 
 	ASSERT_EQ(lsp.sender, stdout);
 	ASSERT_EQ(lsp.receiver_fd, STDIN_FILENO);
 
-	// Don't cleanup - we don't want to close stdin/stdout
+	lsp_cleanup(&lsp);
 }
 
 static void
 test_next_id(void) {
 	struct Lsp lsp = {0};
-	lsp_init(&lsp);
+	int rv = lsp_init(&lsp, NULL, NULL);
+	ASSERT_EQ(rv, 0);
 
 	uint64_t id1 = lsp_next_id(&lsp);
 	uint64_t id2 = lsp_next_id(&lsp);
@@ -58,7 +61,8 @@ test_exit_handler(void *userdata) {
 static void
 test_server_process_exit(void) {
 	struct Lsp lsp = {0};
-	lsp_init(&lsp);
+	int rv = lsp_init(&lsp, NULL, NULL);
+	ASSERT_EQ(rv, 0);
 
 	// Create a pipe to feed data
 	int pipefd[2];
@@ -78,7 +82,7 @@ test_server_process_exit(void) {
 
 	test_exit_handler_called = 0;
 
-	int rv = lsp_server_process(&lsp, NULL, &notif_cbs, NULL);
+	rv = lsp_server_process(&lsp, NULL, &notif_cbs, NULL);
 	ASSERT_EQ(rv, 0);
 	ASSERT_EQ(lsp.running, false);
 	ASSERT_EQ(test_exit_handler_called, 1);
@@ -97,8 +101,7 @@ test_init_handler(
 	test_init_handler_called = 1;
 	// Check we got params
 	ASSERT_NOT_NULL(params);
-	// Set a minimal result
-	result->json = json_object_new_object();
+	// Set a minimal result - result->json is already initialized by dispatch
 	json_object_object_add(
 			result->json, "capabilities", json_object_new_object());
 	return 0;
@@ -107,7 +110,8 @@ test_init_handler(
 static void
 test_server_process_request(void) {
 	struct Lsp lsp = {0};
-	lsp_init(&lsp);
+	int rv = lsp_init(&lsp, NULL, NULL);
+	ASSERT_EQ(rv, 0);
 
 	// Create pipes for input/output
 	int in_pipe[2];
@@ -131,7 +135,7 @@ test_server_process_request(void) {
 
 	test_init_handler_called = 0;
 
-	int rv = lsp_server_process(&lsp, &req_cbs, NULL, NULL);
+	rv = lsp_server_process(&lsp, &req_cbs, NULL, NULL);
 	ASSERT_EQ(rv, 0);
 	ASSERT_EQ(test_init_handler_called, 1);
 
@@ -154,7 +158,8 @@ test_server_process_request(void) {
 static void
 test_server_partial_message(void) {
 	struct Lsp lsp = {0};
-	lsp_init(&lsp);
+	int rv = lsp_init(&lsp, NULL, NULL);
+	ASSERT_EQ(rv, 0);
 
 	// Create a pipe
 	int pipefd[2];
@@ -167,7 +172,7 @@ test_server_partial_message(void) {
 	write(pipefd[1], partial, strlen(partial));
 
 	// First read should return EAGAIN (partial)
-	int rv = lsp_server_process(&lsp, NULL, NULL, NULL);
+	rv = lsp_server_process(&lsp, NULL, NULL, NULL);
 	ASSERT_EQ(rv, -EAGAIN);
 
 	// Complete the message

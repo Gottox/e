@@ -1,7 +1,8 @@
 /*
  * LSP Server Example
  *
- * Demonstrates implementing a minimal LSP server.
+ * Demonstrates implementing a minimal LSP server with automatic capability
+ * detection based on registered handlers.
  *
  * The server responds to initialize/shutdown requests and exits on the exit
  * notification. It logs all received requests and notifications to stderr.
@@ -22,55 +23,6 @@ struct ServerState {
 	bool initialized;
 	bool shutdown_requested;
 };
-
-/* Handle initialize request */
-static int
-on_initialize(
-		struct LspInitializeParams *params, struct LspInitializeResult *result,
-		struct LspResponseError *error, void *userdata) {
-	(void)error;
-	struct ServerState *state = userdata;
-
-	/* Log client info if available */
-	struct LspNameStringVersionStringOptLiteral client_info = {0};
-	if (lsp_initialize_params__client_info(params, &client_info) == 0) {
-		const char *name = json_object_get_string(
-				json_object_object_get(client_info.json, "name"));
-		const char *version = json_object_get_string(
-				json_object_object_get(client_info.json, "version"));
-		fprintf(stderr, "[SERVER] Client: %s %s\n",
-				name ? name : "unknown",
-				version ? version : "");
-	}
-
-	/* Build server capabilities */
-	result->json = json_object_new_object();
-
-	json_object *capabilities = json_object_new_object();
-
-	/* Text document sync: full sync */
-	json_object_object_add(capabilities, "textDocumentSync",
-			json_object_new_int(1));
-
-	/* Hover support */
-	json_object_object_add(capabilities, "hoverProvider",
-			json_object_new_boolean(1));
-
-	json_object_object_add(result->json, "capabilities", capabilities);
-
-	/* Server info */
-	json_object *server_info = json_object_new_object();
-	json_object_object_add(server_info, "name",
-			json_object_new_string("liblsp-example-server"));
-	json_object_object_add(server_info, "version",
-			json_object_new_string("0.1.0"));
-	json_object_object_add(result->json, "serverInfo", server_info);
-
-	state->initialized = true;
-	fprintf(stderr, "[SERVER] Initialized\n");
-
-	return 0;
-}
 
 /* Handle shutdown request */
 static int
@@ -100,16 +52,18 @@ on_hover(
 	int line = lsp_position__line(&pos);
 	int character = lsp_position__character(&pos);
 
-	fprintf(stderr, "[SERVER] Hover at %s:%d:%d\n",
-			uri ? uri : "(null)", line, character);
+	fprintf(stderr, "[SERVER] Hover at %s:%d:%d\n", uri, line, character);
 
 	/* Return a simple hover response */
 	result->json = json_object_new_object();
 
 	json_object *contents = json_object_new_object();
-	json_object_object_add(contents, "kind", json_object_new_string("markdown"));
-	json_object_object_add(contents, "value",
-			json_object_new_string("**Hello from liblsp!**\n\nThis is a hover response."));
+	json_object_object_add(
+			contents, "kind", json_object_new_string("markdown"));
+	json_object_object_add(
+			contents, "value",
+			json_object_new_string(
+					"**Hello from liblsp!**\n\nThis is a hover response."));
 	json_object_object_add(result->json, "contents", contents);
 
 	return 0;
@@ -140,8 +94,7 @@ on_did_open(struct LspDidOpenTextDocumentParams *params, void *userdata) {
 	lsp_did_open_text_document_params__text_document(params, &doc);
 	const char *uri = lsp_text_document_item__uri(&doc);
 	const char *lang = lsp_text_document_item__language_id(&doc);
-	fprintf(stderr, "[SERVER] Opened: %s (%s)\n",
-			uri ? uri : "(null)",
+	fprintf(stderr, "[SERVER] Opened: %s (%s)\n", uri ? uri : "(null)",
 			lang ? lang : "unknown");
 	return 0;
 }
@@ -157,29 +110,31 @@ on_did_close(struct LspDidCloseTextDocumentParams *params, void *userdata) {
 	return 0;
 }
 
+static const struct LspServerRequestCallbacks req_cbs = {
+		.shutdown = on_shutdown,
+		.text_document__hover = on_hover,
+};
+
+static const struct LspServerNotificationCallbacks notif_cbs = {
+		.initialized = on_initialized,
+		.exit = on_exit_notif,
+		.text_document__did_open = on_did_open,
+		.text_document__did_close = on_did_close,
+};
+
 int
 main(int argc, char *argv[]) {
 	(void)argc;
 	(void)argv;
 
 	struct Lsp lsp = {0};
-	lsp_init(&lsp);
+	if (lsp_init(&lsp, "liblsp-example-server", "0.1.0") != 0) {
+		fprintf(stderr, "[SERVER] Failed to initialize LSP\n");
+		return 1;
+	}
 	lsp_stdio(&lsp);
 
 	struct ServerState state = {0};
-
-	/* Set up request callbacks */
-	struct LspServerRequestCallbacks req_cbs = {0};
-	req_cbs.initialize = on_initialize;
-	req_cbs.shutdown = on_shutdown;
-	req_cbs.text_document__hover = on_hover;
-
-	/* Set up notification callbacks */
-	struct LspServerNotificationCallbacks notif_cbs = {0};
-	notif_cbs.initialized = on_initialized;
-	notif_cbs.exit = on_exit_notif;
-	notif_cbs.text_document__did_open = on_did_open;
-	notif_cbs.text_document__did_close = on_did_close;
 
 	fprintf(stderr, "[SERVER] Starting LSP server on stdio...\n");
 

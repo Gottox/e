@@ -9,7 +9,7 @@
 static void
 test_spawn_cat(void) {
 	struct Lsp lsp = {0};
-	ASSERT_EQ(lsp_init(&lsp), 0);
+	ASSERT_EQ(lsp_init(&lsp, NULL, NULL), 0);
 
 	const char *argv[] = {"/bin/cat", NULL};
 	int rv = lsp_spawn(&lsp, argv);
@@ -25,7 +25,7 @@ test_spawn_cat(void) {
 static void
 test_send_receive(void) {
 	struct Lsp lsp = {0};
-	ASSERT_EQ(lsp_init(&lsp), 0);
+	ASSERT_EQ(lsp_init(&lsp, NULL, NULL), 0);
 
 	// Use cat as an echo server
 	const char *argv[] = {"/bin/cat", NULL};
@@ -78,7 +78,7 @@ test_log_message_handler(struct LspLogMessageParams *params, void *userdata) {
 static void
 test_client_process_notification(void) {
 	struct Lsp lsp = {0};
-	ASSERT_EQ(lsp_init(&lsp), 0);
+	ASSERT_EQ(lsp_init(&lsp, NULL, NULL), 0);
 
 	// Create a pipe to feed data
 	int pipefd[2];
@@ -110,7 +110,7 @@ test_client_process_notification(void) {
 static void
 test_eof_sets_not_running(void) {
 	struct Lsp lsp = {0};
-	ASSERT_EQ(lsp_init(&lsp), 0);
+	ASSERT_EQ(lsp_init(&lsp, NULL, NULL), 0);
 
 	// Create a pipe and close write end immediately
 	int pipefd[2];
@@ -130,7 +130,7 @@ test_eof_sets_not_running(void) {
 static void
 test_lsp_notify(void) {
 	struct Lsp lsp = {0};
-	ASSERT_EQ(lsp_init(&lsp), 0);
+	ASSERT_EQ(lsp_init(&lsp, NULL, NULL), 0);
 
 	// Use cat as echo server
 	const char *argv[] = {"/bin/cat", NULL};
@@ -183,7 +183,7 @@ test_shutdown_callback(struct LspResponseError *error, void *userdata) {
 static void
 test_lsp_request_response(void) {
 	struct Lsp lsp = {0};
-	ASSERT_EQ(lsp_init(&lsp), 0);
+	ASSERT_EQ(lsp_init(&lsp, NULL, NULL), 0);
 
 	// Create pipes - we'll manually feed the response
 	int send_pipe[2];

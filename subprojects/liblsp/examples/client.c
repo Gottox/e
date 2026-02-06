@@ -118,7 +118,11 @@ main(int argc, char *argv[]) {
 	}
 
 	struct Lsp lsp = {0};
-	lsp_init(&lsp);
+	rv = lsp_init(&lsp, NULL, NULL);
+	if (rv < 0) {
+		fprintf(stderr, "Failed to init lsp: %s\n", strerror(-rv));
+		return 1;
+	}
 
 	/* Spawn the LSP server */
 	fprintf(stderr, "Spawning %s...\n", argv[1]);
