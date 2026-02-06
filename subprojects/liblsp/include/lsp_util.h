@@ -4,13 +4,36 @@
 #include "model.h"
 #include "messages.h"
 
+#ifndef LSP_NO_UNUSED
+#define LSP_NO_UNUSED __attribute__((warn_unused_result))
+#endif
+
+// Message classification
+enum LspMessageKind {
+	LSP_MESSAGE_REQUEST,      // Has "method" and "id"
+	LSP_MESSAGE_NOTIFICATION, // Has "method", no "id"
+	LSP_MESSAGE_RESPONSE,     // Has "id", no "method" (has "result" or "error")
+	LSP_MESSAGE_INVALID
+};
+
+// Classify an incoming JSON-RPC message
+enum LspMessageKind lsp_message_classify(json_object *msg);
+
+// Create a success response
+// id is taken by reference (caller retains ownership)
+json_object *lsp_response_new(json_object *id, json_object *result);
+
+// Create an error response
+// id is taken by reference (caller retains ownership)
+json_object *lsp_response_error_new(json_object *id, int code, const char *message);
+
 // Set JSON-RPC "Invalid params" error (-32602) on response
 void lsp_response_set_invalid_params(json_object *response);
 
 // Set error response from handler result
 // If error was populated by handler, uses it directly; otherwise creates generic error
 // Takes ownership of error->json
-void lsp_response_set_handler_error(json_object *response,
+LSP_NO_UNUSED int lsp_response_set_handler_error(json_object *response,
 		struct LspResponseError *error, int err_code);
 
 // Set successful result on response and cleanup error
@@ -29,7 +52,7 @@ struct LspResponseError {
 };
 
 // Initialize empty error
-void lsp_response_error__init(struct LspResponseError *err);
+LSP_NO_UNUSED int lsp_response_error__init(struct LspResponseError *err);
 
 // Cleanup (releases json reference)
 void lsp_response_error__cleanup(struct LspResponseError *err);
@@ -40,9 +63,9 @@ const char *lsp_response_error__message(const struct LspResponseError *err);
 json_object *lsp_response_error__data(const struct LspResponseError *err);
 
 // Setters
-void lsp_response_error__set_code(struct LspResponseError *err, int64_t code);
-void lsp_response_error__set_message(struct LspResponseError *err, const char *message);
-void lsp_response_error__set_data(struct LspResponseError *err, json_object *data);
+LSP_NO_UNUSED int lsp_response_error__set_code(struct LspResponseError *err, int64_t code);
+LSP_NO_UNUSED int lsp_response_error__set_message(struct LspResponseError *err, const char *message);
+LSP_NO_UNUSED int lsp_response_error__set_data(struct LspResponseError *err, json_object *data);
 
 // Create a new JSON-RPC request object
 // params can be NULL for requests without parameters

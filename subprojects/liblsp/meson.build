@@ -4,6 +4,7 @@ quickjs_dep = dependency('quickjs-ng')
 jsonc_dep = dependency('json-c', default_options: ['warning_level=0', 'b_sanitize='])
 #libjsonwrap_dep = subproject('libjsonwrap').get_variable('libjsonwrap_dep')
 cextras_dep = subproject('cextras').get_variable('cextras_dep')
+librandid_dep = subproject('librandid').get_variable('librandid_dep')
 
 subdir('gen')
 
@@ -13,7 +14,7 @@ subdir('include')
 
 
 #liblsp_dependencies = [quickjs_dep, libjsonwrap_dep]
-liblsp_dependencies = [jsonc_dep]
+liblsp_dependencies = [jsonc_dep, librandid_dep, cextras_dep]
 
 c_args = []
 
@@ -42,3 +43,5 @@ liblsp_dep = declare_dependency(
 if get_option('test')
     subdir('test')
 endif
+
+subdir('examples')

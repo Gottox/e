@@ -121,7 +121,8 @@ static void
 test_initialized_notification(void) {
 	// Create InitializedParams
 	struct LspInitializedParams params = {0};
-	lsp_initialized_params__init(&params);
+	int rv = lsp_initialized_params__init(&params);
+	ASSERT_EQ(rv, LSP_OK);
 
 	json_object *notif = lsp_initialized__notification(&params);
 

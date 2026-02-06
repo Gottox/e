@@ -214,9 +214,9 @@ emit_struct_decl(struct GenCtx *ctx, const char *norm_name) {
 static void
 emit_lifecycle(struct GenCtx *ctx, const char *func_name, const char *struct_type,
                enum EmitInitKind init_kind) {
-	emit_header(ctx, "int lsp_%s__from_json(%s *obj, json_object *json);\n",
+	emit_header(ctx, "LSP_NO_UNUSED int lsp_%s__from_json(%s *obj, json_object *json);\n",
 	            func_name, struct_type);
-	emit_header(ctx, "int lsp_%s__init(%s *obj);\n", func_name, struct_type);
+	emit_header(ctx, "LSP_NO_UNUSED int lsp_%s__init(%s *obj);\n", func_name, struct_type);
 	emit_header(ctx, "void lsp_%s__cleanup(%s *obj);\n", func_name, struct_type);
 
 	emit_source(ctx, "int lsp_%s__from_json(%s *obj, json_object *json) { "
@@ -226,10 +226,14 @@ emit_lifecycle(struct GenCtx *ctx, const char *func_name, const char *struct_typ
 	emit_source(ctx, "int lsp_%s__init(%s *obj) { ", func_name, struct_type);
 	switch (init_kind) {
 	case EMIT_INIT_OBJECT:
-		emit_source(ctx, "obj->json = json_object_new_object(); return LSP_OK; }\n");
+		emit_source(ctx, "obj->json = json_object_new_object(); ");
+		emit_source(ctx, "if (obj->json == NULL) { return LSP_ERR_OOM; } ");
+		emit_source(ctx, "return LSP_OK; }\n");
 		break;
 	case EMIT_INIT_ARRAY:
-		emit_source(ctx, "obj->json = json_object_new_array(); return LSP_OK; }\n");
+		emit_source(ctx, "obj->json = json_object_new_array(); ");
+		emit_source(ctx, "if (obj->json == NULL) { return LSP_ERR_OOM; } ");
+		emit_source(ctx, "return LSP_OK; }\n");
 		break;
 	case EMIT_INIT_NULL:
 		emit_source(ctx, "obj->json = NULL; return LSP_OK; }\n");
@@ -263,11 +267,16 @@ emit_header_prologue(struct GenCtx *ctx) {
 	emit_header(ctx, "#include <stddef.h>\n");
 	emit_header(ctx, "#include <stdint.h>\n\n");
 
+	emit_header(ctx, "#ifndef LSP_NO_UNUSED\n");
+	emit_header(ctx, "#define LSP_NO_UNUSED __attribute__((warn_unused_result))\n");
+	emit_header(ctx, "#endif\n\n");
+
 	emit_header(ctx, "/* Error codes */\n");
 	emit_header(ctx, "#define LSP_OK 0\n");
 	emit_header(ctx, "#define LSP_ERR_MISSING_FIELD -1\n");
 	emit_header(ctx, "#define LSP_ERR_INVALID_TYPE -2\n");
-	emit_header(ctx, "#define LSP_ERR_INDEX_OUT_OF_BOUNDS -3\n\n");
+	emit_header(ctx, "#define LSP_ERR_INDEX_OUT_OF_BOUNDS -3\n");
+	emit_header(ctx, "#define LSP_ERR_OOM -4\n\n");
 }
 
 static void
@@ -403,18 +412,25 @@ gen_setter(struct GenCtx *ctx, const char *struct_name, const char *func_prefix,
 			char *ref_func = to_func_name(ref_name);
 			bool is_string_enum = type_kind_is_string_enum(type_kind);
 
-			emit_header(ctx, "void lsp_%s__set_%s(struct Lsp%s *obj, %s value);\n",
+			emit_header(ctx, "LSP_NO_UNUSED int lsp_%s__set_%s(struct Lsp%s *obj, %s value);\n",
 			            func_prefix, prop_snake, struct_name, ref_enum);
 
-			emit_source(ctx, "void lsp_%s__set_%s(struct Lsp%s *obj, %s value) { ",
+			emit_source(ctx, "int lsp_%s__set_%s(struct Lsp%s *obj, %s value) { ",
 			            func_prefix, prop_snake, struct_name, ref_enum);
 
 			if (is_string_enum) {
-				emit_source(ctx, "json_object_object_add(obj->json, \"%s\", json_object_new_string(lsp_%s__to_string(value))); }\n",
-				            prop_name, ref_func);
-			} else {
-				emit_source(ctx, "json_object_object_add(obj->json, \"%s\", json_object_new_int(value)); }\n",
+				emit_source(ctx, "json_object *val = json_object_new_string(lsp_%s__to_string(value)); ",
+				            ref_func);
+				emit_source(ctx, "if (val == NULL) { return LSP_ERR_OOM; } ");
+				emit_source(ctx, "if (json_object_object_add(obj->json, \"%s\", val) < 0) { return LSP_ERR_OOM; } ",
 				            prop_name);
+				emit_source(ctx, "return LSP_OK; }\n");
+			} else {
+				emit_source(ctx, "json_object *val = json_object_new_int(value); ");
+				emit_source(ctx, "if (val == NULL) { return LSP_ERR_OOM; } ");
+				emit_source(ctx, "if (json_object_object_add(obj->json, \"%s\", val) < 0) { return LSP_ERR_OOM; } ",
+				            prop_name);
+				emit_source(ctx, "return LSP_OK; }\n");
 			}
 
 			free(ref_func);
@@ -423,13 +439,14 @@ gen_setter(struct GenCtx *ctx, const char *struct_name, const char *func_prefix,
 			// Struct-like reference (structure, array, map, or, alias, unknown)
 			char *ref_struct = to_struct_type(ref_name);
 
-			emit_header(ctx, "void lsp_%s__set_%s(struct Lsp%s *obj, %s *value);\n",
+			emit_header(ctx, "LSP_NO_UNUSED int lsp_%s__set_%s(struct Lsp%s *obj, %s *value);\n",
 			            func_prefix, prop_snake, struct_name, ref_struct);
 
-			emit_source(ctx, "void lsp_%s__set_%s(struct Lsp%s *obj, %s *value) { ",
+			emit_source(ctx, "int lsp_%s__set_%s(struct Lsp%s *obj, %s *value) { ",
 			            func_prefix, prop_snake, struct_name, ref_struct);
-			emit_source(ctx, "json_object_object_add(obj->json, \"%s\", json_object_get(value->json)); }\n",
+			emit_source(ctx, "if (json_object_object_add(obj->json, \"%s\", json_object_get(value->json)) < 0) { return LSP_ERR_OOM; } ",
 			            prop_name);
+			emit_source(ctx, "return LSP_OK; }\n");
 
 			free(ref_struct);
 		}
@@ -438,18 +455,22 @@ gen_setter(struct GenCtx *ctx, const char *struct_name, const char *func_prefix,
 		char *ctype = naming_c_type(prop_type);
 		const char *json_suffix = naming_json_suffix(prop_type);
 
-		emit_header(ctx, "void lsp_%s__set_%s(struct Lsp%s *obj, %s value);\n",
+		emit_header(ctx, "LSP_NO_UNUSED int lsp_%s__set_%s(struct Lsp%s *obj, %s value);\n",
 		            func_prefix, prop_snake, struct_name, ctype);
 
-		emit_source(ctx, "void lsp_%s__set_%s(struct Lsp%s *obj, %s value) { ",
+		emit_source(ctx, "int lsp_%s__set_%s(struct Lsp%s *obj, %s value) { ",
 		            func_prefix, prop_snake, struct_name, ctype);
 
 		if (json_suffix) {
-			emit_source(ctx, "json_object_object_add(obj->json, \"%s\", json_object_new_%s(value)); }\n",
-			            prop_name, json_suffix);
-		} else {
-			emit_source(ctx, "json_object_object_add(obj->json, \"%s\", json_object_get(value)); }\n",
+			emit_source(ctx, "json_object *val = json_object_new_%s(value); ", json_suffix);
+			emit_source(ctx, "if (val == NULL) { return LSP_ERR_OOM; } ");
+			emit_source(ctx, "if (json_object_object_add(obj->json, \"%s\", val) < 0) { return LSP_ERR_OOM; } ",
 			            prop_name);
+			emit_source(ctx, "return LSP_OK; }\n");
+		} else {
+			emit_source(ctx, "if (json_object_object_add(obj->json, \"%s\", json_object_get(value)) < 0) { return LSP_ERR_OOM; } ",
+			            prop_name);
+			emit_source(ctx, "return LSP_OK; }\n");
 		}
 
 		free(ctype);
@@ -532,15 +553,21 @@ gen_array_type(struct GenCtx *ctx, json_object *type_def) {
 				emit_source(ctx, "return LSP_OK; }\n");
 			}
 
-			emit_header(ctx, "void lsp_%s__add(%s *obj, %s value);\n",
+			emit_header(ctx, "LSP_NO_UNUSED int lsp_%s__add(%s *obj, %s value);\n",
 			            func_prefix, struct_type, elem_enum);
-			emit_source(ctx, "void lsp_%s__add(%s *obj, %s value) { ",
+			emit_source(ctx, "int lsp_%s__add(%s *obj, %s value) { ",
 			            func_prefix, struct_type, elem_enum);
 			if (is_string_enum) {
-				emit_source(ctx, "json_object_array_add(obj->json, json_object_new_string(lsp_%s__to_string(value))); }\n",
+				emit_source(ctx, "json_object *val = json_object_new_string(lsp_%s__to_string(value)); ",
 				            elem_func);
+				emit_source(ctx, "if (val == NULL) { return LSP_ERR_OOM; } ");
+				emit_source(ctx, "if (json_object_array_add(obj->json, val) < 0) { return LSP_ERR_OOM; } ");
+				emit_source(ctx, "return LSP_OK; }\n");
 			} else {
-				emit_source(ctx, "json_object_array_add(obj->json, json_object_new_int(value)); }\n");
+				emit_source(ctx, "json_object *val = json_object_new_int(value); ");
+				emit_source(ctx, "if (val == NULL) { return LSP_ERR_OOM; } ");
+				emit_source(ctx, "if (json_object_array_add(obj->json, val) < 0) { return LSP_ERR_OOM; } ");
+				emit_source(ctx, "return LSP_OK; }\n");
 			}
 
 			free(elem_func);
@@ -559,11 +586,12 @@ gen_array_type(struct GenCtx *ctx, json_object *type_def) {
 			emit_source(ctx, "return lsp_%s__from_json(child, json_object_array_get_idx(obj->json, index)); }\n",
 			            elem_func);
 
-			emit_header(ctx, "void lsp_%s__add(%s *obj, %s *elem);\n",
+			emit_header(ctx, "LSP_NO_UNUSED int lsp_%s__add(%s *obj, %s *elem);\n",
 			            func_prefix, struct_type, elem_struct);
-			emit_source(ctx, "void lsp_%s__add(%s *obj, %s *elem) { ",
+			emit_source(ctx, "int lsp_%s__add(%s *obj, %s *elem) { ",
 			            func_prefix, struct_type, elem_struct);
-			emit_source(ctx, "json_object_array_add(obj->json, json_object_get(elem->json)); }\n");
+			emit_source(ctx, "if (json_object_array_add(obj->json, json_object_get(elem->json)) < 0) { return LSP_ERR_OOM; } ");
+			emit_source(ctx, "return LSP_OK; }\n");
 
 			free(elem_func);
 			free(elem_struct);
@@ -614,11 +642,12 @@ gen_map_type(struct GenCtx *ctx, json_object *type_def) {
 			emit_source(ctx, "if (val == NULL) return LSP_ERR_MISSING_FIELD; ");
 			emit_source(ctx, "return lsp_%s__from_json(result, val); }\n", val_func);
 
-			emit_header(ctx, "void lsp_%s__put(%s *obj, const char *key, %s *value);\n",
+			emit_header(ctx, "LSP_NO_UNUSED int lsp_%s__put(%s *obj, const char *key, %s *value);\n",
 			            func_prefix, struct_type, val_struct);
-			emit_source(ctx, "void lsp_%s__put(%s *obj, const char *key, %s *value) { ",
+			emit_source(ctx, "int lsp_%s__put(%s *obj, const char *key, %s *value) { ",
 			            func_prefix, struct_type, val_struct);
-			emit_source(ctx, "json_object_object_add(obj->json, key, json_object_get(value->json)); }\n");
+			emit_source(ctx, "if (json_object_object_add(obj->json, key, json_object_get(value->json)) < 0) { return LSP_ERR_OOM; } ");
+			emit_source(ctx, "return LSP_OK; }\n");
 
 			free(val_func);
 			free(val_struct);
@@ -642,15 +671,18 @@ gen_map_type(struct GenCtx *ctx, json_object *type_def) {
 		}
 		emit_source(ctx, "return LSP_OK; }\n");
 
-		emit_header(ctx, "void lsp_%s__put(%s *obj, const char *key, %s value);\n",
+		emit_header(ctx, "LSP_NO_UNUSED int lsp_%s__put(%s *obj, const char *key, %s value);\n",
 		            func_prefix, struct_type, ctype);
-		emit_source(ctx, "void lsp_%s__put(%s *obj, const char *key, %s value) { ",
+		emit_source(ctx, "int lsp_%s__put(%s *obj, const char *key, %s value) { ",
 		            func_prefix, struct_type, ctype);
 		if (json_suffix) {
-			emit_source(ctx, "json_object_object_add(obj->json, key, json_object_new_%s(value)); }\n",
-			            json_suffix);
+			emit_source(ctx, "json_object *val = json_object_new_%s(value); ", json_suffix);
+			emit_source(ctx, "if (val == NULL) { return LSP_ERR_OOM; } ");
+			emit_source(ctx, "if (json_object_object_add(obj->json, key, val) < 0) { return LSP_ERR_OOM; } ");
+			emit_source(ctx, "return LSP_OK; }\n");
 		} else {
-			emit_source(ctx, "json_object_object_add(obj->json, key, json_object_get(value)); }\n");
+			emit_source(ctx, "if (json_object_object_add(obj->json, key, json_object_get(value)) < 0) { return LSP_ERR_OOM; } ");
+			emit_source(ctx, "return LSP_OK; }\n");
 		}
 
 		free(ctype);

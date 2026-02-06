@@ -443,6 +443,49 @@ gen_message_read_impl(struct GenCtx *ctx, const struct MsgKind *kind,
 }
 
 static void
+gen_notification_send_decl(struct GenCtx *ctx, json_object *msg) {
+	const char *method = msg_get_method(msg);
+	const char *params_name = get_params_type_name(msg);
+	char *func_prefix = method_to_func_prefix(method);
+
+	if (params_name != NULL) {
+		char *params_type = to_struct_type(params_name);
+		emit_header(ctx, "int lsp_%s__send"
+		            "(const %s *params, struct Lsp *lsp);\n",
+		            func_prefix, params_type);
+		free(params_type);
+	} else {
+		emit_header(ctx, "int lsp_%s__send(struct Lsp *lsp);\n", func_prefix);
+	}
+
+	free(func_prefix);
+}
+
+static void
+gen_notification_send_impl(struct GenCtx *ctx, json_object *msg) {
+	const char *method = msg_get_method(msg);
+	const char *params_name = get_params_type_name(msg);
+	char *func_prefix = method_to_func_prefix(method);
+
+	if (params_name != NULL) {
+		char *params_type = to_struct_type(params_name);
+		emit_source(ctx, "int lsp_%s__send"
+		            "(const %s *params, struct Lsp *lsp) {\n",
+		            func_prefix, params_type);
+		emit_source(ctx, "\treturn lsp_notify(lsp, lsp_%s__notification(params));\n",
+		            func_prefix);
+		free(params_type);
+	} else {
+		emit_source(ctx, "int lsp_%s__send(struct Lsp *lsp) {\n", func_prefix);
+		emit_source(ctx, "\treturn lsp_notify(lsp, lsp_%s__notification());\n",
+		            func_prefix);
+	}
+	emit_source(ctx, "}\n\n");
+
+	free(func_prefix);
+}
+
+static void
 gen_message_callback_typedef(struct GenCtx *ctx, const struct MsgKind *kind,
                              json_object *msg) {
 	const char *method = msg_get_method(msg);
@@ -635,12 +678,33 @@ gen_request_dispatch_impl(struct GenCtx *ctx, json_object **sorted, size_t count
 			result_type = to_struct_type(ref_name);
 			result_func = to_func_name(ref_name);
 			emit_source(ctx, "\t\t%s result = {0};\n", result_type);
-			emit_source(ctx, "\t\tlsp_%s__init(&result);\n", result_func);
+			emit_source(ctx, "\t\terr = lsp_%s__init(&result);\n", result_func);
+			emit_source(ctx, "\t\tif (err < 0) {\n");
+			if (params_name != NULL) {
+				char *params_func = to_func_name(params_name);
+				emit_source(ctx, "\t\t\tlsp_%s__cleanup(&params);\n", params_func);
+				free(params_func);
+			}
+			emit_source(ctx, "\t\t\tjson_object_put(response);\n");
+			emit_source(ctx, "\t\t\treturn NULL;\n");
+			emit_source(ctx, "\t\t}\n");
 		}
 
 		/* Error object */
 		emit_source(ctx, "\t\tstruct LspResponseError error = {0};\n");
-		emit_source(ctx, "\t\tlsp_response_error__init(&error);\n");
+		emit_source(ctx, "\t\terr = lsp_response_error__init(&error);\n");
+		emit_source(ctx, "\t\tif (err < 0) {\n");
+		if (has_result) {
+			emit_source(ctx, "\t\t\tlsp_%s__cleanup(&result);\n", result_func);
+		}
+		if (params_name != NULL) {
+			char *params_func = to_func_name(params_name);
+			emit_source(ctx, "\t\t\tlsp_%s__cleanup(&params);\n", params_func);
+			free(params_func);
+		}
+		emit_source(ctx, "\t\t\tjson_object_put(response);\n");
+		emit_source(ctx, "\t\t\treturn NULL;\n");
+		emit_source(ctx, "\t\t}\n");
 
 		/* Call handler */
 		emit_source(ctx, "\t\terr = callbacks->%s(", field_name);
@@ -764,6 +828,182 @@ gen_request_result_read_impl(struct GenCtx *ctx, json_object *req) {
 	free(func_prefix);
 }
 
+/* Request-only: response callback typedef */
+static void
+gen_request_response_callback_typedef(struct GenCtx *ctx, json_object *req) {
+	const char *method = msg_get_method(req);
+	json_object *result = msg_get_result(req);
+	char *handler_name = method_to_handler_name(method);
+
+	/* Change "Handler" suffix to "ResponseCallback" */
+	size_t len = strlen(handler_name);
+	char *cb_name = malloc(len + 16);
+	assert(cb_name != NULL);
+	strcpy(cb_name, handler_name);
+	strcpy(cb_name + len - 7, "ResponseCallback"); /* Replace "Handler" */
+
+	emit_header(ctx, "typedef void (*%s)(", cb_name);
+
+	/* Result parameter (if any) */
+	if (result != NULL && !is_null_result(result) && is_reference_result(result)) {
+		const char *ref_name = type_get_name(result);
+		char *result_type = to_struct_type(ref_name);
+		emit_header(ctx, "%s *result, ", result_type);
+		free(result_type);
+	}
+
+	emit_header(ctx, "struct LspResponseError *error, void *userdata);\n");
+
+	free(cb_name);
+	free(handler_name);
+}
+
+/* Request-only: response wrapper function (static in .c) */
+static void
+gen_request_response_wrapper(struct GenCtx *ctx, json_object *req) {
+	const char *method = msg_get_method(req);
+	json_object *result = msg_get_result(req);
+	char *func_prefix = method_to_func_prefix(method);
+	char *handler_name = method_to_handler_name(method);
+
+	/* Build callback type name */
+	size_t len = strlen(handler_name);
+	char *cb_name = malloc(len + 16);
+	assert(cb_name != NULL);
+	strcpy(cb_name, handler_name);
+	strcpy(cb_name + len - 7, "ResponseCallback");
+
+	bool has_result = result != NULL && !is_null_result(result) &&
+	                  is_reference_result(result);
+
+	emit_source(ctx, "static void\n");
+	emit_source(ctx, "lsp_%s__response_wrapper("
+	            "json_object *response, void *callback, void *userdata) {\n",
+	            func_prefix);
+	emit_source(ctx, "\t%s cb = (%s)callback;\n", cb_name, cb_name);
+
+	/* Check for error in response */
+	emit_source(ctx, "\tjson_object *error_obj = "
+	            "json_object_object_get(response, \"error\");\n");
+	emit_source(ctx, "\tif (error_obj != NULL) {\n");
+	emit_source(ctx, "\t\tstruct LspResponseError error = {0};\n");
+	emit_source(ctx, "\t\terror.json = json_object_get(error_obj);\n");
+	if (has_result) {
+		emit_source(ctx, "\t\tcb(NULL, &error, userdata);\n");
+	} else {
+		emit_source(ctx, "\t\tcb(&error, userdata);\n");
+	}
+	emit_source(ctx, "\t\tlsp_response_error__cleanup(&error);\n");
+	emit_source(ctx, "\t\treturn;\n");
+	emit_source(ctx, "\t}\n");
+
+	/* Parse result if any */
+	if (has_result) {
+		const char *ref_name = type_get_name(result);
+		char *result_type = to_struct_type(ref_name);
+		char *result_func = to_func_name(ref_name);
+
+		emit_source(ctx, "\t%s result = {0};\n", result_type);
+		emit_source(ctx, "\tint rv = lsp_%s__read_result(response, &result);\n",
+		            func_prefix);
+		emit_source(ctx, "\tif (rv != 0) {\n");
+		emit_source(ctx, "\t\tcb(NULL, NULL, userdata);\n");
+		emit_source(ctx, "\t\treturn;\n");
+		emit_source(ctx, "\t}\n");
+		emit_source(ctx, "\tcb(&result, NULL, userdata);\n");
+		emit_source(ctx, "\tlsp_%s__cleanup(&result);\n", result_func);
+
+		free(result_func);
+		free(result_type);
+	} else {
+		emit_source(ctx, "\tcb(NULL, userdata);\n");
+	}
+
+	emit_source(ctx, "}\n\n");
+
+	free(cb_name);
+	free(handler_name);
+	free(func_prefix);
+}
+
+/* Request-only: send function declaration */
+static void
+gen_request_send_decl(struct GenCtx *ctx, json_object *req) {
+	const char *method = msg_get_method(req);
+	const char *params_name = get_params_type_name(req);
+	char *func_prefix = method_to_func_prefix(method);
+	char *handler_name = method_to_handler_name(method);
+
+	/* Build callback type name */
+	size_t len = strlen(handler_name);
+	char *cb_name = malloc(len + 16);
+	assert(cb_name != NULL);
+	strcpy(cb_name, handler_name);
+	strcpy(cb_name + len - 7, "ResponseCallback");
+
+	emit_header(ctx, "int lsp_%s__send(", func_prefix);
+
+	if (params_name != NULL) {
+		char *params_type = to_struct_type(params_name);
+		emit_header(ctx, "const %s *params, ", params_type);
+		free(params_type);
+	}
+
+	emit_header(ctx, "struct Lsp *lsp, %s callback, void *userdata);\n",
+	            cb_name);
+
+	free(cb_name);
+	free(handler_name);
+	free(func_prefix);
+}
+
+/* Request-only: send function implementation */
+static void
+gen_request_send_impl(struct GenCtx *ctx, json_object *req) {
+	const char *method = msg_get_method(req);
+	const char *params_name = get_params_type_name(req);
+	char *func_prefix = method_to_func_prefix(method);
+	char *handler_name = method_to_handler_name(method);
+
+	/* Build callback type name */
+	size_t len = strlen(handler_name);
+	char *cb_name = malloc(len + 16);
+	assert(cb_name != NULL);
+	strcpy(cb_name, handler_name);
+	strcpy(cb_name + len - 7, "ResponseCallback");
+
+	emit_source(ctx, "int lsp_%s__send(", func_prefix);
+
+	if (params_name != NULL) {
+		char *params_type = to_struct_type(params_name);
+		emit_source(ctx, "const %s *params, ", params_type);
+		free(params_type);
+	}
+
+	emit_source(ctx, "struct Lsp *lsp, %s callback, void *userdata) {\n",
+	            cb_name);
+
+	/* Generate ID and create request */
+	emit_source(ctx, "\tjson_object *id = "
+	            "json_object_new_int64((int64_t)lsp_next_id(lsp));\n");
+	if (params_name != NULL) {
+		emit_source(ctx, "\tjson_object *req = lsp_%s__request(params, id);\n",
+		            func_prefix);
+	} else {
+		emit_source(ctx, "\tjson_object *req = lsp_%s__request(id);\n",
+		            func_prefix);
+	}
+	emit_source(ctx, "\tjson_object_put(id);\n");
+	emit_source(ctx, "\treturn lsp_request(lsp, req, "
+	            "lsp_%s__response_wrapper, callback, userdata);\n",
+	            func_prefix);
+	emit_source(ctx, "}\n\n");
+
+	free(cb_name);
+	free(handler_name);
+	free(func_prefix);
+}
+
 /*
  * Main generation
  */
@@ -778,8 +1018,9 @@ emit_header_prologue(struct GenCtx *ctx) {
 	emit_header(ctx, "#include <stddef.h>\n");
 	emit_header(ctx, "#include <stdint.h>\n");
 	emit_header(ctx, "#include \"model.h\"\n\n");
-	emit_header(ctx, "/* Forward declaration for error type */\n");
-	emit_header(ctx, "struct LspResponseError;\n\n");
+	emit_header(ctx, "/* Forward declarations */\n");
+	emit_header(ctx, "struct LspResponseError;\n");
+	emit_header(ctx, "struct Lsp;\n\n");
 }
 
 static void
@@ -791,6 +1032,7 @@ static void
 emit_source_prologue(struct GenCtx *ctx) {
 	emit_source(ctx, "/* Generated by gen/msg_gen - do not edit */\n");
 	emit_source(ctx, "#include \"messages.h\"\n");
+	emit_source(ctx, "#include \"lsp.h\"\n");
 	emit_source(ctx, "#include \"lsp_util.h\"\n");
 	emit_source(ctx, "#include <string.h>\n\n");
 }
@@ -841,6 +1083,12 @@ gen_all_notifications(struct GenCtx *ctx) {
 	}
 	emit_header(ctx, "\n");
 
+	emit_header(ctx, "/* Notification send functions */\n\n");
+	for (size_t i = 0; i < count; i++) {
+		gen_notification_send_decl(ctx, sorted[i]);
+	}
+	emit_header(ctx, "\n");
+
 	/* Header: callback typedefs */
 	emit_header(ctx, "/* Notification callback typedefs */\n\n");
 	for (size_t i = 0; i < count; i++) {
@@ -883,6 +1131,11 @@ gen_all_notifications(struct GenCtx *ctx) {
 	                               "LspServerNotificationCallbacks");
 	gen_notification_dispatch_impl(ctx, s2c, s2c_count, "S2C", "client",
 	                               "LspClientNotificationCallbacks");
+
+	/* Source: send implementations */
+	for (size_t i = 0; i < count; i++) {
+		gen_notification_send_impl(ctx, sorted[i]);
+	}
 
 	free(s2c);
 	free(c2s);
@@ -941,6 +1194,15 @@ gen_all_requests(struct GenCtx *ctx) {
 	}
 	emit_header(ctx, "\n");
 
+	emit_header(ctx, "/* Request send functions */\n\n");
+	for (size_t i = 0; i < count; i++) {
+		gen_request_response_callback_typedef(ctx, sorted[i]);
+	}
+	for (size_t i = 0; i < count; i++) {
+		gen_request_send_decl(ctx, sorted[i]);
+	}
+	emit_header(ctx, "\n");
+
 	/* Header: callback typedefs */
 	emit_header(ctx, "/* Request callback typedefs */\n\n");
 	for (size_t i = 0; i < count; i++) {
@@ -982,6 +1244,14 @@ gen_all_requests(struct GenCtx *ctx) {
 	                          "LspServerRequestCallbacks");
 	gen_request_dispatch_impl(ctx, s2c, s2c_count, "S2C", "client",
 	                          "LspClientRequestCallbacks");
+
+	/* Source: response wrappers and send implementations */
+	for (size_t i = 0; i < count; i++) {
+		gen_request_response_wrapper(ctx, sorted[i]);
+	}
+	for (size_t i = 0; i < count; i++) {
+		gen_request_send_impl(ctx, sorted[i]);
+	}
 
 	free(s2c);
 	free(c2s);
