@@ -1,5 +1,5 @@
 testlib_dep = subproject('cextras').get_variable('testlib_dep')
-test_src = ['lsp_connection.c', 'requests.c', 'notifications.c', 'lsp_util.c', 'lsp_server_test.c', 'lsp_client_test.c', 'initialization.c', 'lsp_progress.c']
+test_src = ['requests.c', 'notifications.c', 'lsp_util.c', 'lsp_server_test.c', 'lsp_client_test.c', 'initialization.c', 'lsp_progress.c']
 
 #subdir('gen')
 

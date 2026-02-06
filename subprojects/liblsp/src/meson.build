@@ -1,5 +1,4 @@
 liblsp_sources = files(
-    'connection.c',
     'initialization.c',
     'lsp.c',
     'lsp_progress.c',
