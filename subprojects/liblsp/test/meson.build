@@ -1,5 +1,5 @@
 testlib_dep = subproject('cextras').get_variable('testlib_dep')
-test_src = ['lsp_connection.c', 'requests.c', 'notifications.c', 'lsp_util.c', 'lsp_server_test.c', 'lsp_client_test.c', 'initialization.c']
+test_src = ['lsp_connection.c', 'requests.c', 'notifications.c', 'lsp_util.c', 'lsp_server_test.c', 'lsp_client_test.c', 'initialization.c', 'lsp_progress.c']
 
 #subdir('gen')
 
@@ -15,10 +15,12 @@ foreach src : test_src
 endforeach
 
 # Integration test (requires clangd)
+clangd = find_program('clangd')
 integration_exe = executable(
     'test-integration_c',
     'integration.c',
     dependencies: [testlib_dep, liblsp_dep],
     install: false,
 )
-test('integration_c', integration_exe, timeout: 30)
+test('integration_c', integration_exe, timeout: 30,
+    env: {'CLANGD': clangd.full_path()})

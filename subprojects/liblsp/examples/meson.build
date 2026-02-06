@@ -9,3 +9,9 @@ executable(
     'server.c',
     dependencies: liblsp_dep,
 )
+
+executable(
+    'lsp_progress_example',
+    'progress.c',
+    dependencies: liblsp_dep,
+)

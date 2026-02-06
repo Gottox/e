@@ -32,37 +32,39 @@ is_handler_registered(const void *callbacks, size_t offset) {
  * Request handler to capability mappings.
  */
 static const struct LspCapabilityMapping request_capabilities[] = {
-	REQ(text_document__hover, "hoverProvider"),
-	REQ(text_document__completion, "completionProvider"),
-	REQ(text_document__signature_help, "signatureHelpProvider"),
-	REQ(text_document__declaration, "declarationProvider"),
-	REQ(text_document__definition, "definitionProvider"),
-	REQ(text_document__type_definition, "typeDefinitionProvider"),
-	REQ(text_document__implementation, "implementationProvider"),
-	REQ(text_document__references, "referencesProvider"),
-	REQ(text_document__document_highlight, "documentHighlightProvider"),
-	REQ(text_document__document_symbol, "documentSymbolProvider"),
-	REQ(text_document__code_action, "codeActionProvider"),
-	REQ(text_document__code_lens, "codeLensProvider"),
-	REQ(text_document__document_link, "documentLinkProvider"),
-	REQ(text_document__document_color, "colorProvider"),
-	REQ(text_document__formatting, "documentFormattingProvider"),
-	REQ(text_document__range_formatting, "documentRangeFormattingProvider"),
-	REQ(text_document__on_type_formatting, "documentOnTypeFormattingProvider"),
-	REQ(text_document__rename, "renameProvider"),
-	REQ(text_document__folding_range, "foldingRangeProvider"),
-	REQ(text_document__selection_range, "selectionRangeProvider"),
-	REQ(text_document__prepare_call_hierarchy, "callHierarchyProvider"),
-	REQ(text_document__linked_editing_range, "linkedEditingRangeProvider"),
-	REQ(text_document__semantic_tokens__full, "semanticTokensProvider"),
-	REQ(text_document__moniker, "monikerProvider"),
-	REQ(text_document__prepare_type_hierarchy, "typeHierarchyProvider"),
-	REQ(text_document__inline_value, "inlineValueProvider"),
-	REQ(text_document__inlay_hint, "inlayHintProvider"),
-	REQ(text_document__diagnostic, "diagnosticProvider"),
-	REQ(text_document__inline_completion, "inlineCompletionProvider"),
-	REQ(workspace__symbol, "workspaceSymbolProvider"),
-	REQ(workspace__execute_command, "executeCommandProvider"),
+		REQ(text_document__hover, "hoverProvider"),
+		REQ(text_document__completion, "completionProvider"),
+		REQ(text_document__signature_help, "signatureHelpProvider"),
+		REQ(text_document__declaration, "declarationProvider"),
+		REQ(text_document__definition, "definitionProvider"),
+		REQ(text_document__type_definition, "typeDefinitionProvider"),
+		REQ(text_document__implementation, "implementationProvider"),
+		REQ(text_document__references, "referencesProvider"),
+		REQ(text_document__document_highlight, "documentHighlightProvider"),
+		REQ(text_document__document_symbol, "documentSymbolProvider"),
+		REQ(text_document__code_action, "codeActionProvider"),
+		REQ(text_document__code_lens, "codeLensProvider"),
+		REQ(text_document__document_link, "documentLinkProvider"),
+		REQ(text_document__document_color, "colorProvider"),
+		REQ(text_document__formatting, "documentFormattingProvider"),
+		REQ(text_document__range_formatting, "documentRangeFormattingProvider"),
+		REQ(text_document__on_type_formatting,
+			"documentOnTypeFormattingProvider"),
+		REQ(text_document__rename, "renameProvider"),
+		REQ(text_document__folding_range, "foldingRangeProvider"),
+		REQ(text_document__selection_range, "selectionRangeProvider"),
+		REQ(text_document__prepare_call_hierarchy, "callHierarchyProvider"),
+		REQ(text_document__linked_editing_range, "linkedEditingRangeProvider"),
+		REQ(text_document__semantic_tokens__full, "semanticTokensProvider"),
+		REQ(text_document__moniker, "monikerProvider"),
+		REQ(text_document__prepare_type_hierarchy, "typeHierarchyProvider"),
+		REQ(text_document__inline_value, "inlineValueProvider"),
+		REQ(text_document__inlay_hint, "inlayHintProvider"),
+		REQ(text_document__diagnostic, "diagnosticProvider"),
+		REQ(text_document__inline_completion, "inlineCompletionProvider"),
+		REQ(workspace__symbol, "workspaceSymbolProvider"),
+		REQ(workspace__execute_command, "executeCommandProvider"),
+		REQ(workspace__diagnostic, "diagnosticProvider"),
 };
 
 static const size_t request_capabilities_count =
@@ -72,11 +74,11 @@ static const size_t request_capabilities_count =
  * Notification handler to textDocumentSync mappings.
  */
 static const struct LspCapabilityMapping notification_capabilities[] = {
-	NOTIF(text_document__did_open, "openClose"),
-	NOTIF(text_document__did_close, "openClose"),
-	NOTIF(text_document__did_change, "change"),
-	NOTIF(text_document__did_save, "save"),
-	NOTIF(text_document__will_save, "willSave"),
+		NOTIF(text_document__did_open, "openClose"),
+		NOTIF(text_document__did_close, "openClose"),
+		NOTIF(text_document__did_change, "change"),
+		NOTIF(text_document__did_save, "save"),
+		NOTIF(text_document__will_save, "willSave"),
 };
 
 static const size_t notification_capabilities_count =
@@ -90,19 +92,18 @@ static json_object *
 build_text_document_sync(
 		const struct LspServerNotificationCallbacks *notif_cbs) {
 	json_object *sync = json_object_new_object();
-	bool has_any = false;
+	bool found = false;
 
 	for (size_t i = 0; i < notification_capabilities_count; i++) {
 		const struct LspCapabilityMapping *m = &notification_capabilities[i];
 		if (!is_handler_registered(notif_cbs, m->offset)) {
 			continue;
 		}
-		has_any = true;
-		json_object_object_add(sync, m->field,
-				json_object_new_boolean(1));
+		found = true;
+		json_object_object_add(sync, m->field, json_object_new_boolean(1));
 	}
 
-	if (!has_any) {
+	if (!found) {
 		json_object_put(sync);
 		return NULL;
 	}
@@ -120,8 +121,8 @@ lsp_build_server_capabilities(
 	for (size_t i = 0; i < request_capabilities_count; i++) {
 		const struct LspCapabilityMapping *m = &request_capabilities[i];
 		if (is_handler_registered(req_cbs, m->offset)) {
-			json_object_object_add(capabilities, m->field,
-					json_object_new_boolean(1));
+			json_object_object_add(
+					capabilities, m->field, json_object_new_boolean(1));
 		}
 	}
 
@@ -150,11 +151,12 @@ lsp_build_initialize_result(
 	if (server_name || server_version) {
 		json_object *server_info = json_object_new_object();
 		if (server_name) {
-			json_object_object_add(server_info, "name",
-					json_object_new_string(server_name));
+			json_object_object_add(
+					server_info, "name", json_object_new_string(server_name));
 		}
 		if (server_version) {
-			json_object_object_add(server_info, "version",
+			json_object_object_add(
+					server_info, "version",
 					json_object_new_string(server_version));
 		}
 		json_object_object_add(result, "serverInfo", server_info);

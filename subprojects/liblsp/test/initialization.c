@@ -130,6 +130,30 @@ test_build_initialize_result_with_capabilities(void) {
 	json_object_put(result);
 }
 
+static void
+test_build_capabilities_no_workspace_when_empty(void) {
+	json_object *caps = lsp_build_server_capabilities(NULL, NULL);
+	ASSERT_NE(caps, NULL);
+	ASSERT_EQ(json_object_object_get(caps, "workspace"), NULL);
+	json_object_put(caps);
+}
+
+static void
+test_build_capabilities_workspace_diagnostic(void) {
+	struct LspServerRequestCallbacks req_cbs = {0};
+	req_cbs.workspace__diagnostic = DUMMY_REQ_HANDLER(LspWorkspaceDiagnosticHandler);
+
+	json_object *caps = lsp_build_server_capabilities(&req_cbs, NULL);
+	ASSERT_NE(caps, NULL);
+
+	/* workspace/diagnostic maps to top-level diagnosticProvider */
+	json_object *diag = json_object_object_get(caps, "diagnosticProvider");
+	ASSERT_NE(diag, NULL);
+	ASSERT_EQ(json_object_get_boolean(diag), 1);
+
+	json_object_put(caps);
+}
+
 DECLARE_TESTS
 TEST(test_build_capabilities_null)
 TEST(test_build_capabilities_hover)
@@ -138,4 +162,6 @@ TEST(test_build_capabilities_text_sync)
 TEST(test_build_initialize_result_minimal)
 TEST(test_build_initialize_result_with_server_info)
 TEST(test_build_initialize_result_with_capabilities)
+TEST(test_build_capabilities_no_workspace_when_empty)
+TEST(test_build_capabilities_workspace_diagnostic)
 END_TESTS

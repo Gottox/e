@@ -555,6 +555,9 @@ gen_notification_dispatch_impl(struct GenCtx *ctx, json_object **sorted,
 	emit_source(ctx, "\tjson_object *notif,\n");
 	emit_source(ctx, "\tvoid *userdata) {\n");
 
+	emit_source(ctx, "\tif (callbacks == NULL) {\n");
+	emit_source(ctx, "\t\treturn 0;\n");
+	emit_source(ctx, "\t}\n");
 	emit_source(ctx, "\tint err = 0;\n");
 	emit_source(ctx, "\tswitch (notification) {\n");
 
@@ -565,8 +568,9 @@ gen_notification_dispatch_impl(struct GenCtx *ctx, json_object **sorted,
 		char *field_name = method_to_func_prefix(method);
 
 		emit_source(ctx, "\tcase LSP_%s_NOTIFICATION_%s: {\n", prefix, suffix);
-		emit_source(ctx, "\t\tif (callbacks->%s == NULL) return 0;\n",
-		            field_name);
+		emit_source(ctx, "\t\tif (callbacks->%s == NULL) {\n", field_name);
+		emit_source(ctx, "\t\t\treturn 0;\n");
+		emit_source(ctx, "\t\t}\n");
 
 		if (params_name != NULL) {
 			char *params_type = to_struct_type(params_name);
@@ -576,7 +580,9 @@ gen_notification_dispatch_impl(struct GenCtx *ctx, json_object **sorted,
 			            "(notif, \"params\");\n");
 			emit_source(ctx, "\t\terr = lsp_%s__from_json(&params, p);\n",
 			            params_func);
-			emit_source(ctx, "\t\tif (err != 0) return err;\n");
+			emit_source(ctx, "\t\tif (err != 0) {\n");
+			emit_source(ctx, "\t\t\treturn err;\n");
+			emit_source(ctx, "\t\t}\n");
 			emit_source(ctx, "\t\terr = callbacks->%s(&params, userdata);\n",
 			            field_name);
 			emit_source(ctx, "\t\tlsp_%s__cleanup(&params);\n", params_func);
@@ -620,9 +626,14 @@ gen_request_dispatch_impl(struct GenCtx *ctx, json_object **sorted, size_t count
 	emit_source(ctx, "\tjson_object *request,\n");
 	emit_source(ctx, "\tvoid *userdata) {\n");
 
+	emit_source(ctx, "\tif (callbacks == NULL) {\n");
+	emit_source(ctx, "\t\treturn NULL;\n");
+	emit_source(ctx, "\t}\n");
 	emit_source(ctx, "\tjson_object *id = json_object_object_get"
 	            "(request, \"id\");\n");
-	emit_source(ctx, "\tif (id == NULL) return NULL;\n\n");
+	emit_source(ctx, "\tif (id == NULL) {\n");
+	emit_source(ctx, "\t\treturn NULL;\n");
+	emit_source(ctx, "\t}\n\n");
 
 	emit_source(ctx, "\tjson_object *response = json_object_new_object();\n");
 	emit_source(ctx, "\tjson_object_object_add(response, \"jsonrpc\", "
@@ -641,9 +652,10 @@ gen_request_dispatch_impl(struct GenCtx *ctx, json_object **sorted, size_t count
 		char *field_name = method_to_func_prefix(method);
 
 		emit_source(ctx, "\tcase LSP_%s_METHOD_%s: {\n", prefix, suffix);
-		emit_source(ctx, "\t\tif (callbacks->%s == NULL) { "
-		            "json_object_put(response); return NULL; }\n",
-		            field_name);
+		emit_source(ctx, "\t\tif (callbacks->%s == NULL) {\n", field_name);
+		emit_source(ctx, "\t\t\tjson_object_put(response);\n");
+		emit_source(ctx, "\t\t\treturn NULL;\n");
+		emit_source(ctx, "\t\t}\n");
 
 		/* Parse params */
 		if (params_name != NULL) {
@@ -985,7 +997,7 @@ gen_request_send_impl(struct GenCtx *ctx, json_object *req) {
 
 	/* Generate ID and create request */
 	emit_source(ctx, "\tjson_object *id = "
-	            "json_object_new_int64((int64_t)lsp_next_id(lsp));\n");
+	            "json_object_new_uint64(lsp_next_id(lsp));\n");
 	if (params_name != NULL) {
 		emit_source(ctx, "\tjson_object *req = lsp_%s__request(params, id);\n",
 		            func_prefix);

@@ -49,7 +49,7 @@ lsp_spawn(struct Lsp *lsp, const char *argv[]) {
 	posix_spawn_file_actions_addclose(&actions, sender_pipe[1]);
 	posix_spawn_file_actions_addclose(&actions, receiver_pipe[0]);
 
-	if (posix_spawn(
+	if (posix_spawnp(
 				&lsp->pid, argv[0], &actions, NULL, (char *const *)argv,
 				environ) != 0) {
 		rv = -errno;

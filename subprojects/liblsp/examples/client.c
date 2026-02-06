@@ -147,7 +147,7 @@ main(int argc, char *argv[]) {
 		return 1;
 	}
 
-	json_object *id = json_object_new_int64(lsp_next_id(&lsp));
+	json_object *id = json_object_new_uint64(lsp_next_id(&lsp));
 	json_object *init_req = lsp_initialize__request(&init_params, id);
 	lsp_initialize_params__cleanup(&init_params);
 
@@ -218,7 +218,7 @@ main(int argc, char *argv[]) {
 
 	/* Send shutdown request */
 	fprintf(stderr, "Sending shutdown request...\n");
-	id = json_object_new_int64(lsp_next_id(&lsp));
+	id = json_object_new_uint64(lsp_next_id(&lsp));
 	json_object *shutdown_req = lsp_shutdown__request(id);
 	rv = lsp_send(&lsp, shutdown_req);
 	if (rv < 0) {
