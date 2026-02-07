@@ -69,7 +69,7 @@ array_index_of(
 		const char *const arr[], size_t arr_len, const char *key, int key_len) {
 	for (size_t i = 0; i < arr_len; i++) {
 		const char *name = arr[i];
-		if (strncmp(name, key, key_len) == 0) {
+		if (memcmp(name, key, key_len) == 0 && name[key_len] == '\0') {
 			return i;
 		}
 	}
