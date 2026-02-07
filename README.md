@@ -56,8 +56,6 @@ Argument 2
 
 Note that each trailing payload must be followed by a newline.
 
-> [!WARNING] The following is unimplemented
-
 It is also possible to use termination markers to indicate the end of an
 argument.
 
