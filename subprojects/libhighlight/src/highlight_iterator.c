@@ -44,6 +44,12 @@ marker_insert(
 		return new_marker;
 	}
 
+	if (new_marker->offset < current->offset) {
+		new_marker->next = current;
+		*top = new_marker;
+		return new_marker;
+	}
+
 	while (current->next != NULL) {
 		if (new_marker->offset < current->next->offset) {
 			break;
