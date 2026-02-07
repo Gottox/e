@@ -104,15 +104,18 @@ add_match(struct HighlightIterator *iterator) {
 		rv = -1;
 		goto out;
 	}
+
+	struct HighlightMarker *end = cx_prealloc_pool_get(&iterator->marker_pool);
+	if (end == NULL) {
+		cx_prealloc_pool_recycle(&iterator->marker_pool, start);
+		rv = -1;
+		goto out;
+	}
+
 	start->offset = start_byte;
 	start->capture_id = HIGHLIGHT_CAPTURE_ID(capture_id);
 	start = marker_insert(iterator, &iterator->markers, start, &old_capture);
 
-	struct HighlightMarker *end = cx_prealloc_pool_get(&iterator->marker_pool);
-	if (end == NULL) {
-		rv = -1;
-		goto out;
-	}
 	end->offset = end_byte;
 	end->capture_id = old_capture;
 	end->next = start->next;
