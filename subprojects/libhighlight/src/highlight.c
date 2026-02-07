@@ -124,7 +124,7 @@ out:
 	return rv;
 }
 
-int
+static int
 compile_query(
 		struct Highlight *highlight, const struct HighlightConfig *config,
 		uint32_t *error_offset, TSQueryError *error) {
