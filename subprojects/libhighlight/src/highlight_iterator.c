@@ -129,19 +129,20 @@ static int
 markers_fill(struct HighlightIterator *iterator) {
 	int rv = 0;
 	const struct HighlightMarker dummy = {0};
-	const struct HighlightMarker *start =
-			iterator->markers ? iterator->markers : &dummy;
-	const struct HighlightMarker *end = start->next ? start->next : &dummy;
 
-	while (iterator->tree_completed_offset != iterator->end_offset &&
-		   end->offset >= iterator->tree_completed_offset) {
+	while (1) {
+		const struct HighlightMarker *start =
+				iterator->markers ? iterator->markers : &dummy;
+		const struct HighlightMarker *end =
+				start->next ? start->next : &dummy;
+
+		if (iterator->tree_completed_offset == iterator->end_offset ||
+			end->offset < iterator->tree_completed_offset) {
+			break;
+		}
 		rv = add_match(iterator);
 		if (rv < 0) {
 			goto out;
-		}
-		if (iterator->markers != NULL) {
-			start = iterator->markers;
-			end = start->next;
 		}
 	}
 out:
