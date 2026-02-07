@@ -10,6 +10,7 @@ enum IrTypeKind {
 	IR_TYPE_ARRAY,
 	IR_TYPE_MAP,
 	IR_TYPE_OR,
+	IR_TYPE_TUPLE,
 	IR_TYPE_UNKNOWN
 };
 
@@ -45,6 +46,8 @@ ir_reader_type_kind(json_object *type_def) {
 		return IR_TYPE_ENUMERATION;
 	} else if (json_has_key(type_def, "element")) {
 		return IR_TYPE_ARRAY;
+	} else if (json_has_key(type_def, "elements")) {
+		return IR_TYPE_TUPLE;
 	} else if (json_has_key(type_def, "items")) {
 		return IR_TYPE_OR;
 	} else if (json_has_key(type_def, "value")) {
@@ -92,6 +95,7 @@ type_kind_from_string(const char *type_kind) {
 	if (strcmp(type_kind, "array") == 0) return IR_TYPE_ARRAY;
 	if (strcmp(type_kind, "map") == 0) return IR_TYPE_MAP;
 	if (strcmp(type_kind, "or") == 0) return IR_TYPE_OR;
+	if (strcmp(type_kind, "tuple") == 0) return IR_TYPE_TUPLE;
 	return IR_TYPE_UNKNOWN;
 }
 
@@ -693,6 +697,117 @@ gen_map_type(struct GenCtx *ctx, json_object *type_def) {
 }
 
 /*
+ * Tuple type generation
+ */
+
+static void
+gen_tuple_type(struct GenCtx *ctx, json_object *type_def) {
+	const char *name = json_get_string(type_def, "name");
+	if (!gen_ctx_mark(ctx, "tuple", name)) {
+		return;
+	}
+
+	json_object *elements = json_get_array(type_def, "elements");
+	size_t elem_count = json_array_len(elements);
+	const char *norm_name = lsp_name_normalize(name);
+	char *func_prefix = to_func_name(name);
+	char *struct_type = to_struct_type(name);
+
+	emit_struct_decl(ctx, norm_name);
+	emit_lifecycle(ctx, func_prefix, struct_type, EMIT_INIT_ARRAY);
+	emit_len_func(ctx, func_prefix, struct_type, EMIT_COLLECTION_ARRAY);
+
+	for (size_t i = 0; i < elem_count; i++) {
+		json_object *elem = json_array_get(elements, i);
+		enum IrPropTypeKind epk = ir_reader_prop_type_kind(elem);
+
+		if (epk == IR_PROP_BASE) {
+			char *ctype = naming_c_type(elem);
+			const char *json_suffix = naming_json_suffix(elem);
+
+			emit_header(ctx, "%s lsp_%s__get_%zu(const %s *obj);\n",
+			            ctype, func_prefix, i, struct_type);
+			emit_source(ctx, "%s lsp_%s__get_%zu(const %s *obj) { ",
+			            ctype, func_prefix, i, struct_type);
+			if (json_suffix) {
+				emit_source(ctx, "return json_object_get_%s(json_object_array_get_idx(obj->json, %zu)); }\n",
+				            json_suffix, i);
+			} else {
+				emit_source(ctx, "return json_object_array_get_idx(obj->json, %zu); }\n", i);
+			}
+
+			emit_header(ctx, "LSP_NO_UNUSED int lsp_%s__set_%zu(%s *obj, %s value);\n",
+			            func_prefix, i, struct_type, ctype);
+			emit_source(ctx, "int lsp_%s__set_%zu(%s *obj, %s value) { ",
+			            func_prefix, i, struct_type, ctype);
+			if (json_suffix) {
+				emit_source(ctx, "json_object *val = json_object_new_%s(value); ", json_suffix);
+				emit_source(ctx, "if (val == NULL) { return LSP_ERR_OOM; } ");
+				emit_source(ctx, "if (json_object_array_put_idx(obj->json, %zu, val) < 0) { return LSP_ERR_OOM; } ",
+				            i);
+				emit_source(ctx, "return LSP_OK; }\n");
+			} else {
+				emit_source(ctx, "if (json_object_array_put_idx(obj->json, %zu, json_object_get(value)) < 0) { return LSP_ERR_OOM; } ",
+				            i);
+				emit_source(ctx, "return LSP_OK; }\n");
+			}
+
+			free(ctype);
+		} else if (epk == IR_PROP_REFERENCE) {
+			const char *ref_name = json_get_string(elem, "name");
+			const char *type_kind = json_get_string(elem, "typeKind");
+			enum IrTypeKind tk = type_kind_from_string(type_kind);
+
+			if (tk == IR_TYPE_ENUMERATION) {
+				char *ref_enum = to_enum_type(ref_name);
+				char *ref_func = to_func_name(ref_name);
+				bool is_string_enum = type_kind_is_string_enum(type_kind);
+
+				emit_header(ctx, "int lsp_%s__get_%zu(const %s *obj, %s *out);\n",
+				            func_prefix, i, struct_type, ref_enum);
+				emit_source(ctx, "int lsp_%s__get_%zu(const %s *obj, %s *out) { ",
+				            func_prefix, i, struct_type, ref_enum);
+				if (is_string_enum) {
+					emit_source(ctx, "return lsp_%s__from_string(json_object_get_string(json_object_array_get_idx(obj->json, %zu)), out); }\n",
+					            ref_func, i);
+				} else {
+					emit_source(ctx, "*out = (%s)json_object_get_int(json_object_array_get_idx(obj->json, %zu)); ",
+					            ref_enum, i);
+					emit_source(ctx, "return LSP_OK; }\n");
+				}
+
+				free(ref_func);
+				free(ref_enum);
+			} else {
+				char *ref_struct = to_struct_type(ref_name);
+				char *ref_func = to_func_name(ref_name);
+
+				emit_header(ctx, "int lsp_%s__get_%zu(const %s *obj, %s *child);\n",
+				            func_prefix, i, struct_type, ref_struct);
+				emit_source(ctx, "int lsp_%s__get_%zu(const %s *obj, %s *child) { ",
+				            func_prefix, i, struct_type, ref_struct);
+				emit_source(ctx, "return lsp_%s__from_json(child, json_object_array_get_idx(obj->json, %zu)); }\n",
+				            ref_func, i);
+
+				emit_header(ctx, "LSP_NO_UNUSED int lsp_%s__set_%zu(%s *obj, %s *value);\n",
+				            func_prefix, i, struct_type, ref_struct);
+				emit_source(ctx, "int lsp_%s__set_%zu(%s *obj, %s *value) { ",
+				            func_prefix, i, struct_type, ref_struct);
+				emit_source(ctx, "if (json_object_array_put_idx(obj->json, %zu, json_object_get(value->json)) < 0) { return LSP_ERR_OOM; } ",
+				            i);
+				emit_source(ctx, "return LSP_OK; }\n");
+
+				free(ref_func);
+				free(ref_struct);
+			}
+		}
+	}
+
+	free(struct_type);
+	free(func_prefix);
+}
+
+/*
  * Or-type variant helpers (used by both or-types and aliases)
  */
 
@@ -791,7 +906,7 @@ gen_or_type(struct GenCtx *ctx, json_object *type_def) {
 			// Use typeKind from the reference
 			const char *type_kind = json_get_string(item, "typeKind");
 			enum IrTypeKind rk = type_kind_from_string(type_kind);
-			if (rk == IR_TYPE_ARRAY) {
+			if (rk == IR_TYPE_ARRAY || rk == IR_TYPE_TUPLE) {
 				emit_source(ctx, "if (json_object_is_type(json, json_type_array)) return %s; ",
 				            enum_name);
 			} else {
@@ -997,7 +1112,8 @@ emit_all_types(struct GenCtx *ctx) {
 		json_object *type_def = json_array_get(ctx->ir->types, i);
 		enum IrTypeKind kind = ir_reader_type_kind(type_def);
 		if (kind == IR_TYPE_STRUCTURE || kind == IR_TYPE_ARRAY ||
-		    kind == IR_TYPE_MAP || kind == IR_TYPE_OR) {
+		    kind == IR_TYPE_MAP || kind == IR_TYPE_OR ||
+		    kind == IR_TYPE_TUPLE) {
 			const char *name = json_get_string(type_def, "name");
 			const char *norm_name = lsp_name_normalize(name);
 			emit_header(ctx, "struct Lsp%s;\n", norm_name);
@@ -1025,6 +1141,9 @@ emit_all_types(struct GenCtx *ctx) {
 			break;
 		case IR_TYPE_OR:
 			gen_or_type(ctx, type_def);
+			break;
+		case IR_TYPE_TUPLE:
+			gen_tuple_type(ctx, type_def);
 			break;
 		default:
 			break;

@@ -8,6 +8,8 @@ static char *namer_type_to_name(json_object *type);
 static char *namer_array_name(json_object *element_type);
 static char *namer_map_name(json_object *value_type);
 static char *namer_or_name(json_object *items_array);
+static char *namer_tuple_name(json_object *items_array);
+static char *namer_and_name(json_object *items_array);
 static char *namer_literal_name(json_object *properties_array);
 
 static char *
@@ -34,7 +36,8 @@ namer_type_to_name(json_object *type) {
 		json_object *properties = json_get_array(value, "properties");
 		return namer_literal_name(properties);
 	} else if (strcmp(kind, "tuple") == 0) {
-		return strdup("Tuple");
+		json_object *items = json_get_array(type, "items");
+		return namer_tuple_name(items);
 	} else if (strcmp(kind, "stringLiteral") == 0) {
 		return strdup("StringLiteral");
 	} else if (strcmp(kind, "or") == 0) {
@@ -81,6 +84,62 @@ namer_or_name(json_object *items_array) {
 		char *new_result = NULL;
 		int ret = asprintf(
 				&new_result, "%sOr%s", result,
+				item_name ? item_name : "Unknown");
+		assert(ret >= 0 && new_result != NULL);
+		free(result);
+		free(item_name);
+		result = new_result;
+	}
+
+	return result;
+}
+
+static char *
+namer_tuple_name(json_object *items_array) {
+	size_t n = json_array_len(items_array);
+	if (n == 0) {
+		return strdup("EmptyTuple");
+	}
+
+	json_object *first = json_array_get(items_array, 0);
+	char *result = namer_type_to_name(first);
+
+	for (size_t i = 1; i < n; i++) {
+		json_object *item = json_array_get(items_array, i);
+		char *item_name = namer_type_to_name(item);
+		char *new_result = NULL;
+		int ret = asprintf(
+				&new_result, "%sAnd%s", result,
+				item_name ? item_name : "Unknown");
+		assert(ret >= 0 && new_result != NULL);
+		free(result);
+		free(item_name);
+		result = new_result;
+	}
+
+	char *final = NULL;
+	int ret = asprintf(&final, "%sTuple", result);
+	assert(ret >= 0 && final != NULL);
+	free(result);
+	return final;
+}
+
+static char *
+namer_and_name(json_object *items_array) {
+	size_t n = json_array_len(items_array);
+	if (n == 0) {
+		return strdup("Empty");
+	}
+
+	json_object *first = json_array_get(items_array, 0);
+	char *result = namer_type_to_name(first);
+
+	for (size_t i = 1; i < n; i++) {
+		json_object *item = json_array_get(items_array, i);
+		char *item_name = namer_type_to_name(item);
+		char *new_result = NULL;
+		int ret = asprintf(
+				&new_result, "%sAnd%s", result,
 				item_name ? item_name : "Unknown");
 		assert(ret >= 0 && new_result != NULL);
 		free(result);
@@ -366,19 +425,67 @@ ir_flatten_type(struct IrCtx *ctx, json_object *type) {
 		json_add_object(def, "properties", flat_props);
 		return ir_register_type(ctx, name, "structure", def);
 	} else if (strcmp(kind, "tuple") == 0) {
-		json_object *ref = json_new_object();
-		json_add_string(ref, "kind", "base");
-		json_add_string(ref, "name", "LSPAny");
-		return ref;
+		json_object *items = json_get_array(type, "items");
+		json_object *flat_elements = json_new_array();
+		size_t n = json_array_len(items);
+		for (size_t i = 0; i < n; i++) {
+			json_object *item = json_array_get(items, i);
+			json_object *flat_item = ir_flatten_type(ctx, item);
+			json_array_add(flat_elements, flat_item);
+		}
+
+		char *name = namer_tuple_name(flat_elements);
+
+		json_object *def = json_new_object();
+		json_add_object(def, "elements", flat_elements);
+		return ir_register_type(ctx, name, "tuple", def);
 	} else if (strcmp(kind, "and") == 0) {
 		json_object *items = json_get_array(type, "items");
-		if (json_array_len(items) > 0) {
-			return ir_flatten_type(ctx, json_array_get(items, 0));
+		size_t n = json_array_len(items);
+		if (n == 0) {
+			json_object *ref = json_new_object();
+			json_add_string(ref, "kind", "base");
+			json_add_string(ref, "name", "LSPAny");
+			return ref;
 		}
-		json_object *ref = json_new_object();
-		json_add_string(ref, "kind", "base");
-		json_add_string(ref, "name", "LSPAny");
-		return ref;
+
+		json_object *merged_props = json_new_array();
+		json_object *seen_names = json_new_object();
+
+		for (size_t i = 0; i < n; i++) {
+			json_object *item = json_array_get(items, i);
+			const char *item_kind = json_get_string(item, "kind");
+
+			if (item_kind && strcmp(item_kind, "reference") == 0) {
+				const char *ref_name = json_get_string(item, "name");
+				json_object *structure = find_structure(ctx, ref_name);
+				if (structure != NULL) {
+					json_object *props = ir_collect_all_properties(ctx, structure);
+					size_t pn = json_array_len(props);
+					for (size_t j = 0; j < pn; j++) {
+						json_object *prop = json_array_get(props, j);
+						const char *pname = json_get_string(prop, "name");
+						if (pname && !json_has_key(seen_names, pname)) {
+							json_add_bool(seen_names, pname, true);
+							json_array_add(merged_props, json_object_get(prop));
+						}
+					}
+					json_object_put(props);
+				}
+			} else if (item_kind && strcmp(item_kind, "literal") == 0) {
+				json_object *value = json_get_object(item, "value");
+				json_object *props = json_get_array(value, "properties");
+				add_props_to_array(ctx, merged_props, seen_names, props);
+			}
+		}
+
+		json_object_put(seen_names);
+
+		char *name = namer_and_name(items);
+
+		json_object *def = json_new_object();
+		json_add_object(def, "properties", merged_props);
+		return ir_register_type(ctx, name, "structure", def);
 	}
 
 	return json_object_get(type);
@@ -692,6 +799,17 @@ ir_resolve_aliases_in_types(struct IrCtx *ctx) {
 				json_object_array_put_idx(items, i, json_object_get(resolved));
 			}
 		}
+
+		/* Tuple elements */
+		json_object *elements = json_get_array(def, "elements");
+		size_t elem_count = json_array_len(elements);
+		for (size_t i = 0; i < elem_count; i++) {
+			json_object *elem = json_array_get(elements, i);
+			json_object *resolved = ir_resolve_alias(ctx, elem);
+			if (resolved != elem) {
+				json_object_array_put_idx(elements, i, json_object_get(resolved));
+			}
+		}
 	}
 
 	/* Requests: params and result */
@@ -774,6 +892,14 @@ ir_enrich_references(struct IrCtx *ctx) {
 		for (size_t i = 0; i < item_count; i++) {
 			json_object *item = json_array_get(items, i);
 			ir_enrich_reference(ctx, item);
+		}
+
+		/* Tuple elements: types[X].elements[Y] */
+		json_object *elements = json_get_array(def, "elements");
+		size_t elem_count = json_array_len(elements);
+		for (size_t i = 0; i < elem_count; i++) {
+			json_object *elem = json_array_get(elements, i);
+			ir_enrich_reference(ctx, elem);
 		}
 
 		/* Alias target: types[X].type */
