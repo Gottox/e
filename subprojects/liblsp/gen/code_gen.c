@@ -299,6 +299,28 @@ emit_source_prologue(struct GenCtx *ctx) {
  * Structure generation
  */
 
+/* Collect string literal properties from a type definition */
+static json_object *
+collect_string_literal_props(json_object *type_def) {
+	json_object *properties = json_get_array(type_def, "properties");
+	size_t prop_count = json_array_len(properties);
+	json_object *literals = NULL;
+
+	for (size_t i = 0; i < prop_count; i++) {
+		json_object *prop = json_array_get(properties, i);
+		json_object *prop_type = json_get_object(prop, "type");
+		enum IrPropTypeKind pk = ir_reader_prop_type_kind(prop_type);
+		if (pk == IR_PROP_STRING_LITERAL) {
+			if (literals == NULL) {
+				literals = json_new_array();
+			}
+			json_array_add(literals, json_object_get(prop));
+		}
+	}
+
+	return literals;
+}
+
 static void
 gen_getter(struct GenCtx *ctx, const char *struct_name, const char *func_prefix,
            json_object *prop) {
@@ -309,6 +331,18 @@ gen_getter(struct GenCtx *ctx, const char *struct_name, const char *func_prefix,
 	enum IrPropTypeKind pk = ir_reader_prop_type_kind(prop_type);
 
 	if (pk == IR_PROP_STRING_LITERAL) {
+		const char *literal_value = json_get_string(prop_type, "value");
+
+		emit_header(ctx, "const char * lsp_%s__%s(const struct Lsp%s *obj);\n",
+		            func_prefix, prop_snake, struct_name);
+
+		emit_source(ctx, "const char * lsp_%s__%s(const struct Lsp%s *obj) { ",
+		            func_prefix, prop_snake, struct_name);
+		emit_source(ctx, "json_object *field = json_object_object_get(obj->json, \"%s\"); ",
+		            prop_name);
+		emit_source(ctx, "return field ? json_object_get_string(field) : \"%s\"; }\n",
+		            literal_value ? literal_value : "");
+
 		free(prop_snake);
 		return;
 	}
@@ -484,6 +518,53 @@ gen_setter(struct GenCtx *ctx, const char *struct_name, const char *func_prefix,
 }
 
 static void
+emit_string_literal_lifecycle(struct GenCtx *ctx, const char *func_prefix,
+                              const char *struct_type, json_object *literals) {
+	size_t n = json_array_len(literals);
+
+	/* from_json: validate each literal field */
+	emit_header(ctx, "LSP_NO_UNUSED int lsp_%s__from_json(%s *obj, json_object *json);\n",
+	            func_prefix, struct_type);
+	emit_source(ctx, "int lsp_%s__from_json(%s *obj, json_object *json) { ",
+	            func_prefix, struct_type);
+	for (size_t i = 0; i < n; i++) {
+		json_object *prop = json_array_get(literals, i);
+		const char *prop_name = json_get_string(prop, "name");
+		json_object *prop_type = json_get_object(prop, "type");
+		const char *literal_value = json_get_string(prop_type, "value");
+		emit_source(ctx, "{ json_object *f = json_object_object_get(json, \"%s\"); ",
+		            prop_name);
+		emit_source(ctx, "if (f != NULL && strcmp(json_object_get_string(f), \"%s\") != 0) "
+		            "return LSP_ERR_INVALID_TYPE; } ",
+		            literal_value);
+	}
+	emit_source(ctx, "obj->json = json_object_get(json); return LSP_OK; }\n");
+
+	/* init: auto-populate literal fields */
+	emit_header(ctx, "LSP_NO_UNUSED int lsp_%s__init(%s *obj);\n",
+	            func_prefix, struct_type);
+	emit_source(ctx, "int lsp_%s__init(%s *obj) { ", func_prefix, struct_type);
+	emit_source(ctx, "obj->json = json_object_new_object(); ");
+	emit_source(ctx, "if (obj->json == NULL) { return LSP_ERR_OOM; } ");
+	for (size_t i = 0; i < n; i++) {
+		json_object *prop = json_array_get(literals, i);
+		const char *prop_name = json_get_string(prop, "name");
+		json_object *prop_type = json_get_object(prop, "type");
+		const char *literal_value = json_get_string(prop_type, "value");
+		emit_source(ctx, "json_object_object_add(obj->json, \"%s\", "
+		            "json_object_new_string(\"%s\")); ",
+		            prop_name, literal_value);
+	}
+	emit_source(ctx, "return LSP_OK; }\n");
+
+	/* cleanup: standard */
+	emit_header(ctx, "void lsp_%s__cleanup(%s *obj);\n", func_prefix, struct_type);
+	emit_source(ctx, "void lsp_%s__cleanup(%s *obj) { "
+	            "if (obj->json != NULL) { json_object_put(obj->json); obj->json = NULL; } }\n",
+	            func_prefix, struct_type);
+}
+
+static void
 gen_structure(struct GenCtx *ctx, json_object *type_def) {
 	const char *name = json_get_string(type_def, "name");
 	if (!gen_ctx_mark(ctx, "struct", name)) {
@@ -495,7 +576,14 @@ gen_structure(struct GenCtx *ctx, json_object *type_def) {
 	char *struct_type = to_struct_type(name);
 
 	emit_struct_decl(ctx, norm_name);
-	emit_lifecycle(ctx, func_prefix, struct_type, EMIT_INIT_OBJECT);
+
+	json_object *literals = collect_string_literal_props(type_def);
+	if (literals != NULL) {
+		emit_string_literal_lifecycle(ctx, func_prefix, struct_type, literals);
+		json_object_put(literals);
+	} else {
+		emit_lifecycle(ctx, func_prefix, struct_type, EMIT_INIT_OBJECT);
+	}
 
 	json_object *properties = json_get_array(type_def, "properties");
 	size_t prop_count = json_array_len(properties);
