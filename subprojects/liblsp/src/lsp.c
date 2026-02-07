@@ -191,6 +191,21 @@ handle_response(struct Lsp *lsp, json_object *msg) {
 	cx_hash_map_delete(&lsp->pending_requests, id);
 }
 
+static const char *
+get_method(json_object *msg) {
+	return json_object_get_string(json_object_object_get(msg, "method"));
+}
+
+static int
+send_response(struct Lsp *lsp, json_object *response) {
+	int rv = 0;
+	if (response) {
+		rv = lsp_send(lsp, response);
+		json_object_put(response);
+	}
+	return rv;
+}
+
 static json_object *
 auto_handle_initialize(
 		struct Lsp *lsp, json_object *msg,
@@ -207,9 +222,7 @@ handle_c2s_request(
 		struct Lsp *lsp, json_object *msg,
 		const struct LspServerRequestCallbacks *req_cbs,
 		const struct LspServerNotificationCallbacks *notif_cbs, void *userdata) {
-	int rv = 0;
-	const char *method =
-			json_object_get_string(json_object_object_get(msg, "method"));
+	const char *method = get_method(msg);
 	enum LspC2SMethod req_type = lsp_c2s_method_lookup(method);
 
 	json_object *response = NULL;
@@ -223,19 +236,14 @@ handle_c2s_request(
 				req_cbs, req_type, msg, userdata);
 	}
 
-	if (response) {
-		rv = lsp_send(lsp, response);
-		json_object_put(response);
-	}
-	return rv;
+	return send_response(lsp, response);
 }
 
 static void
 handle_c2s_notification(
 		struct Lsp *lsp, json_object *msg,
 		const struct LspServerNotificationCallbacks *notif_cbs, void *userdata) {
-	const char *method =
-			json_object_get_string(json_object_object_get(msg, "method"));
+	const char *method = get_method(msg);
 	enum LspC2SNotification notif_type = lsp_c2s_notification_lookup(method);
 	if (notif_type == LSP_C2S_NOTIFICATION_EXIT) {
 		lsp->running = false;
@@ -247,25 +255,18 @@ static int
 handle_s2c_request(
 		struct Lsp *lsp, json_object *msg,
 		const struct LspClientRequestCallbacks *req_cbs, void *userdata) {
-	int rv = 0;
-	const char *method =
-			json_object_get_string(json_object_object_get(msg, "method"));
+	const char *method = get_method(msg);
 	enum LspS2CMethod req_type = lsp_s2c_method_lookup(method);
 	json_object *response =
 			lsp_client_dispatch_request(req_cbs, req_type, msg, userdata);
-	if (response) {
-		rv = lsp_send(lsp, response);
-		json_object_put(response);
-	}
-	return rv;
+	return send_response(lsp, response);
 }
 
 static void
 handle_s2c_notification(
 		json_object *msg, const struct LspClientNotificationCallbacks *notif_cbs,
 		void *userdata) {
-	const char *method =
-			json_object_get_string(json_object_object_get(msg, "method"));
+	const char *method = get_method(msg);
 	enum LspS2CNotification notif_type = lsp_s2c_notification_lookup(method);
 	lsp_client_dispatch_notification(notif_cbs, notif_type, msg, userdata);
 }

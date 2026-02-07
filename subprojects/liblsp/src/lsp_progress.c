@@ -29,19 +29,25 @@ lsp_progress_value_kind(const struct LspProgressParams *params) {
 	return LSP_PROGRESS_VALUE_UNKNOWN;
 }
 
+/**
+ * Validate params and extract the "value" field from ProgressParams JSON.
+ */
+static json_object *
+progress_get_value(const struct LspProgressParams *params, const void *output) {
+	if (!params || !params->json || !output) {
+		return NULL;
+	}
+	return json_object_object_get(params->json, "value");
+}
+
 int
 lsp_progress_value_as_begin(
 		const struct LspProgressParams *params,
 		struct LspWorkDoneProgressBegin *begin) {
-	if (!params || !params->json || !begin) {
-		return LSP_ERR_MISSING_FIELD;
-	}
-
-	json_object *value = json_object_object_get(params->json, "value");
+	json_object *value = progress_get_value(params, begin);
 	if (!value) {
 		return LSP_ERR_MISSING_FIELD;
 	}
-
 	return lsp_work_done_progress_begin__from_json(begin, value);
 }
 
@@ -49,15 +55,10 @@ int
 lsp_progress_value_as_report(
 		const struct LspProgressParams *params,
 		struct LspWorkDoneProgressReport *report) {
-	if (!params || !params->json || !report) {
-		return LSP_ERR_MISSING_FIELD;
-	}
-
-	json_object *value = json_object_object_get(params->json, "value");
+	json_object *value = progress_get_value(params, report);
 	if (!value) {
 		return LSP_ERR_MISSING_FIELD;
 	}
-
 	return lsp_work_done_progress_report__from_json(report, value);
 }
 
@@ -65,15 +66,10 @@ int
 lsp_progress_value_as_end(
 		const struct LspProgressParams *params,
 		struct LspWorkDoneProgressEnd *end) {
-	if (!params || !params->json || !end) {
-		return LSP_ERR_MISSING_FIELD;
-	}
-
-	json_object *value = json_object_object_get(params->json, "value");
+	json_object *value = progress_get_value(params, end);
 	if (!value) {
 		return LSP_ERR_MISSING_FIELD;
 	}
-
 	return lsp_work_done_progress_end__from_json(end, value);
 }
 
@@ -104,6 +100,25 @@ build_progress_params(
 	return LSP_OK;
 }
 
+/**
+ * Build ProgressParams from token and value, send the notification, and clean up.
+ * Takes ownership of value on success; frees it on failure.
+ */
+static int
+send_progress_value(
+		struct Lsp *lsp, const struct LspProgressToken *token,
+		json_object *value) {
+	struct LspProgressParams params = {0};
+	int rv = build_progress_params(&params, token, value);
+	if (rv != LSP_OK) {
+		json_object_put(value);
+		return rv;
+	}
+	rv = lsp_progress__send(&params, lsp);
+	lsp_progress_params__cleanup(&params);
+	return rv;
+}
+
 int
 lsp_progress_begin_send(
 		struct Lsp *lsp,
@@ -116,7 +131,6 @@ lsp_progress_begin_send(
 		return LSP_ERR_MISSING_FIELD;
 	}
 
-	/* Build the value object */
 	json_object *value = json_object_new_object();
 	json_object_object_add(value, "kind", json_object_new_string("begin"));
 	json_object_object_add(value, "title", json_object_new_string(title));
@@ -125,28 +139,16 @@ lsp_progress_begin_send(
 		json_object_object_add(value, "message",
 				json_object_new_string(message));
 	}
-
 	if (percentage >= 0 && percentage <= 100) {
 		json_object_object_add(value, "percentage",
 				json_object_new_int(percentage));
 	}
-
 	if (cancellable) {
 		json_object_object_add(value, "cancellable",
 				json_object_new_boolean(1));
 	}
 
-	/* Build and send */
-	struct LspProgressParams params = {0};
-	int rv = build_progress_params(&params, token, value);
-	if (rv != LSP_OK) {
-		json_object_put(value);
-		return rv;
-	}
-
-	rv = lsp_progress__send(&params, lsp);
-	lsp_progress_params__cleanup(&params);
-	return rv;
+	return send_progress_value(lsp, token, value);
 }
 
 int
@@ -160,7 +162,6 @@ lsp_progress_report_send(
 		return LSP_ERR_MISSING_FIELD;
 	}
 
-	/* Build the value object */
 	json_object *value = json_object_new_object();
 	json_object_object_add(value, "kind", json_object_new_string("report"));
 
@@ -168,28 +169,16 @@ lsp_progress_report_send(
 		json_object_object_add(value, "message",
 				json_object_new_string(message));
 	}
-
 	if (percentage >= 0 && percentage <= 100) {
 		json_object_object_add(value, "percentage",
 				json_object_new_int(percentage));
 	}
-
 	if (cancellable) {
 		json_object_object_add(value, "cancellable",
 				json_object_new_boolean(1));
 	}
 
-	/* Build and send */
-	struct LspProgressParams params = {0};
-	int rv = build_progress_params(&params, token, value);
-	if (rv != LSP_OK) {
-		json_object_put(value);
-		return rv;
-	}
-
-	rv = lsp_progress__send(&params, lsp);
-	lsp_progress_params__cleanup(&params);
-	return rv;
+	return send_progress_value(lsp, token, value);
 }
 
 int
@@ -201,7 +190,6 @@ lsp_progress_end_send(
 		return LSP_ERR_MISSING_FIELD;
 	}
 
-	/* Build the value object */
 	json_object *value = json_object_new_object();
 	json_object_object_add(value, "kind", json_object_new_string("end"));
 
@@ -210,17 +198,7 @@ lsp_progress_end_send(
 				json_object_new_string(message));
 	}
 
-	/* Build and send */
-	struct LspProgressParams params = {0};
-	int rv = build_progress_params(&params, token, value);
-	if (rv != LSP_OK) {
-		json_object_put(value);
-		return rv;
-	}
-
-	rv = lsp_progress__send(&params, lsp);
-	lsp_progress_params__cleanup(&params);
-	return rv;
+	return send_progress_value(lsp, token, value);
 }
 
 int

@@ -2,6 +2,22 @@
 #include <stdio.h>
 #include <string.h>
 
+/**
+ * Create a new JSON-RPC 2.0 message object with "jsonrpc":"2.0" already set.
+ */
+static json_object *
+jsonrpc_new(void) {
+	json_object *obj = json_object_new_object();
+	if (obj == NULL) {
+		return NULL;
+	}
+	if (json_object_object_add(obj, "jsonrpc", json_object_new_string("2.0")) < 0) {
+		json_object_put(obj);
+		return NULL;
+	}
+	return obj;
+}
+
 enum LspMessageKind
 lsp_message_classify(json_object *msg) {
 	if (!msg) return LSP_MESSAGE_INVALID;
@@ -24,17 +40,12 @@ lsp_message_classify(json_object *msg) {
 
 json_object *
 lsp_response_new(json_object *id, json_object *result) {
-	int rv = 0;
-	json_object *resp = json_object_new_object();
+	json_object *resp = jsonrpc_new();
 	if (resp == NULL) {
 		return NULL;
 	}
 
-	rv = json_object_object_add(resp, "jsonrpc", json_object_new_string("2.0"));
-	if (rv < 0) {
-		goto err;
-	}
-	rv = json_object_object_add(resp, "id", json_object_get(id));
+	int rv = json_object_object_add(resp, "id", json_object_get(id));
 	if (rv < 0) {
 		goto err;
 	}
@@ -50,17 +61,12 @@ err:
 
 json_object *
 lsp_response_error_new(json_object *id, int code, const char *message) {
-	int rv = 0;
-	json_object *resp = json_object_new_object();
+	json_object *resp = jsonrpc_new();
 	if (resp == NULL) {
 		return NULL;
 	}
 
-	rv = json_object_object_add(resp, "jsonrpc", json_object_new_string("2.0"));
-	if (rv < 0) {
-		goto err;
-	}
-	rv = json_object_object_add(resp, "id", json_object_get(id));
+	int rv = json_object_object_add(resp, "id", json_object_get(id));
 	if (rv < 0) {
 		goto err;
 	}
@@ -196,17 +202,12 @@ lsp_response_error__set_data(struct LspResponseError *err, json_object *data) {
 
 json_object *
 lsp_request_new(const char *method, json_object *params, json_object *id) {
-	int rv = 0;
-	json_object *req = json_object_new_object();
+	json_object *req = jsonrpc_new();
 	if (req == NULL) {
 		return NULL;
 	}
 
-	rv = json_object_object_add(req, "jsonrpc", json_object_new_string("2.0"));
-	if (rv < 0) {
-		goto err;
-	}
-	rv = json_object_object_add(req, "id", json_object_get(id));
+	int rv = json_object_object_add(req, "id", json_object_get(id));
 	if (rv < 0) {
 		goto err;
 	}
@@ -228,17 +229,12 @@ err:
 
 json_object *
 lsp_notification_new(const char *method, json_object *params) {
-	int rv = 0;
-	json_object *notif = json_object_new_object();
+	json_object *notif = jsonrpc_new();
 	if (notif == NULL) {
 		return NULL;
 	}
 
-	rv = json_object_object_add(notif, "jsonrpc", json_object_new_string("2.0"));
-	if (rv < 0) {
-		goto err;
-	}
-	rv = json_object_object_add(notif, "method", json_object_new_string(method));
+	int rv = json_object_object_add(notif, "method", json_object_new_string(method));
 	if (rv < 0) {
 		goto err;
 	}
